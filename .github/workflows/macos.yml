@@ -86,9 +86,13 @@ jobs:
           xcodebuild test-without-building -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$SIMULATOR" \
             -derivedDataPath build/simulator -parallel-testing-enabled NO \
             -resultBundlePath results/Reelsmith.xcresult || status=$?
-          kill -INT "$recorder"
+          kill -INT "$recorder" || true
           wait "$recorder" || true
           ls -l recording
+          if [ ! -s recording/recording.mp4 ]; then
+            echo "No recording was written."
+            exit 1
+          fi
           exit "$status"
 
       - name: "Layer 5: export the screenshots and marks, write the recording index"
@@ -110,6 +114,10 @@ jobs:
               cp "$exported/$file" "screens/$name"
             done
           ls -l screens
+          if [ -z "$(ls -A screens)" ]; then
+            echo "The result bundle gave no attachment."
+            exit 1
+          fi
           start=$(cat recording/recording-start.txt)
           : > recording/recording-index.txt
           for mark in screens/*.mark.txt; do
