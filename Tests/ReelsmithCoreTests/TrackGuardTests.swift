@@ -173,9 +173,10 @@ private func drawAction(_ draw: inout Draw, in state: EditorState) -> EditorActi
     }
 }
 
-/// The valid state as P6 has it under seam B: "A state is valid when every clip lies inside its source, every
-/// clip length is a whole number of frames and at least `minimumClip`, the playhead is a whole frame from zero
-/// to the project length, and the selection is a clip of the project or none."
+/// The valid state that `reduce` keeps, word for word from its contract: "A state is valid when every clip lies
+/// inside its source, every clip length is a whole number of frames and at least `minimumClip`, the playhead is
+/// a whole frame from zero to the project length, and the selection is a clip of the project or none."
+/// docs/architecture.md says the same under m1-3-edit-actions.
 /// Answers the first part of that sentence the state breaks, or nil for a valid state.
 private func breach(in state: EditorState) -> String? {
     for clip in state.project.clips {
@@ -231,6 +232,9 @@ private func planBreach(for project: Project) -> String? {
                 + "\(info.duration.ticks)"
         }
         before = before + segment.duration
+    }
+    if before != plan.duration {
+        return "the segments of the plan are \(before.ticks) ticks long together and the plan says \(plan.duration.ticks)"
     }
     return nil
 }
@@ -321,8 +325,13 @@ final class TrackGuardTests: XCTestCase {
         var state = threeClips
         state.playhead = Time(ticks: 4200)
 
-        XCTAssertEqual(reduce(state, .trimEnd(red, by: Time(ticks: 600))).playhead, Time(ticks: 4200))
-        XCTAssertEqual(reduce(state, .trimStart(red, by: Time(ticks: 600))).playhead, Time(ticks: 4200))
+        let endTrimmed = reduce(state, .trimEnd(red, by: Time(ticks: 600)))
+        let startTrimmed = reduce(state, .trimStart(red, by: Time(ticks: 600)))
+
+        XCTAssertEqual(endTrimmed.project.duration, Time(ticks: 4800))
+        XCTAssertEqual(endTrimmed.playhead, Time(ticks: 4200))
+        XCTAssertEqual(startTrimmed.project.duration, Time(ticks: 4800))
+        XCTAssertEqual(startTrimmed.playhead, Time(ticks: 4200))
     }
 
     func testATrimEndThatChangesNothingStillPausesAPlayingState() {
