@@ -46,10 +46,10 @@ gh run download <run id> -n ipa -D ipa
 Not yet proven on a phone. The steps as they should work:
 
 1. Install iTunes and iCloud for Windows from Apple's website (the Microsoft Store versions do not work), then install Sideloadly from sideloadly.io.
-2. On the iPhone, switch on Developer Mode under Settings, Privacy & Security, then restart the phone when asked.
-3. Connect the iPhone with a USB cable, unlock it and tap Trust.
-4. Open Sideloadly, pick the phone, drag `Reelsmith.ipa` into the window, type the free Apple ID and press Start. Enter the Apple ID password when asked.
-5. On the iPhone, open Settings, General, VPN & Device Management, tap the Apple ID and tap Trust.
+2. Connect the iPhone with a USB cable, unlock it and tap Trust.
+3. Open Sideloadly, pick the phone, drag `Reelsmith.ipa` into the window, type the free Apple ID and press Start. Enter the Apple ID password when asked.
+4. On the iPhone, open Settings, General, VPN & Device Management, tap the Apple ID and tap Trust.
+5. On the iPhone, switch on Developer Mode under Settings, Privacy & Security (the switch appears only after the install), then restart the phone when asked.
 6. Open Reelsmith. Note the "First opened" date on the screen.
 
-A free Apple ID install stops working after 7 days. Repeat step 4 with the same Apple ID to renew it. The "First opened" date should stay the same after a renewal: that shows saved data survives.
+A free Apple ID install stops working after 7 days. Repeat step 3 with the same Apple ID to renew it. The "First opened" date should stay the same after a renewal: that shows saved data survives.
