@@ -24,6 +24,10 @@ final class TimeTests: XCTestCase {
         XCTAssertFalse(Time(ticks: 2) < Time(ticks: 2))
     }
 
+    func testMinusTakesTicksAway() {
+        XCTAssertEqual(Time(ticks: 4200) - Time(ticks: 1800), Time(ticks: 2400))
+    }
+
     func testRoundedDownToFrameTurns4199Into4180() {
         XCTAssertEqual(Time(ticks: 4199).roundedDownToFrame, Time(ticks: 4180))
     }

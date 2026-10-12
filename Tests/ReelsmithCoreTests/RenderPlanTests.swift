@@ -77,6 +77,18 @@ final class RenderPlanTests: XCTestCase {
         XCTAssertEqual(fitted.y, 0)
     }
 
+    func testANarrowPictureIsCentredAndScaledByOneFactor() throws {
+        XCTAssertEqual(
+            try placement(width: 1080, height: 2160, quarterTurns: 0),
+            Placement(quarterTurns: 0, x: 60, y: 0, width: 960, height: 1920))
+    }
+
+    func testThreeQuarterTurnsAreCountedBeforeTheFit() throws {
+        XCTAssertEqual(
+            try placement(width: 1920, height: 1080, quarterTurns: 3),
+            Placement(quarterTurns: 3, x: 0, y: 0, width: 1080, height: 1920))
+    }
+
     func testASmallPictureIsEnlargedToFillTheCanvas() throws {
         XCTAssertEqual(try placement(width: 540, height: 960, quarterTurns: 0), wholeCanvas)
     }

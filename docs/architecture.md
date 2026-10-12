@@ -13,7 +13,7 @@ Each story writes only inside its own slot.
 - `Editor/EditorState.swift`: `EditorState`, the project with selection, playhead and playing.
 - `Editor/EditorAction.swift`: `EditorAction`, everything a screen can ask for.
 - `Editor/Reduce.swift`: `reduce`, state plus action gives the new state. An action that cannot be done returns the state unchanged.
-- `Editor/Edits.swift`: the edit actions and `canSplit`, `canDelete`, declared with empty bodies.
+- `Editor/Edits.swift`: the edit actions and `canSplit`, `canDelete`, bodies by `m1-3-edit-actions`.
 - `Plan/RenderPlan.swift`: `renderPlan(for:)` turns a project into segments, each with its source range and the rectangle its upright picture fills on the 1080 by 1920 canvas.
 - `Seeds/TestClip.swift`: `RGB` and `TestClip`, the values of the five test clips. No file is written here.
 - `Seeds/Seed.swift`: `Seed`, the three demo projects by name.

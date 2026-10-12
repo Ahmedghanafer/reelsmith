@@ -17,8 +17,7 @@ public struct Time: Hashable, Comparable, Sendable {
     public static let frame = Time(ticks: 20)
 
     public var roundedDownToFrame: Time {
-        let rest = ticks % Time.frame.ticks
-        return Time(ticks: ticks - (rest < 0 ? rest + Time.frame.ticks : rest))
+        Time(ticks: ticks - ticks % Time.frame.ticks)
     }
 
     /// "mm:ss", rounded down.
