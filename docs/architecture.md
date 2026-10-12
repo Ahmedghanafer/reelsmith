@@ -14,9 +14,9 @@ Each story writes only inside its own slot.
 - `Editor/EditorAction.swift`: `EditorAction`, everything a screen can ask for.
 - `Editor/Reduce.swift`: `reduce`, state plus action gives the new state. An action that cannot be done returns the state unchanged.
 - `Editor/Edits.swift`: the edit actions and `canSplit`, `canDelete`, bodies by `m1-3-edit-actions`.
-- `Plan/RenderPlan.swift`: `renderPlan(for:)` turns a project into segments, each with its source range and the rectangle its upright picture fills on the 1080 by 1920 canvas.
+- `Plan/RenderPlan.swift`: `renderPlan(for:)` turns a project into segments, each with its source range and the rectangle its upright picture fills on the canvas of the project.
 - `Seeds/TestClip.swift`: `RGB` and `TestClip`, the values of the five test clips. No file is written here.
-- `Seeds/Seed.swift`: `Seed`, the three demo projects by name.
+- `Seeds/Seed.swift`: `Seed`, the four demo projects by name.
 <!-- end slot: m1-1-core-contracts -->
 
 ### m1-3-edit-actions
@@ -60,7 +60,7 @@ The app side. Screens live in `App/`, hold no logic and no word, and draw a Core
 <!-- slot: m1-5-engine -->
 The Engine turns a render plan into video. Both entry points take the plan, the facts of its media and the media folder, and find the file of a media id at `<media folder>/<fileName>`.
 
-- `Composition.swift`: `makePlayerItem` gives the player item of a plan, on the main actor. The internal `buildComposition` in the same file is the one builder for the player item and for the export. It makes a composition with one picture track and, when a segment has sound, one sound track that ends where the last segment with sound ends. Its video composition is 1080 by 1920 at 30 frames a second with one instruction per segment, whose transform applies the quarter turns of the segment's placement to the stored picture, scales it to the placement's size and moves it to the placement's corner. The canvas stays black around it. The video composition carries the 709 colour properties, so a high dynamic range source is converted to standard range for the preview and the export alike. It throws `sourceMissing` with the media id when the plan names media with no facts or a file that is not in the media folder, and `cannotRead` when a file has no picture track or cannot be put into the composition.
+- `Composition.swift`: `makePlayerItem` gives the player item of a plan, on the main actor. The internal `buildComposition` in the same file is the one builder for the player item and for the export. It makes a composition with one picture track and, when a segment has sound, one sound track that ends where the last segment with sound ends. Its video composition has the size of the plan's canvas at 30 frames a second with one instruction per segment, whose transform applies the quarter turns of the segment's placement to the stored picture, scales it to the placement's size and moves it to the placement's corner. The canvas stays black around it. The video composition carries the 709 colour properties, so a high dynamic range source is converted to standard range for the preview and the export alike. It throws `sourceMissing` with the media id when the plan names media with no facts or a file that is not in the media folder, and `cannotRead` when a file has no picture track or cannot be put into the composition.
 - `Export.swift`: `export` writes the plan as an MPEG-4 file with H.264 and AAC through an export session with the highest quality preset. It writes under a temporary name in the folder of the output place and renames when the file is whole, which replaces a file that was there. `progress` gets 0 before the export starts, the session's own value about ten times a second while it only rises, and 1 after the rename. It may be called from any thread. An empty plan throws `nothingToExport`. A folder of the output place that is missing or cannot be written throws `cannotWrite` before any work, and so does an export session that fails or a rename that fails. A failed export leaves no file of its own behind.
 <!-- end slot: m1-5-engine -->
 
@@ -119,3 +119,16 @@ The slot `handles` is the two lines `// slot: handles` and `// end slot: handles
 ### m1-12-whole-path
 <!-- slot: m1-12-whole-path -->
 <!-- end slot: m1-12-whole-path -->
+
+### m1-13-canvas
+<!-- slot: m1-13-canvas -->
+A project has one of two shapes, and the plan and the Engine follow it.
+
+- `Sources/ReelsmithCore/Model/Canvas.swift`: `Canvas`, an enum with the two cases `landscape` (16:9, 1920 by 1080 pixels) and `portrait` (9:16, 1080 by 1920 pixels), in that order in `allCases`. `width` and `height` are its pixels. `words` gives the word key of a case, `start.landscape` or `start.portrait`, and `allWords` lists the two. `startChoice` is `landscape`, the shape the start screen has chosen before she taps. The text of the two keys is written into the word files by `m1-6b-new-project`.
+- The canvas on the project: `Project.canvas`. `Project()` is `portrait` and `Project(canvas:)` takes the other one. `Project` has no size of its own any more, only `framesPerSecond`. An edit never changes the canvas.
+- The canvas in the plan: `renderPlan(for:)` fits each upright picture whole inside `canvas.width` by `canvas.height` of the project, centred, and the side that limits the fit takes the canvas value itself. It copies the canvas into `RenderPlan.canvas`, for an empty project too. A plan built with no canvas is `portrait`. The numbers of a `Placement` are pixels of the canvas the plan carries.
+- `Seeds/Seed.swift`: the seed `two-clips-wide` (`Seed.twoClipsWide`) is blue then red, 4200 ticks, on the landscape canvas, where blue fills the canvas and red stands in the middle at x 656.25, y 0, 607.5 by 1080. `Seed.canvas` is `landscape` for it and `portrait` for the other three.
+- The Engine: `buildComposition` sets the render size from `plan.canvas`, and nothing else in the Engine names a size. So `makePlayerItem` and `export` keep their signatures, and the exported file is 1920 by 1080 or 1080 by 1920.
+
+The tests are `Tests/ReelsmithCoreTests/CanvasTests.swift` and `Tests/ReelsmithEngineTests/CanvasEngineTests.swift`, described in the slot `m1-13-canvas` of `docs/testing.md`.
+<!-- end slot: m1-13-canvas -->
