@@ -132,6 +132,21 @@ jobs:
             if [[ "$name" == *.mark.txt* ]]; then
               name="${name%%.mark.txt*}.mark.txt"
             fi
+            # The upload refuses these characters in a file name.
+            name=$(printf '%s' "$name" | tr '":<>|*?\r\n' '_________')
+            # A name that is taken gets a number before its ending.
+            ending=""
+            if [[ "$name" == *.mark.txt ]]; then
+              ending=".mark.txt"
+            elif [[ "$name" == *.* ]]; then
+              ending=".${name##*.}"
+            fi
+            stem="${name%"$ending"}"
+            number=2
+            while [ -e "screens/$name" ]; do
+              name="${stem}_${number}${ending}"
+              number=$((number + 1))
+            done
             if ! cp "$exported/$file" "screens/$name"; then
               echo "Not copied: $file as $name"
               failed=1
