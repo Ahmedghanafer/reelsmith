@@ -31,6 +31,13 @@
 /* end slot: m1-9b-trim-handles */
 
 /* slot: m1-10-export */
+"export.button" = "Export";
+"export.exporting" = "Exporting";
+"export.saved" = "Saved to Photos";
+"export.done" = "Done";
+"export.failed" = "Export failed. Nothing was saved.";
+"export.notAllowed" = "Reelsmith is not allowed to save to Photos. Allow it in Settings, then export again.";
+"export.close" = "Close";
 /* end slot: m1-10-export */
 
 /* slot: m1-12-whole-path */

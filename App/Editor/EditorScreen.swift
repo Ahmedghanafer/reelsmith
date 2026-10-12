@@ -40,6 +40,7 @@ struct EditorScreen: View {
             .region("editor.toolsRegion")
             ZStack {
                 // slot: export
+                ExportButton(store: store)
                 // end slot: export
             }
             .region("editor.exportRegion")
