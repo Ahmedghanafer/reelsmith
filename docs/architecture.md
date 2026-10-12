@@ -74,6 +74,17 @@ Reading a picked video and the state of the start screen.
 
 ### m1-8-timeline
 <!-- slot: m1-8-timeline -->
+The timeline strip, in the new folder `App/Editor/Timeline/`. It decides nothing: places and times come from `TimelineGeometry`, starts and positions from `Project`, and every change goes out as an `EditorAction`.
+
+`App/Editor/Timeline/TimelineView.swift` holds two types of one screen. Neither is named `TimelineView`, because SwiftUI has a type of that name.
+
+- `TimelineStrip` is the SwiftUI side, a `UIViewRepresentable` with `state: EditorState` and `send: @MainActor (EditorAction) -> Void`. The slot `timeline` of `EditorScreen` builds it from `store.state` and `store.send` and gives it a fixed height of 72 points, because a wrapped UIKit view takes all the height it is offered.
+- `TimelineStripView` is the UIKit view. `var state: EditorState` is the state it draws, and setting it draws it. `var send` is the way to send an action. `let strip: UIView` holds the blocks and moves under the playhead: its left edge is time zero, so a point of it at x is the time `TimelineGeometry.time(atX: x)`, it starts 8 points below the top of the view and ends 8 above the bottom. Everything is drawn in `layoutSubviews()`: the blocks are made or removed to match the clips, `strip` is put with its left edge at the middle minus `TimelineGeometry.x(of: state.playhead)`, each block at `x(of: project.start(of:))` with `width(of: clip.duration)`, and the playhead line in the middle of the view above `strip`.
+- A block is one `UILabel` in `strip` with the text "<position>\n<length as clockText>", the identifier `editor.clip.<position>` and the trait selected when its clip is the selection, which also gives it a wider outline. The playhead line has the identifier `editor.playhead` and the playhead's `clockText` as its value. Neither holds a word.
+- A drag anywhere on the view is a scrub: `pause` once when it starts, then `movePlayhead` with `TimelineGeometry.time(atX:)` of the playhead's x at the start minus the distance dragged to the right. Core clamps it. A tap on a block sends `select` with its clip id.
+- The view never mirrors: every frame is set by hand from the left, and the view, `strip` and the blocks force left to right.
+
+The slot `handles` is the two lines `// slot: handles` and `// end slot: handles` at the end of `layoutSubviews()` of `TimelineStripView`, after the blocks and the playhead have their frames. Code there runs inside the view on every draw, so it can read `state`, `send`, `strip` and `bounds`, and it cannot add a stored property. A view above the clips is added to `strip` there when it is not in it yet, and gets its frame there, in the coordinates of `strip`. A new block is added above what `strip` already holds, so such a view is brought to the front there too. To draw a state without sending it, as a trim drag does, set `state`: it stays drawn until SwiftUI hands the view the store's state again, which it does when that state changes.
 <!-- end slot: m1-8-timeline -->
 
 ### m1-6b-new-project
