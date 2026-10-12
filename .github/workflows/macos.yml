@@ -53,7 +53,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO GIT_COMMIT="$(git rev-parse --short HEAD)"
           mkdir Payload
           cp -R build/device/Build/Products/Release-iphoneos/Reelsmith.app Payload/
-          zip -qrReelsmith.ipa Payload
+          zip -qr Reelsmith.ipa Payload
           echo "device build: ${SECONDS}s" >> "$RUNNER_TEMP/timings.txt"
 
       - uses: actions/upload-artifact@v4
