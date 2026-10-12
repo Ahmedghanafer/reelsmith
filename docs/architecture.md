@@ -27,6 +27,15 @@ Each story writes only inside its own slot.
 
 ### m1-2a-engine-target
 <!-- slot: m1-2a-engine-target -->
+`Sources/ReelsmithEngine` is the second package target and the only one that touches AVFoundation. It is the library product `ReelsmithEngine`, which the app links, and it depends on `ReelsmithCore`. It uses frameworks that exist on iOS and macOS alike, never UIKit or SwiftUI. Every file that imports an Apple framework sits whole inside `#if canImport(AVFoundation)`, so Linux compiles nothing of it. The Engine and its tests are in Swift 5 language mode.
+
+- `EngineError.swift`: `EngineError`, what an entry point can throw.
+- `MediaProbe.swift`: `readMediaInfo`, throws `notBuilt` until `m1-6a-media-facts`.
+- `Composition.swift`: `makePlayerItem`, throws `notBuilt` until `m1-5-engine`.
+- `Export.swift`: `export`, throws `notBuilt` until `m1-5-engine`.
+- `TestClipMaker.swift`: `writeTestClip` writes one test clip from its Core values as `<folder>/<name>.mov`: H.264 with the 709 colour properties, and for a clip with sound one mono track of uncompressed 16 bit samples. It makes the folder when missing, writes under a temporary name in that folder, renames, and keeps a file that is already there. A clip with one quarter turn gets the stored transform a 0, b 1, c minus 1, d 0, tx the stored height, ty 0. Other turns are written with no transform.
+
+`UITests/` is the UI test target `ReelsmithUITests` of `project.yml`. The scheme `Reelsmith` has a test action that runs it.
 <!-- end slot: m1-2a-engine-target -->
 
 ### m1-2b-ui-harness
