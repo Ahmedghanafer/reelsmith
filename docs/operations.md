@@ -41,34 +41,50 @@ Once the workflow file is on `dev` it can also be started by hand on any branch:
 gh workflow run "Compile check" --ref <branch>
 ```
 
-## Ask for a macOS run
+## Start a wave run
 
-The `macOS build` workflow builds the app, takes a screenshot in an iPhone simulator and packs an unsigned `Reelsmith.ipa`. macOS minutes are scarce, so it never runs on a push, only when asked for:
+The `macOS build` workflow is the wave run: one run on a macOS runner with Xcode 26.6 that builds everything, runs the Engine tests and the UI tests in an iPhone simulator, and brings back the pictures, one recording and the test results. The repository is public, so runner time is free and a wave run is repeated after each fix until it is green. It starts by hand only. The Executive starts it on `dev` when a wave is merged, and again after a fix:
 
-- A wave of merged stories is checked by one manual run on `dev` after the merges. A manual run works on any branch once the workflow file is on `dev`:
+```
+gh workflow run "macOS build" --ref dev
+gh workflow run "macOS build" --ref dev -f ipa=true
+```
 
-  ```
-  gh workflow run "macOS build" --ref dev
-  ```
-
-- On a pull request: add the label `macos-run`. To run again, remove the label and add it back.
-
-  ```
-  gh pr edit <number> --add-label macos-run
-  gh pr edit <number> --remove-label macos-run
-  ```
-
-The last step of the run prints how many seconds each main step took.
-
-## Fetch the two artifacts
+The second form also makes the unsigned build for the phone. To follow the run and read it:
 
 ```
 gh run list --workflow "macOS build"
+gh run watch <run id>
+gh run view <run id> --log
+```
+
+The run creates one simulator, an iPhone 17 on the iOS 26.5 runtime, and works through seven layers in order:
+
+1. `swift test` builds the package and runs its tests on macOS, the Engine tests among them. `REELSMITH_CLIP_DIR` is set, so the clip maker test leaves `blue.mov` and `red.mov` there.
+2. The project is generated, and the app and the UI tests are built for testing.
+3. The simulator boots, the built app is installed, the right to add to Photos is granted to the app, the two clips are put into the photo library, and the count of videos in the library is printed.
+4. The clock second is written to `recording-start.txt`, one recording of the simulator starts, and the UI tests run without a rebuild into a result bundle.
+5. The screenshots and the mark files are exported from the result bundle under their attachment names, and each mark becomes one line of `recording-index.txt`.
+6. The count of videos in the library is printed again.
+7. Only with `ipa=true`: the device build without code signing, packed as `Reelsmith.ipa`.
+
+A layer is attempted whenever what it needs was built, also after an earlier layer failed. The last step, `Summary`, prints the result of every layer, the two counts and the seconds of each step, and the same text is on the run's page. A layer that reads `skipped` was not attempted. The run is red if any layer failed. A library that does not take the clips, or a count that cannot be read, is printed and does not make the run red. The run stops itself after 30 minutes.
+
+## Fetch the artifacts
+
+Every artifact is uploaded whether a layer failed or not, and is kept for 3 days. In PowerShell or Git Bash on this PC:
+
+```
 gh run download <run id> -n screens -D screens
+gh run download <run id> -n recording -D recording
+gh run download <run id> -n results -D results
 gh run download <run id> -n ipa -D ipa
 ```
 
-`screens\first-screen.png` is the first screen in the simulator. `ipa\Reelsmith.ipa` is the build for the phone.
+- `screens` holds one picture per screenshot of the UI tests, named `<attachment name>.png`, and the mark files `<mark name>.mark.txt`.
+- `recording` holds `recording.mp4`, `recording-start.txt` and `recording-index.txt`. A line of the index is a mark's name, a space, and the seconds from the start of the recording to the mark, so that stretch is found by seeking to that second.
+- `results` holds the result bundle `Reelsmith.xcresult` of the UI tests. It opens only in Xcode. On this PC the log of the run says which test failed and why.
+- `ipa` holds `Reelsmith.ipa`, the build for the phone, only when the run was started with `ipa=true`.
 
 ## Install on the iPhone with Sideloadly
 

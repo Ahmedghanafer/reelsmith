@@ -54,6 +54,12 @@ After a seeded start the editor is not there at once. The first seeded start in 
 
 ### m1-2c-wave-run
 <!-- slot: m1-2c-wave-run -->
+The UI tests in `UITests/` run only in the wave run (the `macOS build` workflow, see `docs/operations.md`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check.
+
+- A screenshot kept with the helper `screenshot(_:)` comes back in the artifact `screens` as `<name>.png`.
+- A mark set with the helper `mark(_:)` comes back as `<name>.mark.txt` in `screens` and as one line of `recording-index.txt` in the artifact `recording`: the name, a space, and the seconds into `recording.mp4`.
+- A failed UI test makes the run red and still brings back the pictures, the recording and the result bundle.
+- Before the UI tests the run puts `blue.mov` and `red.mov` into the simulator's photo library and grants the app the right to add to Photos, so no test meets the system's question.
 <!-- end slot: m1-2c-wave-run -->
 
 ### m1-5-engine

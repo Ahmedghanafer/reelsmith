@@ -2,64 +2,187 @@ name: macOS build
 
 on:
   workflow_dispatch:
-  pull_request:
-    types: [labeled]
+    inputs:
+      ipa:
+        description: Also make the unsigned device build
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
-    if: github.event_name != 'pull_request' || github.event.label.name == 'macos-run'
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Generate the project
+      - name: Select Xcode 26.6 and create the simulator
+        id: setup
         run: |
+          trap 'echo "setup: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version
+          xcrun simctl list runtimes
+          runtime=$(xcrun simctl list runtimes --json | jq -er '[.runtimes[] | select(.name == "iOS 26.5" and .isAvailable)][0].identifier')
+          udid=$(xcrun simctl create "Reelsmith wave run" "iPhone 17" "$runtime")
+          echo "SIMULATOR=$udid" >> "$GITHUB_ENV"
+          echo "Created the simulator $udid on $runtime"
+
+      - name: "Layer 1: build the package and run its tests on macOS"
+        id: layer1
+        if: ${{ !cancelled() }}
+        env:
+          REELSMITH_CLIP_DIR: ${{ runner.temp }}/clips
+        run: |
+          trap 'echo "layer 1: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          swift test
+          ls -l "$REELSMITH_CLIP_DIR"
+
+      - name: "Layer 2: generate the project and build app and UI tests for testing"
+        id: layer2
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: |
+          trap 'echo "layer 2: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           brew install xcodegen
           xcodegen generate
-          echo "project generation: ${SECONDS}s" >> "$RUNNER_TEMP/timings.txt"
-
-      - name: Build for the simulator
-        run: |
-          udid=$(xcrun simctl list devices available --json | jq -er '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
-          echo "SIMULATOR=$udid" >> "$GITHUB_ENV"
-          xcodebuild build -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$udid" \
+          xcodebuild build-for-testing -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$SIMULATOR" \
             -derivedDataPath build/simulator GIT_COMMIT="$(git rev-parse --short HEAD)"
-          echo "simulator build: ${SECONDS}s" >> "$RUNNER_TEMP/timings.txt"
 
-      - name: Boot the simulator and take the screenshot
+      - name: "Layer 3: boot the simulator, install the app, grant Photos, add the clips"
+        id: layer3
+        if: ${{ !cancelled() && steps.layer2.outcome == 'success' }}
+        env:
+          REELSMITH_CLIP_DIR: ${{ runner.temp }}/clips
         run: |
+          trap 'echo "layer 3: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           xcrun simctl bootstatus "$SIMULATOR" -b
           xcrun simctl install "$SIMULATOR" build/simulator/Build/Products/Debug-iphonesimulator/Reelsmith.app
-          xcrun simctl launch "$SIMULATOR" com.ghanafer.reelsmith
-          sleep 10
-          xcrun simctl spawn "$SIMULATOR" launchctl list | grep com.ghanafer.reelsmith
-          xcrun simctl io "$SIMULATOR" screenshot first-screen.png
-          echo "simulator boot and screenshot: ${SECONDS}s" >> "$RUNNER_TEMP/timings.txt"
+          xcrun simctl privacy "$SIMULATOR" grant photos-add com.ghanafer.reelsmith
+          if xcrun simctl addmedia "$SIMULATOR" "$REELSMITH_CLIP_DIR/blue.mov" "$REELSMITH_CLIP_DIR/red.mov"; then
+            echo "Clips into the library: taken" | tee -a "$RUNNER_TEMP/library.txt"
+          else
+            echo "Clips into the library: not taken" | tee -a "$RUNNER_TEMP/library.txt"
+          fi
+          library="$HOME/Library/Developer/CoreSimulator/Devices/$SIMULATOR/data/Media/PhotoData/Photos.sqlite"
+          count=$(sqlite3 -readonly "$library" "select count(*) from ZASSET where ZKIND = 1 and ZTRASHEDSTATE = 0") || count="could not be read"
+          echo "Videos in the library before the UI tests: $count" | tee -a "$RUNNER_TEMP/library.txt"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: screens
-          path: first-screen.png
-          if-no-files-found: error
-
-      - name: Build for a device without code signing
+      - name: "Layer 4: record the simulator and run the UI tests"
+        id: layer4
+        if: ${{ !cancelled() && steps.layer3.outcome == 'success' }}
         run: |
+          trap 'echo "layer 4: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          mkdir -p recording results
+          date +%s > recording/recording-start.txt
+          xcrun simctl io "$SIMULATOR" recordVideo --codec h264 recording/recording.mp4 &
+          recorder=$!
+          status=0
+          xcodebuild test-without-building -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$SIMULATOR" \
+            -derivedDataPath build/simulator -parallel-testing-enabled NO \
+            -resultBundlePath results/Reelsmith.xcresult || status=$?
+          kill -INT "$recorder"
+          wait "$recorder" || true
+          ls -l recording
+          exit "$status"
+
+      - name: "Layer 5: export the screenshots and marks, write the recording index"
+        id: layer5
+        if: ${{ !cancelled() && steps.layer4.outcome != 'skipped' }}
+        run: |
+          trap 'echo "layer 5: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          exported="$RUNNER_TEMP/attachments"
+          xcrun xcresulttool export attachments --path results/Reelsmith.xcresult --output-path "$exported"
+          cat "$exported/manifest.json"
+          mkdir -p screens
+          # An exported file is named <attachment name>_<number>_<identifier>.<ending> in the manifest.
+          jq -r '.[].attachments[] | [.exportedFileName, .suggestedHumanReadableName // .exportedFileName] | @tsv' "$exported/manifest.json" |
+            while IFS=$'\t' read -r file suggested; do
+              name=$(printf '%s' "$suggested" | sed -E 's/_[0-9]+_[0-9A-Fa-f-]{36}//')
+              if [[ "$name" == *.mark* ]]; then
+                name="${name%%.mark*}.mark.txt"
+              fi
+              cp "$exported/$file" "screens/$name"
+            done
+          ls -l screens
+          start=$(cat recording/recording-start.txt)
+          : > recording/recording-index.txt
+          for mark in screens/*.mark.txt; do
+            [ -e "$mark" ] || continue
+            echo "$(basename "$mark" .mark.txt) $(( $(cat "$mark") - start ))" >> recording/recording-index.txt
+          done
+          cat recording/recording-index.txt
+
+      - name: "Layer 6: count the videos in the library again"
+        id: layer6
+        if: ${{ !cancelled() && steps.layer3.outcome == 'success' }}
+        run: |
+          trap 'echo "layer 6: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          library="$HOME/Library/Developer/CoreSimulator/Devices/$SIMULATOR/data/Media/PhotoData/Photos.sqlite"
+          count=$(sqlite3 -readonly "$library" "select count(*) from ZASSET where ZKIND = 1 and ZTRASHEDSTATE = 0") || count="could not be read"
+          echo "Videos in the library after the UI tests: $count" | tee -a "$RUNNER_TEMP/library.txt"
+
+      - name: "Layer 7: build for a device without code signing"
+        id: layer7
+        if: ${{ !cancelled() && inputs.ipa && hashFiles('Reelsmith.xcodeproj/project.pbxproj') != '' }}
+        run: |
+          trap 'echo "layer 7: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           xcodebuild build -project Reelsmith.xcodeproj -scheme Reelsmith -configuration Release \
             -destination "generic/platform=iOS" -derivedDataPath build/device \
             CODE_SIGNING_ALLOWED=NO GIT_COMMIT="$(git rev-parse --short HEAD)"
           mkdir Payload
           cp -R build/device/Build/Products/Release-iphoneos/Reelsmith.app Payload/
           zip -qr Reelsmith.ipa Payload
-          echo "device build: ${SECONDS}s" >> "$RUNNER_TEMP/timings.txt"
 
       - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: screens
+          path: screens
+          retention-days: 3
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: recording
+          path: recording
+          retention-days: 3
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: results
+          path: results
+          retention-days: 3
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && inputs.ipa }}
         with:
           name: ipa
           path: Reelsmith.ipa
-          if-no-files-found: error
+          retention-days: 3
 
-      - name: Print the step timings
-        run: cat "$RUNNER_TEMP/timings.txt"
+      - name: Summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "Setup, Xcode 26.6 and the simulator: ${{ steps.setup.outcome }}"
+            echo "Layer 1, the package and the Engine tests on macOS: ${{ steps.layer1.outcome }}"
+            echo "Layer 2, the project, the app and the UI tests built: ${{ steps.layer2.outcome }}"
+            echo "Layer 3, simulator, install, Photos, clips: ${{ steps.layer3.outcome }}"
+            echo "Layer 4, the recording and the UI tests: ${{ steps.layer4.outcome }}"
+            echo "Layer 5, screenshots, marks and the index: ${{ steps.layer5.outcome }}"
+            echo "Layer 6, the count again: ${{ steps.layer6.outcome }}"
+            echo "Layer 7, the device build: ${{ inputs.ipa && steps.layer7.outcome || 'not asked for' }}"
+            echo "A layer that reads skipped was not attempted, because what it needs was not built."
+            echo
+            cat "$RUNNER_TEMP/library.txt" 2>/dev/null || echo "The library was not reached."
+            echo
+            echo "Seconds per step:"
+            cat "$RUNNER_TEMP/timings.txt"
+          } | sed 's/$/  /' | tee -a "$GITHUB_STEP_SUMMARY"
