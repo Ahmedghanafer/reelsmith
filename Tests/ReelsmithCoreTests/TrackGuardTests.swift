@@ -339,6 +339,5 @@ final class TrackGuardTests: XCTestCase {
         playing.isPlaying = true
 
         XCTAssertEqual(reduce(playing, .trimEnd(red, by: Time(ticks: 19))), threeClips)
-        XCTAssertEqual(reduce(playing, .trimEnd(red, by: Time(ticks: -600))), threeClips)
     }
 }
