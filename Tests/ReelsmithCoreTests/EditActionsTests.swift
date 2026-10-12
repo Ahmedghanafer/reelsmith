@@ -14,6 +14,12 @@ final class EditActionsTests: XCTestCase {
         return state
     }
 
+    private func playing(_ state: EditorState) -> EditorState {
+        var next = state
+        next.isPlaying = true
+        return next
+    }
+
     private func lengths(_ state: EditorState) -> [Int64] {
         state.project.clips.map { $0.duration.ticks }
     }
@@ -84,6 +90,13 @@ final class EditActionsTests: XCTestCase {
         XCTAssertFalse(reduce(playing, .deleteSelected).isPlaying)
     }
 
+    func testAnEditThatIsDoneButChangesNothingStillPauses() {
+        let state = playing(threeClips)
+
+        XCTAssertFalse(reduce(state, .addClips([])).isPlaying)
+        XCTAssertFalse(reduce(state, .trimStart(red, by: Time(ticks: 19))).isPlaying)
+    }
+
     func testAddClipsWithOtherFactsForAMediaInUseKeepsTheStateValid() {
         var shorter = TestClip.red.info
         shorter.duration = Time(ticks: 1200)
@@ -92,6 +105,15 @@ final class EditActionsTests: XCTestCase {
 
         assertValid(next, "red again with a shorter length")
         XCTAssertEqual(ids(next), [1, 2, 3, 4])
+        XCTAssertEqual(lengths(next), [1800, 2400, 1200, 2400])
+        XCTAssertEqual(next.project.media[TestClip.red.info.id], TestClip.red.info)
+    }
+
+    func testAddClipsTakesAMediaOfExactlyTheShortestLength() {
+        var info = TestClip.turned.info
+        info.duration = TimelineGeometry.minimumClip
+
+        XCTAssertEqual(lengths(reduce(empty, .addClips([info]))), [60])
     }
 
     func testAddClipsStoresTheGivenFactsOfAMediaNoClipUsesAnyMore() {
@@ -187,9 +209,9 @@ final class EditActionsTests: XCTestCase {
     }
 
     func testSplitThatCannotBeDoneReturnsTheStateUnchanged() {
-        XCTAssertEqual(reduce(seedAt(1800), .split), seedAt(1800))
-        XCTAssertEqual(reduce(seedAt(40), .split), seedAt(40))
-        XCTAssertEqual(reduce(seedAt(5400), .split), seedAt(5400))
+        XCTAssertEqual(reduce(playing(seedAt(1800)), .split), playing(seedAt(1800)))
+        XCTAssertEqual(reduce(playing(seedAt(40)), .split), playing(seedAt(40)))
+        XCTAssertEqual(reduce(playing(seedAt(5400)), .split), playing(seedAt(5400)))
         XCTAssertEqual(reduce(empty, .split), empty)
     }
 
@@ -236,11 +258,31 @@ final class EditActionsTests: XCTestCase {
     }
 
     func testATrimOfAClipWhoseMediaHasNoFactsReturnsTheStateUnchanged() {
-        var state = threeClips
+        var state = playing(threeClips)
         state.project.media[TestClip.red.info.id] = nil
 
         XCTAssertEqual(reduce(state, .trimStart(red, by: Time(ticks: 600))), state)
         XCTAssertEqual(reduce(state, .trimEnd(red, by: Time(ticks: 600))), state)
+    }
+
+    func testATrimOfAClipThatIsNotInTheProjectReturnsTheStateUnchanged() {
+        let state = playing(threeClips)
+
+        XCTAssertEqual(reduce(state, .trimStart(ClipID(99), by: Time(ticks: 600))), state)
+        XCTAssertEqual(reduce(state, .trimEnd(ClipID(99), by: Time(ticks: 600))), state)
+    }
+
+    func testATrimOfAClipWhoseSourceIsNotWholeFramesKeepsItsLengthInWholeFrames() {
+        var info = TestClip.turned.info
+        info.duration = Time(ticks: 1219)
+        let added = reduce(empty, .addClips([info]))
+
+        let shorter = reduce(added, .trimEnd(ClipID(1), by: Time(ticks: 600)))
+        let longer = reduce(shorter, .trimEnd(ClipID(1), by: Time(ticks: -5000)))
+
+        XCTAssertEqual(lengths(shorter), [600])
+        XCTAssertEqual(lengths(longer), [1200])
+        assertValid(longer, "grown back to the end of a source of 1219 ticks")
     }
 
     // Criterion 6
@@ -315,7 +357,17 @@ final class EditActionsTests: XCTestCase {
     }
 
     func testDeleteWithNothingSelectedReturnsTheStateUnchanged() {
-        XCTAssertEqual(reduce(seedAt(600), .deleteSelected), seedAt(600))
+        XCTAssertEqual(reduce(playing(seedAt(600)), .deleteSelected), playing(seedAt(600)))
+    }
+
+    func testAfterADeleteThePlayheadKeepsItsTimeAndTheMediaFactsStay() {
+        var state = seedAt(3000)
+        state.selection = blue
+
+        let next = reduce(state, .deleteSelected)
+
+        XCTAssertEqual(next.playhead, Time(ticks: 3000))
+        XCTAssertEqual(next.project.media[TestClip.blue.info.id], TestClip.blue.info)
     }
 
     func testCanDeleteIsTrueExactlyWhenAClipIsSelected() {
