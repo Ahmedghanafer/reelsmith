@@ -125,15 +125,15 @@ jobs:
           cat "$exported/manifest.json"
           mkdir -p screens
           # An exported file is named <attachment name>_<number>_<identifier>.<ending> in the manifest.
-          jq -r '.[].attachments[] | [.exportedFileName, .suggestedHumanReadableName // .exportedFileName] | @tsv' "$exported/manifest.json" > "$exported/names.tsv"
+          jq -r '.[].attachments[] | [.exportedFileName, (.suggestedHumanReadableName // .exportedFileName | gsub("[\r\n]"; "_"))] | @tsv' "$exported/manifest.json" > "$exported/names.tsv"
           failed=0
           while IFS=$'\t' read -r file suggested; do
             name=$(printf '%s' "$suggested" | sed -E 's/_[0-9]+_[0-9A-Fa-f-]{36}//')
             if [[ "$name" == *.mark.txt* ]]; then
               name="${name%%.mark.txt*}.mark.txt"
             fi
-            # The upload refuses these characters in a file name.
-            name=$(printf '%s' "$name" | tr '":<>|*?\r\n' '_________')
+            # The upload refuses these characters in a file name, and a line break, which is replaced above.
+            name=$(printf '%s' "$name" | tr '":<>|*?' '_______')
             # A name that is taken gets a number before its ending.
             ending=""
             if [[ "$name" == *.mark.txt ]]; then
