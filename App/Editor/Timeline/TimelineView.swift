@@ -109,7 +109,12 @@ final class TimelineStripView: UIView {
         playhead.frame = CGRect(x: middle - 1, y: 0, width: 2, height: bounds.height)
         playhead.accessibilityValue = state.playhead.clockText
 
-        // Views above the clips are added to `strip` and laid out here.
+        // Views above the clips are added and laid out here. A view that stays inside `strip` is added
+        // to `strip`. A view that can lie outside it, as a handle at the edge of the first or the last clip,
+        // is added to this view below `playhead`, at `strip.frame.minX` plus its x: a view gets no touch
+        // outside the bounds of the view that holds it. A tap on such a view also reaches the tap of this
+        // view unless it has a tap of its own. A `state` set here as a preview is written over when the
+        // state of the store changes, so a drag that previews starts by sending `pause`.
         // slot: handles
         // end slot: handles
     }

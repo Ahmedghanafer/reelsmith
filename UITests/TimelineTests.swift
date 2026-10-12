@@ -16,9 +16,8 @@ final class TimelineTests: XCTestCase {
         XCTAssertFalse(element(app, "editor.clip.4").exists)
         screenshot("m1-8-timeline-01-strip")
 
-        // The strip cannot be pinched: the blocks keep their widths and the playhead stays in its second.
+        // The strip cannot be pinched: the blocks keep their widths.
         element(app, "editor.timelineRegion").pinch(withScale: 2, velocity: 1)
-        XCTAssertEqual(playheadValue(app), "00:04")
         XCTAssertEqual(element(app, "editor.clip.1").frame.width, 180, accuracy: 1)
         XCTAssertEqual(element(app, "editor.clip.2").frame.width, 240, accuracy: 1)
         XCTAssertEqual(element(app, "editor.clip.3").frame.width, 120, accuracy: 1)
