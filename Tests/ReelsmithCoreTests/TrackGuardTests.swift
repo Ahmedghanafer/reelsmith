@@ -173,10 +173,10 @@ private func drawAction(_ draw: inout Draw, in state: EditorState) -> EditorActi
     }
 }
 
-/// The valid state that `reduce` keeps, word for word from its contract: "A state is valid when every clip lies
-/// inside its source, every clip length is a whole number of frames and at least `minimumClip`, the playhead is
-/// a whole frame from zero to the project length, and the selection is a clip of the project or none."
-/// docs/architecture.md says the same under m1-3-edit-actions.
+/// The valid state that `reduce` must keep: "A state is valid when every clip lies inside its source, every
+/// clip length is a whole number of frames and at least `minimumClip`, the playhead is a whole frame from zero
+/// to the project length, and the selection is a clip of the project or none."
+/// docs/architecture.md says the same in short under m1-3-edit-actions.
 /// Answers the first part of that sentence the state breaks, or nil for a valid state.
 private func breach(in state: EditorState) -> String? {
     for clip in state.project.clips {
