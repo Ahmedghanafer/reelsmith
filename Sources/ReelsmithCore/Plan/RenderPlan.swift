@@ -39,10 +39,13 @@ public struct Segment: Equatable, Sendable {
 public struct RenderPlan: Equatable, Sendable {
     public var segments: [Segment]
     public var duration: Time
+    /// Copied from the project.
+    public var canvas: Canvas
 
-    public init(segments: [Segment], duration: Time) {
+    public init(segments: [Segment], duration: Time, canvas: Canvas = .portrait) {
         self.segments = segments
         self.duration = duration
+        self.canvas = canvas
     }
 }
 
@@ -52,8 +55,8 @@ public enum PlanError: Error, Equatable, Sendable {
 
 /// An empty project gives an empty plan and no error.
 public func renderPlan(for project: Project) throws -> RenderPlan {
-    let canvasWidth = Double(Project.canvasWidth)
-    let canvasHeight = Double(Project.canvasHeight)
+    let canvasWidth = Double(project.canvas.width)
+    let canvasHeight = Double(project.canvas.height)
     var segments: [Segment] = []
     var start = Time.zero
     for clip in project.clips {
@@ -80,5 +83,5 @@ public func renderPlan(for project: Project) throws -> RenderPlan {
             duration: clip.duration, placement: placement, hasSound: info.hasSound))
         start = start + clip.duration
     }
-    return RenderPlan(segments: segments, duration: start)
+    return RenderPlan(segments: segments, duration: start, canvas: project.canvas)
 }

@@ -76,7 +76,7 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
     // Standard range colour properties, so a high dynamic range source is converted for preview and export alike.
     // https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition/colorprimaries
     let videoComposition = AVMutableVideoComposition()
-    videoComposition.renderSize = CGSize(width: Project.canvasWidth, height: Project.canvasHeight)
+    videoComposition.renderSize = CGSize(width: plan.canvas.width, height: plan.canvas.height)
     videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(Project.framesPerSecond))
     videoComposition.instructions = instructions
     videoComposition.colorPrimaries = AVVideoColorPrimaries_ITU_R_709_2
