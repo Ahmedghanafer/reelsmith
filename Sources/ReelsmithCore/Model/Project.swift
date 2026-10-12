@@ -21,10 +21,10 @@ public struct Clip: Equatable, Sendable {
 }
 
 public struct Project: Equatable, Sendable {
-    public static let canvasWidth = 1080
-    public static let canvasHeight = 1920
     public static let framesPerSecond = 30
 
+    /// The shape every picture is fitted into.
+    public var canvas: Canvas
     /// The main track, in order, always touching.
     public var clips: [Clip]
     /// The facts of every media file a clip uses.
@@ -32,7 +32,8 @@ public struct Project: Equatable, Sendable {
     /// Starts at 1, each new clip takes it and adds 1.
     public var nextClipID: Int
 
-    public init() {
+    public init(canvas: Canvas = .portrait) {
+        self.canvas = canvas
         clips = []
         media = [:]
         nextClipID = 1
