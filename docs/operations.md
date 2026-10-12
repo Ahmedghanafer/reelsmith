@@ -12,6 +12,31 @@ gh run watch <run id>
 gh run view <run id> --log
 ```
 
+## Ask for a compile check
+
+The `Compile check` workflow compiles a pull request's Apple code on a macOS runner with Xcode 26.6. It generates the project, runs `swift test` for the package (the Engine tests run here, with no simulator), builds the app and the UI tests for a simulator with `xcodebuild build-for-testing`, and runs `plutil -lint` over the word files. Every part runs even when an earlier one failed, and the check is red if any part is. No simulator is booted and no UI test runs. It stops itself after 15 minutes.
+
+Put the label `compile` on the pull request to start it. To run it again after a fix, take the label off and put it back:
+
+```
+gh pr edit <number> --add-label compile
+gh pr edit <number> --remove-label compile
+```
+
+The result shows among the checks of the pull request as `Compile check`, and in the run list:
+
+```
+gh pr checks <number>
+gh run list --workflow "Compile check" --branch <branch>
+gh run view <run id> --log
+```
+
+Once the workflow file is on `dev` it can also be started by hand on any branch:
+
+```
+gh workflow run "Compile check" --ref <branch>
+```
+
 ## Ask for a macOS run
 
 The `macOS build` workflow builds the app, takes a screenshot in an iPhone simulator and packs an unsigned `Reelsmith.ipa`. macOS minutes are scarce, so it never runs on a push, only when asked for:
