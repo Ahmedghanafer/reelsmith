@@ -14,16 +14,16 @@ Each story writes only inside its own slot.
 <!-- slot: m1-2a-engine-target -->
 Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only, first in the compile check. On Linux the target compiles to nothing. A test makes its clips with `writeTestClip` in a folder of its own under the temporary folder. No media file is committed.
 
-- `TestClipMakerTests.swift` holds the five test clips to the table: stored size, H.264, the exact frame count, the exact length of the picture track, the two colours at half the length, the sound track of blue and red with its peak, the 709 colour properties, the stored transform of `turned.mov`, the write under a temporary name and the kept file.
+- `TestClipMakerTests.swift` holds the five test clips to the table: stored size, H.264, the exact frame count, the exact length of the picture track, the two colours at half the length, the sound track of blue and red with its peak, the 709 colour properties, the stored transform of `turned.mov` and the identity transform of the other four, the write under a temporary name and the kept file.
 - When `REELSMITH_CLIP_DIR` is set, `testLeavesBlueAndRedInTheClipFolder` leaves `blue.mov` and `red.mov` in that folder. When it is not set the test is skipped.
 
 The helpers in `Support/MediaReading.swift` read a file back. Each takes the file's URL:
 
-- `pixel(of:at:x:y:)`: the colour of one pixel of the stored picture as an `RGB`, x and y from the top left, in the frame shown at a Core `Time`. The turn of the file is not applied.
+- `pixel(of:at:x:y:)`: the colour of one pixel of the stored picture as an `RGB`, x from the left and y from the top, in the frame shown at a Core `Time`. The turn of the file is not applied.
 - `frameCount(of:)`: the number of picture frames, counted without decoding.
 - `soundPeak(of:)`: the peak of the first sound track, from 0 to 1 of full scale.
 - `storedSize(of:)`: width and height of the picture as stored.
-- `tracks(of:)`: one `TrackFacts` per track with `kind` ("vide" or "soun"), `coding` ("avc1" for H.264, "lpcm" for uncompressed sound), `duration`, and for sound `sampleRate`, `channels` and `bitsPerSample`.
+- `tracks(of:)`: one `TrackFacts` per track with `kind` ("vide" or "soun"), `coding` ("avc1" for H.264, "lpcm" for uncompressed sound, and an AAC track reads back as "aac " with a trailing space), `duration`, and for sound `sampleRate`, `channels` and `bitsPerSample`.
 - `fileType(of:)`: the major brand the file starts with, "qt  " for a QuickTime movie.
 - `colourProperties(of:)`: the primaries, transfer function and matrix the picture track reports, by the platform's names.
 - `storedTransform(of:)`: the six numbers a, b, c, d, tx, ty of the picture track.

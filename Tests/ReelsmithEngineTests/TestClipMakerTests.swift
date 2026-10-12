@@ -106,6 +106,14 @@ final class TestClipMakerTests: XCTestCase {
         XCTAssertEqual(transform, [0, 1, -1, 0, 1080, 0])
     }
 
+    func testTheOtherFourClipsHaveNoTurnInTheirStoredTransform() async throws {
+        for clip in [TestClip.blue, TestClip.red, TestClip.green, TestClip.fast] {
+            let file = try await writeTestClip(clip, to: Self.folder)
+            let transform = try await storedTransform(of: file)
+            XCTAssertEqual(transform, [1, 0, 0, 1, 0, 0], clip.name)
+        }
+    }
+
     func testLeavesBlueAndRedInTheClipFolder() async throws {
         guard let path = ProcessInfo.processInfo.environment["REELSMITH_CLIP_DIR"] else {
             throw XCTSkip("REELSMITH_CLIP_DIR is not set")
