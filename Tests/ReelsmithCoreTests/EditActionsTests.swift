@@ -94,6 +94,19 @@ final class EditActionsTests: XCTestCase {
         XCTAssertEqual(ids(next), [1, 2, 3, 4])
     }
 
+    func testAddClipsStoresTheGivenFactsOfAMediaNoClipUsesAnyMore() {
+        var state = reduce(empty, .addClips([TestClip.red.info]))
+        state.selection = ClipID(1)
+        state = reduce(state, .deleteSelected)
+        var shorter = TestClip.red.info
+        shorter.duration = Time(ticks: 1200)
+
+        let next = reduce(state, .addClips([shorter]))
+
+        XCTAssertEqual(lengths(next), [1200])
+        XCTAssertEqual(next.project.media[shorter.id], shorter)
+    }
+
     // Criterion 2
 
     func testAddClipsOnTheEmptySeedPutsBlueThenRedAtTheEnd() {
@@ -142,6 +155,18 @@ final class EditActionsTests: XCTestCase {
         XCTAssertEqual(next.selection, blue)
         XCTAssertEqual(next.playhead, Time(ticks: 600))
         XCTAssertNil(reduce(seedAt(600), .split).selection)
+    }
+
+    func testTheTwoPartsOfASplitTouchInsideTheSourceOfATrimmedClip() {
+        var state = reduce(threeClips, .trimStart(blue, by: Time(ticks: 600)))
+        state.playhead = Time(ticks: 400)
+
+        let next = reduce(state, .split)
+
+        XCTAssertEqual(next.project.clips[0].sourceStart, Time(ticks: 600))
+        XCTAssertEqual(next.project.clips[0].duration, Time(ticks: 400))
+        XCTAssertEqual(next.project.clips[1].sourceStart, Time(ticks: 1000))
+        XCTAssertEqual(next.project.clips[1].duration, Time(ticks: 800))
     }
 
     // Criterion 4
