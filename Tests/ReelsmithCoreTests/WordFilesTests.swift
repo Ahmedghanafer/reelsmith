@@ -4,10 +4,11 @@ import XCTest
 /// Holds the three word files `App/Resources/<en, ar, sv>.lproj/Localizable.strings` to the same keys.
 final class WordFilesTests: XCTestCase {
     func testTheWordFilesOfTheRepositoryAgree() throws {
-        let repository = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-
         XCTAssertEqual(try wordFileProblems(in: repository), [])
+    }
+
+    func testTheKeyOfTheSeedTextIsInTheEnglishFile() throws {
+        XCTAssertTrue(try wordKeys(of: "en").contains("editor.seedInfo"))
     }
 
     func testWordFilesThatAgreeHaveNoProblem() throws {
@@ -71,8 +72,18 @@ final class WordFilesTests: XCTestCase {
 
 private let wordLanguages = ["en", "ar", "sv"]
 
-private func wordFile(of language: String, in repository: URL) -> URL {
-    repository.appendingPathComponent("App/Resources/" + language + ".lproj/Localizable.strings")
+private let repository = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+
+private func wordFile(of language: String, in folder: URL) -> URL {
+    folder.appendingPathComponent("App/Resources/" + language + ".lproj/Localizable.strings")
+}
+
+/// The keys of the word file of one language ("en", "ar" or "sv") in the repository, in the order of the file.
+/// For the tests of other stories, which hold the keys a Core state can give to the English file.
+func wordKeys(of language: String) throws -> [String] {
+    let content = try String(contentsOf: wordFile(of: language, in: repository), encoding: .utf8)
+    return try XCTUnwrap(wordLines(of: content)).map { $0.key }
 }
 
 /// Everything wrong with the three word files under a folder, one line each. Empty when they agree.

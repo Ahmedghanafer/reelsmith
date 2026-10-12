@@ -20,6 +20,7 @@ targets:
         - ReelsmithUITests
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.ghanafer.reelsmith
+      SWIFT_VERSION: "5.0"
       TARGETED_DEVICE_FAMILY: "1"
     info:
       path: App/Info.plist
@@ -38,4 +39,5 @@ targets:
       - target: Reelsmith
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.ghanafer.reelsmith.uitests
+      SWIFT_VERSION: "5.0"
       GENERATE_INFOPLIST_FILE: YES
