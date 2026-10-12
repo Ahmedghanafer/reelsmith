@@ -21,6 +21,8 @@ Each story writes only inside its own slot.
 
 ### m1-3-edit-actions
 <!-- slot: m1-3-edit-actions -->
+- `Editor/Edits.swift`: the bodies of `addClips`, `split`, `trimStart`, `trimEnd` and `deleteSelected`, which `reduce` calls, and of `canSplit` and `canDelete`. An edit that cannot be done returns the state unchanged. A trim past a limit stops at the limit. Every edit keeps a valid state valid: each clip inside its source, each length whole frames and at least `TimelineGeometry.minimumClip`, the playhead a whole frame inside the project, the selection a clip of the project or none.
+- `Editor/TimelineGeometry.swift`: `TimelineGeometry`, the fixed scale of the timeline strip (60 points a second), the shortest clip (60 ticks), and the pure functions between a time and a point and from a drag in points to a trim amount.
 <!-- end slot: m1-3-edit-actions -->
 
 ### m1-2a-engine-target
