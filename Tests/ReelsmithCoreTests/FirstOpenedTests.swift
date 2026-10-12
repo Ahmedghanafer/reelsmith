@@ -41,4 +41,12 @@ final class FirstOpenedTests: XCTestCase {
 
         XCTAssertEqual(firstOpened(in: folder, now: Date()), .unavailable)
     }
+
+    func testFileThatHoldsNoDateIsUnavailableAndLeftUnchanged() throws {
+        let file = folder.appendingPathComponent("first-opened.txt")
+        try "not a date".write(to: file, atomically: true, encoding: .utf8)
+
+        XCTAssertEqual(firstOpened(in: folder, now: Date()), .unavailable)
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "not a date")
+    }
 }
