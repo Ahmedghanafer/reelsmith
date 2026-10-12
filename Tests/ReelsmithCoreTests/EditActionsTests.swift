@@ -48,8 +48,6 @@ final class EditActionsTests: XCTestCase {
         }
     }
 
-    // Criterion 1
-
     func testEveryActionReturnsAValidStateFromAValidState() {
         let actions: [EditorAction] = [
             .addClips([TestClip.turned.info, TestClip.fast.info]),
@@ -129,8 +127,6 @@ final class EditActionsTests: XCTestCase {
         XCTAssertEqual(next.project.media[shorter.id], shorter)
     }
 
-    // Criterion 2
-
     func testAddClipsOnTheEmptySeedPutsBlueThenRedAtTheEnd() {
         let next = reduce(empty, .addClips([TestClip.blue.info, TestClip.red.info]))
 
@@ -159,8 +155,6 @@ final class EditActionsTests: XCTestCase {
         XCTAssertEqual(next.project.media[long.id], long)
         XCTAssertEqual(next.project.nextClipID, 5)
     }
-
-    // Criterion 3
 
     func testSplitCutsTheClipUnderThePlayheadInTwo() {
         var state = seedAt(600)
@@ -191,8 +185,6 @@ final class EditActionsTests: XCTestCase {
         XCTAssertEqual(next.project.clips[1].duration, Time(ticks: 800))
     }
 
-    // Criterion 4
-
     func testCanSplitNeedsTheShortestClipOnBothSidesOfThePlayhead() {
         XCTAssertTrue(seedAt(600).canSplit)
         XCTAssertTrue(seedAt(60).canSplit)
@@ -214,8 +206,6 @@ final class EditActionsTests: XCTestCase {
         XCTAssertEqual(reduce(playing(seedAt(5400)), .split), playing(seedAt(5400)))
         XCTAssertEqual(reduce(empty, .split), empty)
     }
-
-    // Criterion 5
 
     func testTrimEndMovesTheLastFrameAndTheLaterClipsFollow() {
         let next = reduce(threeClips, .trimEnd(red, by: Time(ticks: 600)))
@@ -285,8 +275,6 @@ final class EditActionsTests: XCTestCase {
         assertValid(longer, "grown back to the end of a source of 1219 ticks")
     }
 
-    // Criterion 6
-
     func testATrimStopsAtItsLimit() {
         let endShort = reduce(threeClips, .trimEnd(red, by: Time(ticks: 5000)))
         let startShort = reduce(threeClips, .trimStart(red, by: Time(ticks: 5000)))
@@ -317,8 +305,6 @@ final class EditActionsTests: XCTestCase {
         XCTAssertEqual(lateStart.selection, green)
         XCTAssertEqual(lateStart.playhead, Time(ticks: 4800))
     }
-
-    // Criterion 7
 
     func testDeleteSelectedRemovesTheClipAndClearsTheSelection() {
         var state = seedAt(600)
