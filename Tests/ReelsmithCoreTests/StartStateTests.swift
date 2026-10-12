@@ -68,6 +68,21 @@ final class StartStateTests: XCTestCase {
         XCTAssertEqual(StartState.copying.after(.copyingEnded([short])), .failed)
     }
 
+    func testAnEventWithNoMeaningInACaseLeavesItUnchanged() {
+        let facts = [TestClip.blue.info]
+        let ready = StartState.ready(Seed.twoClips.project)
+
+        XCTAssertEqual(StartState.idle.after(.copyingEnded(facts)), .idle)
+        XCTAssertEqual(StartState.idle.after(.failureConfirmed), .idle)
+        XCTAssertEqual(StartState.copying.after(.pickerClosed(chosen: 1)), .copying)
+        XCTAssertEqual(StartState.copying.after(.failureConfirmed), .copying)
+        XCTAssertEqual(StartState.failed.after(.pickerClosed(chosen: 1)), .failed)
+        XCTAssertEqual(StartState.failed.after(.copyingEnded(facts)), .failed)
+        XCTAssertEqual(ready.after(.pickerClosed(chosen: 1)), ready)
+        XCTAssertEqual(ready.after(.copyingEnded(facts)), ready)
+        XCTAssertEqual(ready.after(.failureConfirmed), ready)
+    }
+
     func testConfirmingTheFailedCaseGivesIdle() {
         XCTAssertEqual(StartState.failed.after(.failureConfirmed), .idle)
     }

@@ -1,10 +1,12 @@
 #if canImport(AVFoundation)
 import CoreGraphics
+import CoreMedia
 import Foundation
 import ReelsmithCore
 import XCTest
 
-// The mapping from a stored transform to quarter turns is internal to the Engine.
+// The mapping from a stored transform to quarter turns and the rounding of a length to ticks are internal
+// to the Engine.
 @testable import ReelsmithEngine
 
 final class MediaProbeTests: XCTestCase {
@@ -44,12 +46,18 @@ final class MediaProbeTests: XCTestCase {
         XCTAssertTrue(info.hasSound)
     }
 
-    func testTheStoredTransformsOfP6MapToTheirQuarterTurns() {
+    func testTheFourStoredTransformsMapToTheirQuarterTurns() {
         // The six numbers a, b, c, d, tx, ty of a picture stored 1920 by 1080.
         XCTAssertEqual(quarterTurns(of: CGAffineTransform(a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0)), 0)
         XCTAssertEqual(quarterTurns(of: CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: 1080, ty: 0)), 1)
         XCTAssertEqual(quarterTurns(of: CGAffineTransform(a: -1, b: 0, c: 0, d: -1, tx: 1920, ty: 1080)), 2)
         XCTAssertEqual(quarterTurns(of: CGAffineTransform(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: 1920)), 3)
+    }
+
+    func testALengthIsRoundedDownToATick() {
+        XCTAssertEqual(wholeTicks(of: CMTime(value: 2999, timescale: 3000)), 599)
+        XCTAssertEqual(wholeTicks(of: CMTime(value: 1001, timescale: 30000)), 20)
+        XCTAssertEqual(wholeTicks(of: CMTime(value: 1800, timescale: 600)), 1800)
     }
 
     func testAFileThatIsNotAVideoThrowsCannotRead() async throws {
