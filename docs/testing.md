@@ -58,6 +58,11 @@ After a seeded start the editor is not there at once. The first seeded start in 
 
 ### m1-5-engine
 <!-- slot: m1-5-engine -->
+Both files run with `swift test` on macOS, on clips from `writeTestClip`. Sizes, frame counts and lengths are exact, a colour matches within 24 of 255 per channel.
+
+- `ExportTests.swift` exports the plan of `three-clips` once for the tests that read it, over an old file at an output place whose name does not end in mp4. They hold the file type, the one H.264 picture track of 1080 by 1920 with 270 frames in 9 seconds, the one AAC sound track that ends at 7.0 seconds with its peak, the middle colours at 1.0, 5.0 and 8.0 seconds with the black bars around blue, the 709 colour properties with an 8 bit H.264 profile, and the progress values. The time of that export is printed and fails only above 120 seconds. Further tests export a plan built by hand with a trimmed start (180 frames, the colours 2 frames either side of each join, the sound up to 4.0 seconds), `turned` alone (white above blue) and `fast` alone (60 frames in 2 seconds), and hold the three errors with nothing left at the output place.
+- `CompositionTests.swift` holds the player item of `three-clips`: 9 seconds long, and the frames at 1.0, 5.0 and 8.0 seconds drawn through its video composition are 1080 by 1920 with a blue, red and green middle.
+- `ExportTests.swift` also gives every Engine test `assertNear(_:_:_:)`, the colour comparison within 24 per channel.
 <!-- end slot: m1-5-engine -->
 
 ### m1-6a-media-facts
