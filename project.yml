@@ -12,7 +12,11 @@ targets:
     sources: [App]
     dependencies:
       - package: ReelsmithCore
-    scheme: {}
+      - package: ReelsmithCore
+        product: ReelsmithEngine
+    scheme:
+      testTargets:
+        - ReelsmithUITests
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.ghanafer.reelsmith
       TARGETED_DEVICE_FAMILY: "1"
@@ -24,3 +28,12 @@ targets:
         GitCommit: $(GIT_COMMIT)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+  ReelsmithUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Reelsmith
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.ghanafer.reelsmith.uitests
+      GENERATE_INFOPLIST_FILE: YES

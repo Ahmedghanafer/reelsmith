@@ -1,0 +1,51 @@
+name: Compile check
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  compile:
+    if: github.event_name != 'pull_request' || github.event.label.name == 'compile'
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Select Xcode 26.6
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version
+
+      - name: Generate the project
+        if: ${{ !cancelled() }}
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Test the package on macOS
+        if: ${{ !cancelled() }}
+        env:
+          REELSMITH_CLIP_DIR: ${{ runner.temp }}/clips
+        run: swift test
+
+      - name: Build app and UI tests for a simulator
+        if: ${{ !cancelled() }}
+        run: |
+          udid=$(xcrun simctl list devices available --json | jq -er '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
+          xcodebuild build-for-testing -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$udid" \
+            -derivedDataPath build/simulator
+
+      - name: Lint the word files
+        if: ${{ !cancelled() }}
+        run: |
+          shopt -s nullglob
+          files=(App/Resources/*.lproj/*.strings)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No word files yet."
+          else
+            plutil -lint "${files[@]}"
+          fi
