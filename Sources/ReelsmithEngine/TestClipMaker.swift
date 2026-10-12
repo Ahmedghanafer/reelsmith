@@ -37,7 +37,7 @@ public func writeTestClip(_ clip: TestClip, to folder: URL) async throws -> URL 
     let picture = AVAssetWriterInput(mediaType: .video, outputSettings: pictureSettings)
     picture.mediaTimeScale = 600
     if clip.quarterTurns == 1 {
-        // One clockwise quarter turn shows the stored picture upright (P6, seam A).
+        // One clockwise quarter turn shows the stored picture upright.
         picture.transform = CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: CGFloat(clip.storedHeight), ty: 0)
     }
     let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: picture, sourcePixelBufferAttributes: nil)
