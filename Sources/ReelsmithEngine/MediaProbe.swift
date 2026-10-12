@@ -30,14 +30,18 @@ public func readMediaInfo(id: MediaID, fileName: String, in mediaFolder: URL) as
         let range = try await picture.load(.timeRange)
         let soundTracks = try await asset.loadTracks(withMediaType: .audio)
 
-        let length = CMTimeConvertScale(range.duration, timescale: 600, method: .roundTowardZero)
         return MediaInfo(
             id: id, fileName: fileName, width: Int(size.width), height: Int(size.height),
-            duration: Time(ticks: length.value), quarterTurns: quarterTurns(of: transform),
+            duration: Time(ticks: wholeTicks(of: range.duration)), quarterTurns: quarterTurns(of: transform),
             hasSound: !soundTracks.isEmpty)
     } catch {
         throw EngineError.cannotRead
     }
+}
+
+/// A length in ticks, 600 a second, rounded down.
+func wholeTicks(of length: CMTime) -> Int64 {
+    CMTimeConvertScale(length, timescale: 600, method: .roundTowardZero).value
 }
 
 /// The clockwise quarter turns that show a picture with this stored transform upright.
