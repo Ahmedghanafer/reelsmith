@@ -47,7 +47,6 @@ final class ExportTests: XCTestCase {
         return Exported(output: output, file: copy, progress: recorder.values, seconds: seconds)
     }
 
-    // Criterion 1
     func testThreeClipsExportIsOneMPEG4FileOf1080By1920With270FramesIn9Seconds() async throws {
         let made = try await Self.threeClips.value
         let file = made.file
@@ -70,7 +69,6 @@ final class ExportTests: XCTestCase {
         XCTAssertEqual(count, 270)
     }
 
-    // Criterion 2
     func testThreeClipsExportIsBlueThenRedThenGreenWithBarsAroundBlue() async throws {
         let file = try await Self.threeClips.value.file
         let blue = try await pixel(of: file, at: Time(ticks: 600), x: 540, y: 960)
@@ -84,22 +82,82 @@ final class ExportTests: XCTestCase {
         let below = try await pixel(of: file, at: Time(ticks: 600), x: 540, y: 1820)
         assertNear(above, RGB(r: 0, g: 0, b: 0), "above at 1.0")
         assertNear(below, RGB(r: 0, g: 0, b: 0), "below at 1.0")
+
+        // The upright clips after the wide one fill the canvas to its top and bottom.
+        let checks: [(Int64, RGB, String)] = [
+            (3000, RGB(r: 255, g: 0, b: 0), "at 5.0"), (4800, RGB(r: 0, g: 255, b: 0), "at 8.0"),
+        ]
+        for (ticks, wanted, what) in checks {
+            let top = try await pixel(of: file, at: Time(ticks: ticks), x: 540, y: 100)
+            let bottom = try await pixel(of: file, at: Time(ticks: ticks), x: 540, y: 1820)
+            assertNear(top, wanted, "(540, 100) " + what)
+            assertNear(bottom, wanted, "(540, 1820) " + what)
+        }
     }
 
-    // Criterion 3
+    /// A plan built by hand, since the Engine takes the turn and the rectangle from the plan and not from the
+    /// file. `turned.mov` with no turn is white on the left and blue on the right, here as a wide strip. Then
+    /// red at half size in the middle of the canvas.
+    func testAPictureIsScaledAndMovedToItsPlaceAndNotMirrored() async throws {
+        let plan = RenderPlan(
+            segments: [
+                Segment(
+                    clip: ClipID(1), media: MediaID("turned"), sourceStart: .zero, timelineStart: .zero,
+                    duration: Time(ticks: 1200),
+                    placement: Placement(quarterTurns: 0, x: 0, y: 656.25, width: 1080, height: 607.5),
+                    hasSound: false),
+                Segment(
+                    clip: ClipID(2), media: MediaID("red"), sourceStart: .zero, timelineStart: Time(ticks: 1200),
+                    duration: Time(ticks: 2400),
+                    placement: Placement(quarterTurns: 0, x: 270, y: 480, width: 540, height: 960), hasSound: true),
+            ],
+            duration: Time(ticks: 3600))
+        let file = try await Self.exported(plan, clips: [.turned, .red], name: "placed.out").file
+
+        let white = RGB(r: 255, g: 255, b: 255)
+        let blue = RGB(r: 0, g: 0, b: 255)
+        let red = RGB(r: 255, g: 0, b: 0)
+        let black = RGB(r: 0, g: 0, b: 0)
+        let checks: [(Int64, Int, Int, RGB)] = [
+            (600, 270, 672, white), (600, 810, 1248, blue), (600, 270, 640, black), (600, 810, 1280, black),
+            (2400, 290, 500, red), (2400, 790, 1420, red), (2400, 250, 960, black), (2400, 830, 960, black),
+            (2400, 540, 460, black), (2400, 540, 1460, black),
+        ]
+        for (ticks, x, y, wanted) in checks {
+            let colour = try await pixel(of: file, at: Time(ticks: ticks), x: x, y: y)
+            assertNear(colour, wanted, "(\(x), \(y)) at \(ticks) ticks")
+        }
+    }
+
+    /// A clip without sound between two with sound, like a time lapse between two camera clips.
+    func testASilentClipBetweenTwoWithSoundLeavesItsStretchSilentAndTheLaterSoundInPlace() async throws {
+        let plan = try wholePlan([.red, .green, .blue])
+        let file = try await Self.exported(plan, clips: [.red, .green, .blue], name: "silent-between.out").file
+
+        let sound = try await tracks(of: file).first { $0.kind == "soun" }
+        XCTAssertEqual(sound?.duration, CMTime(value: 5400, timescale: 600), "\(String(describing: sound?.duration.seconds))")
+        // Red sounds up to 4.0 seconds, green is silent up to 6.0, blue sounds from 6.0 to 9.0.
+        let first = try await soundPeak(of: file, from: Time(ticks: 2160), to: Time(ticks: 2340))
+        let silent = try await soundPeak(of: file, from: Time(ticks: 2460), to: Time(ticks: 3540))
+        let third = try await soundPeak(of: file, from: Time(ticks: 3660), to: Time(ticks: 3840))
+        XCTAssertGreaterThan(first, 0.1, "3.6 to 3.9 seconds")
+        XCTAssertLessThan(silent, 0.02, "4.1 to 5.9 seconds")
+        XCTAssertGreaterThan(third, 0.1, "6.1 to 6.4 seconds")
+    }
+
     func testThreeClipsExportHasSoundThatEndsWithTheLastClipThatHasIt() async throws {
         let file = try await Self.threeClips.value.file
         let sound = try await tracks(of: file).filter { $0.kind == "soun" }
         XCTAssertEqual(sound.first?.duration, CMTime(value: 4200, timescale: 600), "\(String(describing: sound.first?.duration.seconds))")
-        let peak = try await soundPeak(of: file, upTo: Time(ticks: 4200))
+        let peak = try await soundPeak(of: file, from: .zero, to: Time(ticks: 4200))
         XCTAssertGreaterThan(peak, 0.1)
     }
 
-    // Criterion 4
-    func testAPlanWithATrimmedStartExportsTheRightFramesAndSound() async throws {
+    /// Built by hand: blue from its second second for 2 seconds, then the first 2 seconds of red, then green whole.
+    static let trimmedPlan: RenderPlan = {
         let whole = Placement(quarterTurns: 0, x: 0, y: 0, width: 1080, height: 1920)
         let wide = Placement(quarterTurns: 0, x: 0, y: 656.25, width: 1080, height: 607.5)
-        let plan = RenderPlan(
+        return RenderPlan(
             segments: [
                 Segment(
                     clip: ClipID(1), media: MediaID("blue"), sourceStart: Time(ticks: 600), timelineStart: .zero,
@@ -112,7 +170,10 @@ final class ExportTests: XCTestCase {
                     duration: Time(ticks: 1200), placement: whole, hasSound: false),
             ],
             duration: Time(ticks: 3600))
-        let file = try await Self.exported(plan, clips: [.blue, .red, .green], name: "trimmed.out").file
+    }()
+
+    func testAPlanWithATrimmedStartExportsTheRightFramesAndSound() async throws {
+        let file = try await Self.exported(Self.trimmedPlan, clips: [.blue, .red, .green], name: "trimmed.out").file
 
         let count = try await frameCount(of: file)
         XCTAssertEqual(count, 180)
@@ -133,13 +194,12 @@ final class ExportTests: XCTestCase {
 
         let sound = all.first { $0.kind == "soun" }
         XCTAssertEqual(sound?.duration, CMTime(value: 2400, timescale: 600), "\(String(describing: sound?.duration.seconds))")
-        let peak = try await soundPeak(of: file, upTo: Time(ticks: 2100))
+        let peak = try await soundPeak(of: file, from: .zero, to: Time(ticks: 2100))
         XCTAssertGreaterThan(peak, 0.1)
     }
 
-    // Criterion 5
     func testTheTurnedClipExportsUprightWithWhiteAboveBlue() async throws {
-        let plan = try planOfOne(.turned)
+        let plan = try wholePlan([.turned])
         let file = try await Self.exported(plan, clips: [.turned], name: "turned.out").file
 
         let size = try await storedSize(of: file)
@@ -153,9 +213,8 @@ final class ExportTests: XCTestCase {
         assertNear(bottom, RGB(r: 0, g: 0, b: 255), "(540, 1700) at 1.0")
     }
 
-    // Criterion 5
     func testTheFastClipExportsTo60FramesIn2Seconds() async throws {
-        let plan = try planOfOne(.fast)
+        let plan = try wholePlan([.fast])
         let file = try await Self.exported(plan, clips: [.fast], name: "fast.out").file
 
         let count = try await frameCount(of: file)
@@ -166,7 +225,6 @@ final class ExportTests: XCTestCase {
         assertNear(middle, RGB(r: 255, g: 255, b: 0), "middle at 1.0")
     }
 
-    // Criterion 7
     func testTheExportedPictureReportsThe709ColourPropertiesAt8Bit() async throws {
         let file = try await Self.threeClips.value.file
         let colour = try await colourProperties(of: file)
@@ -179,7 +237,6 @@ final class ExportTests: XCTestCase {
         XCTAssertTrue([66, 77, 100].contains(profile), "profile \(profile)")
     }
 
-    // Criterion 8
     func testProgressGoesFrom0To1AndNeverBackAndTheExportTimeIsPrinted() async throws {
         let made = try await Self.threeClips.value
         print("m1-5-engine: the export of three-clips took \(made.seconds) seconds, expected 40, limit 120")
@@ -191,7 +248,6 @@ final class ExportTests: XCTestCase {
         XCTAssertTrue(zip(made.progress, made.progress.dropFirst()).allSatisfy { $0 <= $1 }, "\(made.progress)")
     }
 
-    // Criterion 9
     func testAnEmptyPlanThrowsNothingToExportAndLeavesNoFile() async throws {
         let folder = try emptyFolder()
         let output = folder.appendingPathComponent("out.mp4")
@@ -205,7 +261,6 @@ final class ExportTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), [])
     }
 
-    // Criterion 9
     func testAMissingSourceThrowsSourceMissingWithTheIdAndLeavesNoFile() async throws {
         let mediaFolder = try emptyFolder()
         let folder = try emptyFolder()
@@ -221,7 +276,6 @@ final class ExportTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), [])
     }
 
-    // Criterion 9
     func testAnOutputPlaceThatCannotBeWrittenThrowsCannotWriteAndLeavesNoFile() async throws {
         for clip in Seed.threeClips.testClips {
             _ = try await writeTestClip(clip, to: Self.folder)
@@ -240,11 +294,15 @@ final class ExportTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), [])
     }
 
-    /// The plan of one test clip alone, whole.
-    private func planOfOne(_ clip: TestClip) throws -> RenderPlan {
+    /// The plan of test clips in a row, each whole.
+    private func wholePlan(_ clips: [TestClip]) throws -> RenderPlan {
         var project = Project()
-        project.media[clip.info.id] = clip.info
-        project.clips.append(Clip(id: ClipID(1), media: clip.info.id, sourceStart: .zero, duration: clip.duration))
+        for clip in clips {
+            project.media[clip.info.id] = clip.info
+            project.clips.append(
+                Clip(id: ClipID(project.nextClipID), media: clip.info.id, sourceStart: .zero, duration: clip.duration))
+            project.nextClipID += 1
+        }
         return try renderPlan(for: project)
     }
 
@@ -255,14 +313,16 @@ final class ExportTests: XCTestCase {
         return folder
     }
 
-    /// The peak of the first sound track from zero up to a time, from 0 to 1 of full scale.
+    /// The peak of the first sound track between two times, from 0 to 1 of full scale.
     /// https://developer.apple.com/documentation/avfoundation/avassetreader/timerange
-    private func soundPeak(of file: URL, upTo end: Time) async throws -> Double {
+    private func soundPeak(of file: URL, from start: Time, to end: Time) async throws -> Double {
         let asset = AVURLAsset(url: file)
         let soundTracks = try await asset.loadTracks(withMediaType: .audio)
         let track = try XCTUnwrap(soundTracks.first)
         let reader = try AVAssetReader(asset: asset)
-        reader.timeRange = CMTimeRange(start: .zero, duration: CMTime(value: end.ticks, timescale: 600))
+        reader.timeRange = CMTimeRange(
+            start: CMTime(value: start.ticks, timescale: 600),
+            duration: CMTime(value: end.ticks - start.ticks, timescale: 600))
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatLinearPCM,
             AVLinearPCMBitDepthKey: 16,
@@ -309,7 +369,7 @@ final class ExportTests: XCTestCase {
 }
 
 /// Collects the progress values of one export, which may come from any thread.
-final class ProgressRecorder: @unchecked Sendable {
+private final class ProgressRecorder: @unchecked Sendable {
     private let lock = NSLock()
     private var collected: [Double] = []
 
@@ -327,7 +387,7 @@ final class ProgressRecorder: @unchecked Sendable {
 }
 
 /// A colour matches within 24 of 255 per channel.
-func assertNear(_ colour: RGB, _ wanted: RGB, _ what: String, file: StaticString = #filePath, line: UInt = #line) {
+private func assertNear(_ colour: RGB, _ wanted: RGB, _ what: String, file: StaticString = #filePath, line: UInt = #line) {
     XCTAssertLessThanOrEqual(abs(Int(colour.r) - Int(wanted.r)), 24, what + " red", file: file, line: line)
     XCTAssertLessThanOrEqual(abs(Int(colour.g) - Int(wanted.g)), 24, what + " green", file: file, line: line)
     XCTAssertLessThanOrEqual(abs(Int(colour.b) - Int(wanted.b)), 24, what + " blue", file: file, line: line)

@@ -7,8 +7,9 @@ import ReelsmithCore
 /// Replaces a file at the output place. The sound ends where the last clip with sound ends, no silence is added
 /// after it. Progress goes from 0 to 1 and never goes back.
 ///
-/// Throws `nothingToExport` for an empty plan, `sourceMissing` for a file that is not in the media folder and
-/// `cannotWrite` when the file cannot be written. The file is written under a temporary name beside the output
+/// Throws `nothingToExport` for an empty plan, `sourceMissing` for a file that is not in the media folder,
+/// `cannotRead` for a file that has no picture or cannot be put into the composition, and `cannotWrite` when
+/// the output cannot be written or the export session fails. The file is written under a temporary name beside the output
 /// place and renamed when it is whole.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avassetexportsession

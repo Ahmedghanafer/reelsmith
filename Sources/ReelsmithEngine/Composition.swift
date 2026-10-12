@@ -86,7 +86,7 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
 }
 
 /// From the stored picture, with its origin at the top left, to its place on the canvas: the quarter turns of
-/// seam A first, then the scale to the size of the place, then the move to it.
+/// the placement first, then the scale to the size of the place, then the move to it.
 private func transform(for placement: Placement, width: Int, height: Int) -> CGAffineTransform {
     let stored = CGSize(width: width, height: height)
     var upright = stored
