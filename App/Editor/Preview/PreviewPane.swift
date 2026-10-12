@@ -32,7 +32,8 @@ struct PreviewPane: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: 16) {
                 Button {
-                    store.send(state.isPlaying ? .pause : .play)
+                    // Read at the tap, so a pause the player sent a moment ago is seen.
+                    store.send(store.state.isPlaying ? .pause : .play)
                 } label: {
                     Image(systemName: state.isPlaying ? "pause.fill" : "play.fill")
                         .frame(width: 44, height: 44)
