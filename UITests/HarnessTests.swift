@@ -47,6 +47,18 @@ final class HarnessTests: XCTestCase {
         // The seed text is the Swedish line of the word file, so the language reached the app.
         let info = app.staticTexts["editor.seedInfo"].label
         XCTAssertTrue(info.hasPrefix("2 klipp, "), info)
+        screenshot("m1-2b-ui-harness-02-shell-sv")
+    }
+
+    func testAStartInArabicOpensTheShellInArabic() {
+        let app = startApp(seed: "two-clips", language: "ar")
+
+        XCTAssertTrue(app.descendants(matching: .any)["editor.root"].waitForExistence(timeout: 60))
+        // The Arabic line of the word file with both numbers in it.
+        let info = app.staticTexts["editor.seedInfo"].label
+        XCTAssertTrue(info.contains("المقاطع: 2"), info)
+        XCTAssertTrue(info.contains("الملفات: 2"), info)
+        screenshot("m1-2b-ui-harness-01-shell-ar")
     }
 
     /// The content of the slot `start` is some text, and the editor with its seed text is not there.

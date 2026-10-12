@@ -5,7 +5,7 @@ import ReelsmithEngine
 /// The start on a seed: writes the seed's test clips once into `<caches>/Seeds/`, keeps a file that is
 /// already there, and gives the store the editor opens with. Nil when the launch names no seed.
 /// A clip that cannot be written leaves its file missing: the file count of `editor.seedInfo` shows it
-/// and the error is printed.
+/// and the error is logged.
 ///
 /// https://developer.apple.com/documentation/foundation/filemanager/urls(for:in:)
 @MainActor
@@ -17,7 +17,7 @@ func seedStart(_ options: LaunchOptions) async -> EditorStore? {
         do {
             _ = try await writeTestClip(clip, to: folder)
         } catch {
-            print("seed start: " + clip.name + ".mov was not written: \(error)")
+            NSLog("%@", "seed start: " + clip.name + ".mov was not written: \(error)")
         }
     }
     let project: Project = seed.project
