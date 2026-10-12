@@ -102,6 +102,23 @@ For a later test of the strip: a block is one element, and its frame is expected
 
 ### m1-9b-trim-handles
 <!-- slot: m1-9b-trim-handles -->
+`UITests/TrimTests.swift` holds the two trim handles on the seed `three-clips`. It is built by the compile check and first runs in a wave run. Every test waits 60 seconds for `editor.root` after a start and uses no control of the preview or the tools. How far a clip can be trimmed is `reduce` and `TimelineGeometry`, held on Linux by `EditActionsTests.swift` and `TimelineGeometryTests.swift`, and the UI tests below hold that the handles follow them.
+
+The screen is 402 points wide with the playhead at x 201, and a handle is 24 points wide outside its edge. A drag starts in the middle of a handle with `press(forDuration:thenDragTo:)`, so each test starts with a `-playhead` that puts the tapped point, the handle and the end of the drag on the screen. A block is tapped a quarter of its width from its left edge. The project length is read by three drags of the strip to the left from x 362, where no handle lies in any of these tests, and then the value of `editor.playhead`.
+
+- The handles, at 3000 ticks: before a tap `editor.trim.start` and `editor.trim.end` do not exist. After a tap on the red block the start handle ends where the block starts and the end handle starts where the block ends, and they read "Trim start" and "Trim end". A tap on the start handle, which lies over the end of the blue block, leaves red selected.
+- The end handle, at 3000 ticks: a drag of 120 points to the left leaves `editor.clip.2` narrower than 240 points with green against it, red still selected and the playhead still at "00:05", so the drag was no scrub. The project length reads "00:06", "00:07" or "00:08".
+- The start handle, at 3000 ticks: a drag of 120 points to the right leaves the block narrower with its left edge where it was, against blue, and the same length.
+- The limits, at 2700 ticks: a drag of the end handle of red 300 points to the left leaves the block 6 points wide with both handles outside its edges, and the length reads "00:05". A drag of 300 points to the right then leaves it 240 points wide, and the length reads "00:09". The screen has no room for a drag of 600 points: 300 is 66 points past each limit.
+- The first clip, with no playhead value: the start handle of blue lies left of the strip. A drag of 120 points to the right leaves blue narrower with its left edge under the playhead.
+- The last clip, at 4200 ticks: the end handle of green lies right of the strip. A drag of 60 points to the left leaves green narrower, and the length reads "00:07" or "00:08".
+- Arabic, at 3000 ticks: the start handle is still at the left edge of the red block and the end handle at the right, and they read the Arabic lines of the word file.
+
+That nothing is sent while the finger moves, that one trim is sent on release and that a drag starts with `pause` cannot be seen on this screen and is read in the diff.
+
+On Linux, `Tests/ReelsmithCoreTests/TrimWordsTests.swift` fails when `trim.start` or `trim.end` is missing from the English, the Arabic or the Swedish word file.
+
+Screenshots: `m1-9b-trim-handles-01-handles`, `m1-9b-trim-handles-01-handles-ar`, `m1-9b-trim-handles-02-shortest`. Marks: `m1-9b-trim-handles-01-trim-end`, `m1-9b-trim-handles-02-trim-start`, `m1-9b-trim-handles-03-limits`, `m1-9b-trim-handles-04-first-clip`, `m1-9b-trim-handles-05-last-clip`.
 <!-- end slot: m1-9b-trim-handles -->
 
 ### m1-9a-split-delete

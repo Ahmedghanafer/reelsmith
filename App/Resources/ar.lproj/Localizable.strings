@@ -17,6 +17,8 @@
 /* end slot: m1-9a-split-delete */
 
 /* slot: m1-9b-trim-handles */
+"trim.start" = "قص البداية";
+"trim.end" = "قص النهاية";
 /* end slot: m1-9b-trim-handles */
 
 /* slot: m1-10-export */
