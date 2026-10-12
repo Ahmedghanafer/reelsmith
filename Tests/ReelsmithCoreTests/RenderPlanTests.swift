@@ -70,6 +70,13 @@ final class RenderPlanTests: XCTestCase {
             Placement(quarterTurns: 2, x: 0, y: 656.25, width: 1080, height: 607.5))
     }
 
+    func testTheSideThatLimitsTheFitIsExactlyTheCanvasSide() throws {
+        let fitted = try placement(width: 1170, height: 2532, quarterTurns: 0)
+
+        XCTAssertEqual(fitted.height, 1920)
+        XCTAssertEqual(fitted.y, 0)
+    }
+
     func testASmallPictureIsEnlargedToFillTheCanvas() throws {
         XCTAssertEqual(try placement(width: 540, height: 960, quarterTurns: 0), wholeCanvas)
     }
