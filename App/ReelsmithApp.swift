@@ -15,7 +15,8 @@ struct ReelsmithApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
+            // A stack and no Group: a Group would hand the task to each branch and so run the seed start twice.
+            ZStack {
                 if let store {
                     EditorScreen(store: store)
                 } else {
@@ -25,7 +26,7 @@ struct ReelsmithApp: App {
                 }
             }
             .task {
-                if let seeded = await seedStart(options) {
+                if let seeded = await seedStart(options), store == nil {
                     store = seeded
                 }
             }
