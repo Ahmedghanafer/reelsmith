@@ -84,6 +84,16 @@ final class EditActionsTests: XCTestCase {
         XCTAssertFalse(reduce(playing, .deleteSelected).isPlaying)
     }
 
+    func testAddClipsWithOtherFactsForAMediaInUseKeepsTheStateValid() {
+        var shorter = TestClip.red.info
+        shorter.duration = Time(ticks: 1200)
+
+        let next = reduce(threeClips, .addClips([shorter]))
+
+        assertValid(next, "red again with a shorter length")
+        XCTAssertEqual(ids(next), [1, 2, 3, 4])
+    }
+
     // Criterion 2
 
     func testAddClipsOnTheEmptySeedPutsBlueThenRedAtTheEnd() {
