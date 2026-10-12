@@ -37,12 +37,16 @@ struct VideoPicker: UIViewControllerRepresentable {
     @MainActor
     final class Coordinator: NSObject, PHPickerViewControllerDelegate {
         private let closed: @MainActor ([NSItemProvider]) -> Void
+        private var reported = false
 
         init(closed: @escaping @MainActor ([NSItemProvider]) -> Void) {
             self.closed = closed
         }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            // One picker closes once: a second report would start a second copy.
+            guard !reported else { return }
+            reported = true
             closed(results.map { $0.itemProvider })
         }
     }

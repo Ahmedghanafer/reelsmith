@@ -73,8 +73,6 @@ struct StartScreen: View {
 
     /// The picker closed with these videos, none when she cancelled.
     private func pickerClosed(_ videos: [NSItemProvider]) {
-        // A second report of the same picker is not a second close.
-        guard picking else { return }
         picking = false
         state = state.after(.pickerClosed(chosen: videos.count))
         guard state == .copying else { return }
