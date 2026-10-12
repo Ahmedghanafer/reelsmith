@@ -117,6 +117,7 @@ final class TimelineStripView: UIView {
         // for them. A `state` set as a preview is written over when the state of the store changes,
         // so a drag that previews first sends `pause` and then sets `state` on each step.
         // slot: handles
+        TrimHandle.layout(in: self, below: playhead)
         // end slot: handles
     }
 
