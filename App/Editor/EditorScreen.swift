@@ -43,9 +43,12 @@ struct EditorScreen: View {
         .accessibilityIdentifier("editor.root")
     }
 
-    /// Shown on a seed start only: the clips of the project and the files the seed start left in the media folder.
+    /// Shown on a seed start only: the clips of the project, and how many of its media files are in the media folder.
+    /// A half written file under another name does not count.
     private var seedInfo: Words {
-        let files = (try? FileManager.default.contentsOfDirectory(atPath: store.mediaFolder.path)) ?? []
+        let files = store.state.project.media.values.filter {
+            FileManager.default.fileExists(atPath: store.mediaFolder.appendingPathComponent($0.fileName).path)
+        }
         return Words("editor.seedInfo", [String(store.state.project.clips.count), String(files.count)])
     }
 }

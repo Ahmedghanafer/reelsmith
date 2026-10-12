@@ -46,7 +46,7 @@ UI tests live in `UITests/`, are built by the compile check and run only in a wa
 
 A test class that uses them is marked `@MainActor`. A control is found by its identifier, as in `app.descendants(matching: .any)["editor.root"]`, which does not depend on the kind of the element.
 
-`UITests/HarnessTests.swift` starts on `two-clips` and finds `editor.root` and the four regions from top to bottom while they are empty, reads `editor.seedInfo` (it starts with "2 clips, " and names 2 files or more, which shows the seed start wrote clips inside the simulator), starts with no seed and with an unknown seed name (text is shown, no `editor.root`, no `editor.seedInfo`), and starts once in Swedish with a playhead and the export failure, where `editor.seedInfo` starts with "2 klipp, ". Nothing on the shell shows the playhead or the export failure yet. Screenshots: `m1-2b-ui-harness-01-shell`, `m1-2b-ui-harness-02-no-seed`. Mark: `m1-2b-ui-harness-01-launch`.
+`UITests/HarnessTests.swift` starts on `two-clips` and finds `editor.root` and the four regions from top to bottom while they are empty, reads `editor.seedInfo` (it starts with "2 clips, " and names 2 files or more, the media files of the project found in the media folder, which shows the seed start wrote clips inside the simulator), starts with no seed and with an unknown seed name (text is shown, no `editor.root`, no `editor.seedInfo`), and starts once in Swedish with a playhead and the export failure, where `editor.seedInfo` starts with "2 klipp, ". Nothing on the shell shows the playhead or the export failure yet. Screenshots: `m1-2b-ui-harness-01-shell`, `m1-2b-ui-harness-02-no-seed`. Mark: `m1-2b-ui-harness-01-launch`.
 <!-- end slot: m1-2b-ui-harness -->
 
 ### m1-2c-wave-run
