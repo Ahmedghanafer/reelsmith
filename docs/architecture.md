@@ -113,6 +113,9 @@ The start screen, in the new folder `App/Start/`. It is the content of the slot 
 
 ### m1-9a-split-delete
 <!-- slot: m1-9a-split-delete -->
+The edit buttons, in the new folder `App/Editor/Tools/`.
+
+- `App/Editor/Tools/ToolsRow.swift`: `ToolsRow`, a SwiftUI row with `state: EditorState` and `send: @MainActor (EditorAction) -> Void`. The slot `tools` of `EditorScreen` builds it from `store.state` and `store.send`. It holds two buttons from leading to trailing, so Arabic mirrors the row: `editor.split` with the key `tools.split`, enabled when `canSplit` is true, sends `split`, and `editor.delete` with the key `tools.delete`, enabled when `canDelete` is true, sends `deleteSelected`. It decides nothing and asks no question.
 <!-- end slot: m1-9a-split-delete -->
 
 ### m1-10-export
