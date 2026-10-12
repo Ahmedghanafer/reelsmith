@@ -52,8 +52,9 @@ public enum ExportState: Equatable, Sendable {
         switch (self, event) {
         case (.idle, .started):
             return .exporting(percent: 0)
-        case (.exporting(let percent), .progress(let value)):
-            return .exporting(percent: max(percent, Int(min(max(value, 0), 1) * 100)))
+        // A value that is not a number is not above zero and changes nothing.
+        case (.exporting(let percent), .progress(let value)) where value > 0:
+            return .exporting(percent: max(percent, Int(min(value, 1) * 100)))
         case (.exporting, .saved):
             return .saved
         case (.exporting, .failed(let notAllowed)):

@@ -41,6 +41,13 @@ final class ExportStateTests: XCTestCase {
         }
     }
 
+    func testAProgressValueThatIsNotANumberChangesNothing() {
+        let half = ExportState.idle.after(.started).after(.progress(0.5))
+
+        XCTAssertEqual(half.after(.progress(.nan)), half)
+        XCTAssertEqual(half.after(.progress(.infinity)).percentText, "100%")
+    }
+
     func testSavedGivesTheKeyOfSavedAndNoPercent() {
         let saved = ExportState.idle.after(.started).after(.saved)
 
