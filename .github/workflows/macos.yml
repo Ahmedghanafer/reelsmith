@@ -108,8 +108,8 @@ jobs:
           jq -r '.[].attachments[] | [.exportedFileName, .suggestedHumanReadableName // .exportedFileName] | @tsv' "$exported/manifest.json" |
             while IFS=$'\t' read -r file suggested; do
               name=$(printf '%s' "$suggested" | sed -E 's/_[0-9]+_[0-9A-Fa-f-]{36}//')
-              if [[ "$name" == *.mark* ]]; then
-                name="${name%%.mark*}.mark.txt"
+              if [[ "$name" == *.mark.txt* ]]; then
+                name="${name%%.mark.txt*}.mark.txt"
               fi
               cp "$exported/$file" "screens/$name"
             done
