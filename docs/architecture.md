@@ -58,6 +58,10 @@ The app side. Screens live in `App/`, hold no logic and no word, and draw a Core
 
 ### m1-5-engine
 <!-- slot: m1-5-engine -->
+The Engine turns a render plan into video. Both entry points take the plan, the facts of its media and the media folder, and find the file of a media id at `<media folder>/<fileName>`.
+
+- `Composition.swift`: `makePlayerItem` gives the player item of a plan, on the main actor. The internal `buildComposition` in the same file is the one builder for the player item and for the export. It makes a composition with one picture track and, when a segment has sound, one sound track that ends where the last segment with sound ends. Its video composition is 1080 by 1920 at 30 frames a second with one instruction per segment, whose transform applies the quarter turns of the segment's placement to the stored picture, scales it to the placement's size and moves it to the placement's corner. The canvas stays black around it. The video composition carries the 709 colour properties, so a high dynamic range source is converted to standard range for the preview and the export alike. It throws `sourceMissing` with the media id when the plan names media with no facts or a file that is not in the media folder, and `cannotRead` when a file has no picture track or cannot be put into the composition.
+- `Export.swift`: `export` writes the plan as an MPEG-4 file with H.264 and AAC through an export session with the highest quality preset. It writes under a temporary name in the folder of the output place and renames when the file is whole, which replaces a file that was there. `progress` gets 0 before the export starts, the session's own value about ten times a second while it only rises, and 1 after the rename. It may be called from any thread. An empty plan throws `nothingToExport`. A folder of the output place that is missing or cannot be written throws `cannotWrite` before any work, and so does an export session that fails or a rename that fails. A failed export leaves no file of its own behind.
 <!-- end slot: m1-5-engine -->
 
 ### m1-6a-media-facts
