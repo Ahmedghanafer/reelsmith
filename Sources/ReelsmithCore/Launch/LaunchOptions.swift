@@ -12,5 +12,18 @@ public struct LaunchOptions: Equatable, Sendable {
         seed = nil
         playhead = nil
         exportFails = false
+        for (index, argument) in arguments.enumerated() {
+            let value = index + 1 < arguments.count ? arguments[index + 1] : ""
+            switch argument {
+            case "-seed":
+                seed = Seed(rawValue: value)
+            case "-playhead":
+                playhead = Int64(value).map { Time(ticks: $0) }
+            case "-export-fails":
+                exportFails = true
+            default:
+                break
+            }
+        }
     }
 }

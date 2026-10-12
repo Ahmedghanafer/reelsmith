@@ -1,0 +1,24 @@
+/* slot: m1-2b-ui-harness */
+"editor.seedInfo" = "%1$@ klipp, %2$@ filer";
+/* end slot: m1-2b-ui-harness */
+
+/* slot: m1-6b-new-project */
+/* end slot: m1-6b-new-project */
+
+/* slot: m1-7-preview */
+/* end slot: m1-7-preview */
+
+/* slot: m1-8-timeline */
+/* end slot: m1-8-timeline */
+
+/* slot: m1-9a-split-delete */
+/* end slot: m1-9a-split-delete */
+
+/* slot: m1-9b-trim-handles */
+/* end slot: m1-9b-trim-handles */
+
+/* slot: m1-10-export */
+/* end slot: m1-10-export */
+
+/* slot: m1-12-whole-path */
+/* end slot: m1-12-whole-path */
