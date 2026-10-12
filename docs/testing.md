@@ -33,6 +33,20 @@ The helpers in `Support/MediaReading.swift` read a file back. Each takes the fil
 
 ### m1-2b-ui-harness
 <!-- slot: m1-2b-ui-harness -->
+On Linux:
+
+- `LaunchOptionsTests.swift` holds the three launch values: each one read, all three among other arguments, an empty list, an unknown seed name, a missing value, and that no other argument changes anything.
+- `WordFilesTests.swift` reads `App/Resources/<en, ar, sv>.lproj/Localizable.strings` from the repository and fails when their key sets differ, when a text is empty, when the placeholders of a key differ between languages, when a key appears twice, or when a file holds anything but comments and lines of a key. It shows each of the first four on word files it writes into a temporary folder. A story that adds a key needs no test of its own for the three files.
+
+UI tests live in `UITests/`, are built by the compile check and run only in a wave run. The helpers in `UITests/Support/Harness.swift` are methods of every test case:
+
+- `startApp(seed:language:playhead:exportFails:)` starts the app and returns it. `seed` is the name of a seed such as `"two-clips"`, or nil for a start with no seed. `language` is `"en"` (the default), `"ar"` or `"sv"` and is passed as `-AppleLanguages (<code>)` and `-AppleLocale <code>`. `playhead` is in ticks.
+- `screenshot(_:)` keeps a picture of the screen under the given name, also when the test passes. The name is `<story key>-<two digits>-<what>`.
+- `mark(_:)` marks the start of a stretch of the recording: a text attachment `<name>.mark.txt` with the clock second of the call, whole seconds since 1970.
+
+A test class that uses them is marked `@MainActor`. A control is found by its identifier, as in `app.descendants(matching: .any)["editor.root"]`, which does not depend on the kind of the element.
+
+`UITests/HarnessTests.swift` starts on `two-clips` and finds `editor.root` and the four regions from top to bottom while they are empty, reads `editor.seedInfo` (it starts with "2 clips, " and names 2 files or more, which shows the seed start wrote clips inside the simulator), starts with no seed and with an unknown seed name (text is shown, no `editor.root`, no `editor.seedInfo`), and starts once in Swedish with a playhead and the export failure. Screenshots: `m1-2b-ui-harness-01-shell`, `m1-2b-ui-harness-02-no-seed`. Mark: `m1-2b-ui-harness-01-launch`.
 <!-- end slot: m1-2b-ui-harness -->
 
 ### m1-2c-wave-run
