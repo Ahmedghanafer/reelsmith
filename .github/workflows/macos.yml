@@ -75,9 +75,10 @@ jobs:
 
       - name: "Layer 4: record the simulator and run the UI tests"
         id: layer4
-        if: ${{ !cancelled() && steps.layer3.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.layer2.outcome == 'success' }}
         run: |
           trap 'echo "layer 4: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          xcrun simctl bootstatus "$SIMULATOR" -b
           mkdir -p recording results
           date +%s > recording/recording-start.txt
           xcrun simctl io "$SIMULATOR" recordVideo --codec h264 recording/recording.mp4 &
@@ -85,8 +86,17 @@ jobs:
           status=0
           xcodebuild test-without-building -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$SIMULATOR" \
             -derivedDataPath build/simulator -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 300 \
+            -maximum-test-execution-time-allowance 300 \
             -resultBundlePath results/Reelsmith.xcresult || status=$?
           kill -INT "$recorder" || true
+          for _ in $(seq 30); do
+            kill -0 "$recorder" 2>/dev/null || break
+            sleep 1
+          done
+          if kill -KILL "$recorder" 2>/dev/null; then
+            echo "The recorder did not end on the interrupt and was ended hard."
+          fi
           wait "$recorder" || true
           ls -l recording
           if [ ! -s recording/recording.mp4 ]; then
@@ -105,7 +115,7 @@ jobs:
 
       - name: "Layer 5: export the screenshots and marks, write the recording index"
         id: layer5
-        if: ${{ !cancelled() && steps.layer4.outcome != 'skipped' }}
+        if: ${{ always() && steps.layer4.outcome != 'skipped' }}
         run: |
           trap 'echo "layer 5: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           exported="$RUNNER_TEMP/attachments"
@@ -113,18 +123,22 @@ jobs:
           cat "$exported/manifest.json"
           mkdir -p screens
           # An exported file is named <attachment name>_<number>_<identifier>.<ending> in the manifest.
-          jq -r '.[].attachments[] | [.exportedFileName, .suggestedHumanReadableName // .exportedFileName] | @tsv' "$exported/manifest.json" |
-            while IFS=$'\t' read -r file suggested; do
-              name=$(printf '%s' "$suggested" | sed -E 's/_[0-9]+_[0-9A-Fa-f-]{36}//')
-              if [[ "$name" == *.mark.txt* ]]; then
-                name="${name%%.mark.txt*}.mark.txt"
-              fi
-              cp "$exported/$file" "screens/$name"
-            done
+          jq -r '.[].attachments[] | [.exportedFileName, .suggestedHumanReadableName // .exportedFileName] | @tsv' "$exported/manifest.json" > "$exported/names.tsv"
+          failed=0
+          while IFS=$'\t' read -r file suggested; do
+            name=$(printf '%s' "$suggested" | sed -E 's/_[0-9]+_[0-9A-Fa-f-]{36}//')
+            if [[ "$name" == *.mark.txt* ]]; then
+              name="${name%%.mark.txt*}.mark.txt"
+            fi
+            if ! cp "$exported/$file" "screens/$name"; then
+              echo "Not copied: $file as $name"
+              failed=1
+            fi
+          done < "$exported/names.tsv"
           ls -l screens
           if [ -z "$(ls -A screens)" ]; then
             echo "The result bundle gave no attachment."
-            exit 1
+            failed=1
           fi
           start=$(cat recording/recording-start.txt)
           : > recording/recording-index.txt
@@ -133,27 +147,16 @@ jobs:
             echo "$(basename "$mark" .mark.txt) $(( $(cat "$mark") - start ))" >> recording/recording-index.txt
           done
           cat recording/recording-index.txt
+          exit "$failed"
 
       - name: "Layer 6: count the videos in the library again"
         id: layer6
-        if: ${{ !cancelled() && steps.layer3.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.layer3.outcome != 'skipped' }}
         run: |
           trap 'echo "layer 6: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           library="$HOME/Library/Developer/CoreSimulator/Devices/$SIMULATOR/data/Media/PhotoData/Photos.sqlite"
           count=$(sqlite3 -readonly "$library" "select count(*) from ZASSET where ZKIND = 1 and ZTRASHEDSTATE = 0") || count="could not be read"
           echo "Videos in the library after the UI tests: $count" | tee -a "$RUNNER_TEMP/library.txt"
-
-      - name: "Layer 7: build for a device without code signing"
-        id: layer7
-        if: ${{ !cancelled() && inputs.ipa && hashFiles('Reelsmith.xcodeproj/project.pbxproj') != '' }}
-        run: |
-          trap 'echo "layer 7: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
-          xcodebuild build -project Reelsmith.xcodeproj -scheme Reelsmith -configuration Release \
-            -destination "generic/platform=iOS" -derivedDataPath build/device \
-            CODE_SIGNING_ALLOWED=NO GIT_COMMIT="$(git rev-parse --short HEAD)"
-          mkdir Payload
-          cp -R build/device/Build/Products/Release-iphoneos/Reelsmith.app Payload/
-          zip -qr Reelsmith.ipa Payload
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
@@ -176,6 +179,18 @@ jobs:
           path: results
           retention-days: 3
 
+      - name: "Layer 7: build for a device without code signing"
+        id: layer7
+        if: ${{ !cancelled() && inputs.ipa && hashFiles('Reelsmith.xcodeproj/project.pbxproj') != '' }}
+        run: |
+          trap 'echo "layer 7: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          xcodebuild build -project Reelsmith.xcodeproj -scheme Reelsmith -configuration Release \
+            -destination "generic/platform=iOS" -derivedDataPath build/device \
+            CODE_SIGNING_ALLOWED=NO GIT_COMMIT="$(git rev-parse --short HEAD)"
+          mkdir Payload
+          cp -R build/device/Build/Products/Release-iphoneos/Reelsmith.app Payload/
+          zip -qr Reelsmith.ipa Payload
+
       - uses: actions/upload-artifact@v4
         if: ${{ always() && inputs.ipa }}
         with:
@@ -195,7 +210,7 @@ jobs:
             echo "Layer 5, screenshots, marks and the index: ${{ steps.layer5.outcome }}"
             echo "Layer 6, the count again: ${{ steps.layer6.outcome }}"
             echo "Layer 7, the device build: ${{ inputs.ipa && steps.layer7.outcome || 'not asked for' }}"
-            echo "A layer that reads skipped was not attempted, because what it needs was not built."
+            echo "A layer that reads skipped was not attempted."
             echo
             cat "$RUNNER_TEMP/library.txt" 2>/dev/null || echo "The library was not reached."
             echo

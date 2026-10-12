@@ -43,7 +43,7 @@ gh workflow run "Compile check" --ref <branch>
 
 ## Start a wave run
 
-The `macOS build` workflow is the wave run: one run on a macOS runner with Xcode 26.6 that builds everything, runs the Engine tests and the UI tests in an iPhone simulator, and brings back the pictures, one recording and the test results. The repository is public, so runner time is free and a wave run is repeated after each fix until it is green. It starts by hand only. The Executive starts it on `dev` when a wave is merged, and again after a fix:
+The `macOS build` workflow is the wave run: one run on a macOS runner with Xcode 26.6 that builds everything, runs the Engine tests and the UI tests in an iPhone simulator, and brings back the pictures, one recording and the test results. The repository is public, so runner time is free and a wave run is repeated after each fix until it is green. It starts by hand only. It is started on `dev` when a group of changes is merged, and again after a fix:
 
 ```
 gh workflow run "macOS build" --ref dev
@@ -68,7 +68,7 @@ The run creates one simulator, an iPhone 17 on the iOS 26.5 runtime, and works t
 6. The count of videos in the library is printed again.
 7. Only with `ipa=true`: the device build without code signing, packed as `Reelsmith.ipa`.
 
-A layer is attempted whenever what it needs was built, also after an earlier layer failed. The last step, `Summary`, prints the result of every layer, the two counts and the seconds of each step, and the same text is on the run's page. A layer that reads `skipped` was not attempted. The run is red if any layer failed. A library that does not take the clips, or a count that cannot be read, is printed and does not make the run red. The run stops itself after 30 minutes.
+A layer is attempted whenever what it needs was built, also after an earlier layer failed. The last step, `Summary`, prints the result of every layer, the two counts and the seconds of each step, and the same text is on the run's page. A layer that reads `skipped` was not attempted. The run is red if any layer failed. A library that does not take the clips, or a count that cannot be read, is printed and does not make the run red. A UI test that runs longer than 300 seconds is ended and counts as failed. The run stops itself after 30 minutes, and the pictures taken until then are still exported and uploaded.
 
 ## Fetch the artifacts
 
@@ -88,7 +88,7 @@ gh run download <run id> -n ipa -D ipa
 
 ## Install on the iPhone with Sideloadly
 
-Not yet proven on a phone. The steps as they should work:
+This works: on 2026-10-12 an unsigned build of this project was installed with Sideloadly and a free Apple ID on an iPhone with iOS 26.6.2, and it opened. The steps:
 
 1. Remove the Microsoft Store versions of iTunes and iCloud if they are installed (they do not work). Install iTunes and iCloud for Windows from Apple's website, then install Sideloadly from sideloadly.io.
 2. Connect the iPhone with a USB cable, unlock it and tap Trust.
