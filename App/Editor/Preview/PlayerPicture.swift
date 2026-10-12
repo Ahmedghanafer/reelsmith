@@ -28,14 +28,17 @@ struct PlayerPicture: UIViewRepresentable {
 ///
 /// https://developer.apple.com/documentation/avfoundation/avplayer
 /// https://developer.apple.com/documentation/avfoundation/avplayerlayer
+/// https://developer.apple.com/documentation/avfoundation/avplayerlayer/pixelbufferattributes
+/// https://developer.apple.com/documentation/corevideo/kcvpixelbufferiosurfacepropertieskey
 /// https://developer.apple.com/documentation/uikit/uiview/layerclass
 /// https://developer.apple.com/documentation/avfoundation/avplayer/replacecurrentitem(with:)
-/// https://developer.apple.com/documentation/avfoundation/avplayer/seek(to:tolerancebefore:toleranceafter:)
+/// https://developer.apple.com/documentation/avfoundation/avplayeritem/status-swift.property
+/// https://developer.apple.com/documentation/objectivec/nsobject-swift.class/observe(_:options:changehandler:)
+/// https://developer.apple.com/documentation/avfoundation/avplayer/seek(to:tolerancebefore:toleranceafter:completionhandler:)
 /// https://developer.apple.com/documentation/avfoundation/avplayer/play()
 /// https://developer.apple.com/documentation/avfoundation/avplayer/pause()
 /// https://developer.apple.com/documentation/avfoundation/avplayer/addperiodictimeobserver(forinterval:queue:using:)
 /// https://developer.apple.com/documentation/avfoundation/avplayer/removetimeobserver(_:)
-/// https://developer.apple.com/documentation/avfoundation/avplayer/timecontrolstatus-swift.property
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/didplaytoendtimenotification
 /// https://developer.apple.com/documentation/foundation/notificationcenter/addobserver(_:selector:name:object:)
 /// https://developer.apple.com/documentation/coremedia/cmtime/convertscale(_:method:)
@@ -53,12 +56,15 @@ final class PlayerPictureView: UIView {
     private var project: Project?
     /// Counts the builds, so the result of a build that a newer one superseded is dropped.
     private var build = 0
-    /// True while the item of `project` is in the player.
+    /// True while the item of `project` is in the player and ready to play.
     private var isReady = false
-    /// True from the moment the player is told to play until it is stopped.
+    private var statusObservation: NSKeyValueObservation?
+    /// True from the moment the state turns to playing until the player is stopped.
     private var isPlaying = false
-    /// The playhead the player was last sent to while not playing.
-    private var shown: Time?
+    /// The playhead the player was last sent to. Nil when it stands somewhere else, as after playing.
+    private var target: Time?
+    /// True while one seek is in flight. A newer playhead waits in `target` until it lands.
+    private var isSeeking = false
     private var timeObserver: Any?
 
     init(store: EditorStore) {
@@ -70,6 +76,11 @@ final class PlayerPictureView: UIView {
         isAccessibilityElement = true
         accessibilityIdentifier = "editor.picture"
         (layer as? AVPlayerLayer)?.player = player
+        // Without this request the simulator's layer refuses every frame of a clip that fills the canvas
+        // unscaled and shows black. It names a kind of buffer only, so no frame is converted for it.
+        (layer as? AVPlayerLayer)?.pixelBufferAttributes = [
+            kCVPixelBufferIOSurfacePropertiesKey as String: [String: Any]()
+        ]
         NotificationCenter.default.addObserver(
             self, selector: #selector(itemEnded(_:)), name: AVPlayerItem.didPlayToEndTimeNotification, object: nil)
     }
@@ -88,13 +99,14 @@ final class PlayerPictureView: UIView {
         }
     }
 
-    /// Builds the item of the state's project. Until it is there the player keeps the old picture and
-    /// follows nothing. Then it is brought to the state of that moment, so the playhead is kept.
+    /// Builds the item of the state's project. Until it is ready the player follows nothing. Then it is
+    /// brought to the state of that moment, so the playhead is kept.
     /// An empty project gets no item, and neither does a build that throws: the area is black.
     private func rebuild(for state: EditorState) {
         build += 1
         let number = build
         isReady = false
+        statusObservation = nil
         stop()
         guard state.canPlay else {
             player.replaceCurrentItem(with: nil)
@@ -113,45 +125,103 @@ final class PlayerPictureView: UIView {
                 return
             }
             self.player.replaceCurrentItem(with: item)
-            self.shown = nil
-            if item != nil {
-                self.isReady = true
-                self.bring(to: self.store.state)
+            // A seek with a completion handler needs an item that is ready, so the player waits for it.
+            // The change can come on any thread.
+            self.statusObservation = item?.observe(\.status, options: [.initial, .new]) { [weak self] _, _ in
+                Task { @MainActor [weak self] in
+                    self?.itemStatusChanged(number)
+                }
             }
         }
+    }
+
+    private func itemStatusChanged(_ number: Int) {
+        guard number == build, !isReady, player.currentItem?.status == .readyToPlay else {
+            return
+        }
+        isReady = true
+        target = nil
+        isSeeking = false
+        bring(to: store.state)
     }
 
     private func bring(to state: EditorState) {
         if state.isPlaying {
             if !isPlaying {
+                // The player starts when it stands on the playhead: at once, or when the seek has landed.
                 isPlaying = true
-                shown = nil
-                seek(to: state.playhead)
-                player.play()
-                // The queue is the main queue, so the block runs on the main actor.
-                timeObserver = player.addPeriodicTimeObserver(
-                    forInterval: CMTime(value: Time.frame.ticks, timescale: 600), queue: .main
-                ) { [weak self] time in
-                    MainActor.assumeIsolated {
-                        if let self {
-                            self.report(time)
-                        }
-                    }
+                if target != state.playhead {
+                    seek(to: state.playhead)
+                }
+                if !isSeeking {
+                    start()
                 }
             }
         } else {
             if isPlaying {
                 stop()
             }
-            if shown != state.playhead {
-                shown = state.playhead
+            if target != state.playhead {
                 seek(to: state.playhead)
             }
         }
     }
 
+    /// One seek is in flight at a time. A playhead that comes meanwhile is held, and the player is sent
+    /// to the newest one when the seek in flight has landed.
     private func seek(to playhead: Time) {
-        player.seek(to: CMTime(value: playhead.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        target = playhead
+        if !isSeeking {
+            seekToTarget()
+        }
+    }
+
+    private func seekToTarget() {
+        guard let wanted: Time = target else {
+            return
+        }
+        isSeeking = true
+        let number = build
+        // The handler can come on any thread.
+        player.seek(
+            to: CMTime(value: wanted.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero
+        ) { [weak self] finished in
+            Task { @MainActor [weak self] in
+                self?.seekEnded(wanted, finished: finished, build: number)
+            }
+        }
+    }
+
+    private func seekEnded(_ sought: Time, finished: Bool, build number: Int) {
+        guard number == build else {
+            return
+        }
+        isSeeking = false
+        if target != sought {
+            seekToTarget()
+        } else if !finished {
+            // The player is not there, so the next state seeks again.
+            target = nil
+        }
+        if !isSeeking, isPlaying, timeObserver == nil {
+            start()
+        }
+    }
+
+    private func start() {
+        // From here the player moves by itself and stands on no playhead of the state.
+        target = nil
+        player.play()
+        // The queue is the main queue, so the block runs on the main actor.
+        timeObserver = player.addPeriodicTimeObserver(
+            forInterval: CMTime(value: Time.frame.ticks, timescale: 600), queue: .main
+        ) { [weak self] time in
+            MainActor.assumeIsolated {
+                if let self {
+                    self.report(time)
+                }
+            }
+        }
     }
 
     private func stop() {
@@ -164,10 +234,9 @@ final class PlayerPictureView: UIView {
     }
 
     /// The state of the store is read at this moment: once it has stopped playing nothing more is
-    /// reported, also when this view has not been handed that state yet. A time from before the
-    /// player really runs, as one from before the seek of a start has landed, is not reported either.
+    /// reported, also when this view has not been handed that state yet.
     private func report(_ time: CMTime) {
-        guard store.state.isPlaying, timeObserver != nil, player.timeControlStatus == .playing else {
+        guard store.state.isPlaying, timeObserver != nil else {
             return
         }
         store.send(.movePlayhead(Time(ticks: time.convertScale(600, method: .roundTowardZero).value)))
@@ -181,13 +250,13 @@ final class PlayerPictureView: UIView {
     }
 
     private func playedToEnd() {
-        guard isPlaying, store.state.isPlaying else {
+        guard isPlaying, timeObserver != nil, store.state.isPlaying else {
             return
         }
         stop()
         store.send(.movePlayhead(store.state.project.duration))
         store.send(.pause)
         // The player stands on its last frame, which is the picture of the end. No seek goes there.
-        shown = store.state.playhead
+        target = store.state.playhead
     }
 }

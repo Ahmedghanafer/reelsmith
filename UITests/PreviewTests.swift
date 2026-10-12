@@ -70,25 +70,32 @@ final class PreviewTests: XCTestCase {
         XCTAssertEqual(time.label, "00:06 / 00:07")
         waitForThePicture()
 
-        // The last second of the project. Expected 3 seconds with the tap, fails only above 9.
-        let started = Date()
+        // The last second of the project.
         play.tap()
-        var waited = Date().timeIntervalSince(started)
-        while time.label != "00:07 / 00:07" && waited <= 9 {
-            Thread.sleep(forTimeInterval: 0.1)
-            waited = Date().timeIntervalSince(started)
-        }
-        print("m1-7-preview: waited \(waited) seconds for the end of the project, expected 3")
+        waitForTheTime(app, "the end of the project", expected: 3) { $0 == "00:07" }
         XCTAssertEqual(time.label, "00:07 / 00:07")
-        XCTAssertLessThanOrEqual(waited, 9)
         // The player sent pause at the end.
         XCTAssertEqual(play.label, "Play")
         XCTAssertEqual(timeBeforeTheSlash(app), playheadValue(app))
 
-        // From the end, play starts again from zero.
+        // From the end, play starts again from zero and the player moves: Core alone gives "00:00",
+        // only the player's reports give "00:01".
         play.tap()
-        let restarted = timeBeforeTheSlash(app)
-        XCTAssertTrue(["00:00", "00:01", "00:02"].contains(restarted), restarted)
+        waitForTheTime(app, "the first second after the restart", expected: 2) { $0 >= "00:01" && $0 < "00:07" }
+        play.tap()
+        XCTAssertEqual(play.label, "Play")
+        XCTAssertEqual(timeBeforeTheSlash(app), playheadValue(app))
+    }
+
+    func testPlaybackPassesFromTheBlueClipIntoTheRedClip() {
+        // Half a second before the join at 3 seconds, on the 9:16 canvas, where red fills the area.
+        let app = startPreview(seed: "two-clips", playhead: 1500)
+        let play = element(app, "editor.play")
+        XCTAssertEqual(element(app, "editor.time").label, "00:02 / 00:07")
+        waitForThePicture()
+
+        play.tap()
+        waitForTheTime(app, "a second inside the red clip", expected: 3) { $0 >= "00:04" }
         play.tap()
         XCTAssertEqual(play.label, "Play")
         XCTAssertEqual(timeBeforeTheSlash(app), playheadValue(app))
@@ -179,6 +186,23 @@ final class PreviewTests: XCTestCase {
     /// The playhead part of `editor.time`, as in "00:02" of "00:02 / 00:07".
     private func timeBeforeTheSlash(_ app: XCUIApplication) -> String {
         element(app, "editor.time").label.components(separatedBy: " / ").first ?? ""
+    }
+
+    /// Reads the playhead part of `editor.time` until it is as wanted. Prints the seconds it waited and
+    /// fails only above three times the expected seconds. "mm:ss" texts are in the order of their times.
+    private func waitForTheTime(
+        _ app: XCUIApplication, _ what: String, expected: Double, _ wanted: (String) -> Bool
+    ) {
+        let started = Date()
+        var waited: Double = 0
+        var reached = wanted(timeBeforeTheSlash(app))
+        while !reached && waited <= 3 * expected {
+            Thread.sleep(forTimeInterval: 0.1)
+            reached = wanted(timeBeforeTheSlash(app))
+            waited = Date().timeIntervalSince(started)
+        }
+        print("m1-7-preview: waited \(waited) seconds for \(what), expected \(expected)")
+        XCTAssertTrue(reached, what)
     }
 
     /// The width of the area divided by its height lies between the two numbers.
