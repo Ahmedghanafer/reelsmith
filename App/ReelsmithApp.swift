@@ -21,7 +21,7 @@ struct ReelsmithApp: App {
                     EditorScreen(store: store)
                 } else {
                     // slot: start
-                    FirstScreen()
+                    StartScreen(options: options, open: { store = $0 })
                     // end slot: start
                 }
             }

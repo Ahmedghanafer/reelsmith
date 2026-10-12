@@ -3,6 +3,13 @@
 /* end slot: m1-2b-ui-harness */
 
 /* slot: m1-6b-new-project */
+"start.title" = "Reelsmith";
+"start.newProject" = "New project";
+"start.landscape" = "Landscape 16:9";
+"start.portrait" = "Portrait 9:16";
+"start.copying" = "Copying videos";
+"start.noneReadable" = "None of the videos could be used.";
+"start.ok" = "OK";
 /* end slot: m1-6b-new-project */
 
 /* slot: m1-7-preview */

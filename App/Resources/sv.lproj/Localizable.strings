@@ -3,6 +3,13 @@
 /* end slot: m1-2b-ui-harness */
 
 /* slot: m1-6b-new-project */
+"start.title" = "Reelsmith";
+"start.newProject" = "Nytt projekt";
+"start.landscape" = "Liggande 16:9";
+"start.portrait" = "Stående 9:16";
+"start.copying" = "Kopierar videor";
+"start.noneReadable" = "Ingen av videorna kunde användas.";
+"start.ok" = "OK";
 /* end slot: m1-6b-new-project */
 
 /* slot: m1-7-preview */
