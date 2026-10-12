@@ -12,6 +12,9 @@ final class ExportTests: XCTestCase {
         .appendingPathComponent("m1-5-engine-" + UUID().uuidString)
 
     struct Exported {
+        /// The output place, whose name does not end in mp4.
+        var output: URL
+        /// A copy of it for the helpers.
         var file: URL
         var progress: [Double]
         var seconds: Double
@@ -37,13 +40,18 @@ final class ExportTests: XCTestCase {
         try await export(plan: plan, media: media, mediaFolder: folder, to: output) { value in
             recorder.add(value)
         }
-        return Exported(file: output, progress: recorder.values, seconds: Date().timeIntervalSince(began))
+        let seconds = Date().timeIntervalSince(began)
+        // The platform picks its file reader by the end of the name, so the helpers read a copy named as MPEG-4.
+        let copy = folder.appendingPathComponent(name + ".mp4")
+        try FileManager.default.copyItem(at: output, to: copy)
+        return Exported(output: output, file: copy, progress: recorder.values, seconds: seconds)
     }
 
     // Criterion 1
     func testThreeClipsExportIsOneMPEG4FileOf1080By1920With270FramesIn9Seconds() async throws {
-        let file = try await Self.threeClips.value.file
-        XCTAssertEqual(try fileType(of: file), "mp42")
+        let made = try await Self.threeClips.value
+        let file = made.file
+        XCTAssertEqual(try fileType(of: made.output), "mp42")
 
         let all = try await tracks(of: file)
         let picture = all.filter { $0.kind == "vide" }
