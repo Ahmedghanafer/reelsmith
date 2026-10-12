@@ -102,6 +102,13 @@ The slot `handles` is the two lines `// slot: handles` and `// end slot: handles
 
 ### m1-9b-trim-handles
 <!-- slot: m1-9b-trim-handles -->
+The trim handles, in `App/Editor/Timeline/TrimHandles.swift`. They decide nothing: how far a clip can be trimmed is `reduce`, and the amount for a drag is `TimelineGeometry.trimAmount(forDragOf:)`.
+
+- `TrimHandle` is one handle, a UIKit view 24 points wide and as high as `strip`. The slot `handles` of `TimelineStripView` calls `TrimHandle.layout(in:below:)` with the strip view and its playhead line on every layout. The first call makes the two handles and adds them to the strip view below the playhead line. Later calls find them among the subviews of the strip view, so nothing piles up.
+- With a selected clip the start handle is put with its right edge on the left edge of the clip and the end handle with its left edge on the right edge of the clip, at `strip.frame.minX` plus `TimelineGeometry.x(of:)` of the clip's start. With no selection both are hidden. They never mirror: the frames are set from the left and the handles force left to right.
+- The identifiers are `editor.trim.start` and `editor.trim.end`, and the accessibility labels are the keys `trim.start` and `trim.end`.
+- A handle has a pan and a tap recognizer of its own and is their delegate: the scrub and the tap of the strip view wait for them to fail, so a drag on a handle is no scrub and a tap on it selects nothing.
+- A drag sends `pause` when it starts and keeps the paused state of that moment. While the finger moves it sets `state` of the strip view to `reduce` of the kept state with `trimStart` by the points moved to the right, or `trimEnd` by the points moved to the left, and sends nothing. On release it sends that one action. A cancelled drag sets `state` back to the kept state and sends nothing.
 <!-- end slot: m1-9b-trim-handles -->
 
 ### m1-9a-split-delete

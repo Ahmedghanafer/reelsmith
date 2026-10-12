@@ -17,6 +17,8 @@
 /* end slot: m1-9a-split-delete */
 
 /* slot: m1-9b-trim-handles */
+"trim.start" = "Trimma början";
+"trim.end" = "Trimma slutet";
 /* end slot: m1-9b-trim-handles */
 
 /* slot: m1-10-export */
