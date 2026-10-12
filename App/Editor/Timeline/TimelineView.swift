@@ -54,7 +54,10 @@ final class TimelineStripView: UIView {
         playhead.isAccessibilityElement = true
         playhead.accessibilityIdentifier = "editor.playhead"
         addSubview(playhead)
-        addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(scrubbed(_:))))
+        // One finger only, so a pinch is no scrub.
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(scrubbed(_:)))
+        pan.maximumNumberOfTouches = 1
+        addGestureRecognizer(pan)
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped(_:))))
     }
 
@@ -126,7 +129,10 @@ final class TimelineStripView: UIView {
 
     @objc private func tapped(_ tap: UITapGestureRecognizer) {
         let point = tap.location(in: strip)
-        for (clip, block) in zip(state.project.clips, blocks) where block.frame.contains(point) {
+        guard strip.bounds.contains(point) else {
+            return
+        }
+        if let clip: Clip = state.project.clip(at: TimelineGeometry.time(atX: Double(point.x))) {
             send(.select(clip.id))
         }
     }

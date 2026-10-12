@@ -16,8 +16,9 @@ final class TimelineTests: XCTestCase {
         XCTAssertFalse(element(app, "editor.clip.4").exists)
         screenshot("m1-8-timeline-01-strip")
 
-        // The strip cannot be pinched: the blocks keep their widths.
+        // The strip cannot be pinched: the blocks keep their widths, and two fingers are no scrub.
         element(app, "editor.timelineRegion").pinch(withScale: 2, velocity: 1)
+        XCTAssertEqual(playheadValue(app), "00:04")
         XCTAssertEqual(element(app, "editor.clip.1").frame.width, 180, accuracy: 1)
         XCTAssertEqual(element(app, "editor.clip.2").frame.width, 240, accuracy: 1)
         XCTAssertEqual(element(app, "editor.clip.3").frame.width, 120, accuracy: 1)
@@ -58,7 +59,9 @@ final class TimelineTests: XCTestCase {
         XCTAssertTrue(["00:01", "00:02", "00:03"].contains(later), later)
 
         drag(app, fromX: 0.5, byPoints: 120)
-        XCTAssertLessThan(playheadValue(app), later)
+        let earlier = playheadValue(app)
+        XCTAssertFalse(earlier.isEmpty)
+        XCTAssertLessThan(earlier, later)
 
         // A long drag to the left stops at the end of the 9 seconds.
         for _ in 0..<3 {
