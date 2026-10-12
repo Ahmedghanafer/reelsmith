@@ -40,14 +40,13 @@ final class HarnessTests: XCTestCase {
         assertTheStartSlotShows(app)
     }
 
-    func testTheHelperPassesALanguageAPlayheadAndAnExportFailure() {
+    func testAStartInSwedishWithAPlayheadAndAnExportFailureOpensTheShellInSwedish() {
         let app = startApp(seed: "two-clips", language: "sv", playhead: 3000, exportFails: true)
 
         XCTAssertTrue(app.descendants(matching: .any)["editor.root"].waitForExistence(timeout: 60))
-        // In Swedish the seed text is not the English one.
+        // The seed text is the Swedish line of the word file, so the language reached the app.
         let info = app.staticTexts["editor.seedInfo"].label
-        XCTAssertFalse(info.isEmpty)
-        XCTAssertFalse(info.hasPrefix("2 clips, "), info)
+        XCTAssertTrue(info.hasPrefix("2 klipp, "), info)
     }
 
     /// The content of the slot `start` is some text, and the editor with its seed text is not there.
