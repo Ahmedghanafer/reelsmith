@@ -72,6 +72,8 @@ Both files run with `swift test` on macOS, on clips from `writeTestClip`. Sizes,
 
 ### m1-6a-media-facts
 <!-- slot: m1-6a-media-facts -->
+- `Tests/ReelsmithEngineTests/MediaProbeTests.swift` runs with `swift test` on macOS. It writes each of the five test clips with `writeTestClip` and holds that `readMediaInfo` returns exactly the clip's `info`, with the numbers of `turned.mov` (1920 by 1080, one quarter turn, 1200 ticks, no sound) and of `blue.mov` under another id written out. It holds the mapping of the four stored transforms of the plan to 0, 1, 2 and 3 quarter turns on the six numbers alone, because no test clip is stored with two or three turns. For that one function the file imports the Engine with `@testable`. A text file named `note.mov` throws `cannotRead`, and a file name that is not in the folder throws `sourceMissing` with the id.
+- `Tests/ReelsmithCoreTests/StartStateTests.swift` runs on Linux. It holds the word key of each case of `StartState`, the two keys of `allWords`, the project that `ready` carries, and every move of `after(_:)`: nothing chosen, one or more chosen, facts that give a project, one of two videos read, no facts, facts too short to give a clip, and the confirmed failure. That every key of `allWords` is in the English word file is held by `m1-6b-new-project`, which writes those lines.
 <!-- end slot: m1-6a-media-facts -->
 
 ### m1-8-timeline

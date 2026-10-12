@@ -66,6 +66,10 @@ The Engine turns a render plan into video. Both entry points take the plan, the 
 
 ### m1-6a-media-facts
 <!-- slot: m1-6a-media-facts -->
+Reading a picked video and the state of the start screen.
+
+- `Sources/ReelsmithEngine/MediaProbe.swift`: `readMediaInfo` reads the facts of the file `<media folder>/<fileName>` and returns them under the id and the file name it was given: the width and height of the picture as stored, the length of the picture track rounded down to a tick, the quarter turns, and whether the file has a sound track. The internal `quarterTurns(of:)` in the same file maps the stored transform of the picture track to the turns: b 1 is one turn, a minus 1 two turns, b minus 1 three turns, anything else none. It throws `sourceMissing` with the id when the file is not in the folder, and `cannotRead` when the file cannot be opened as a video or has no picture track.
+- `Sources/ReelsmithCore/Start/StartState.swift`: `StartState`, the one value the start screen draws, with the cases `idle`, `copying`, `failed` and `ready(Project)`. `words` gives the word key of a case: `start.copying` while copying, `start.noneReadable` when failed, none for the other two. `allWords` lists those two keys. `after(_:)` is the one function that moves between the cases, on a `StartState.Event`: `pickerClosed(chosen:)` with the count of chosen videos (none leaves `idle`, one or more give `copying`), `copyingEnded` with the facts that could be read (they are added to an empty project with `addClips`: a project with a clip gives `ready` with that project, an empty one gives `failed`), and `failureConfirmed` (from `failed` back to `idle`). An event that has no meaning in a case leaves it unchanged. A video that could not be copied or read is simply not among the facts. The text of the two keys is written into the word files by `m1-6b-new-project`.
 <!-- end slot: m1-6a-media-facts -->
 
 ### m1-8-timeline
