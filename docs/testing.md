@@ -98,6 +98,21 @@ For a later test of the strip: a block is one element, and its frame is expected
 
 ### m1-7-preview
 <!-- slot: m1-7-preview -->
+`UITests/PreviewTests.swift` holds the preview on the seeds `two-clips`, `two-clips-wide` and `empty`. It is built by the compile check and first runs in a wave run. Every test waits 60 seconds for `editor.root` after a start. A UI test cannot see the colour of the picture: what the area shows is judged on the screenshots, and the tests read the frame of `editor.picture`, the labels and the enabled states. No element says when a frame is drawn, so a test pauses 2 seconds before it takes a picture of the area. What the label reads and whether the button is enabled is `timeLabel` and `canPlay`, held on Linux by `EditorStateTests.swift`, and what `play`, `pause` and `movePlayhead` do is held by `ReduceTests.swift`.
+
+- The first frame, on `two-clips`: `editor.picture`, `editor.play` and `editor.time` are among the descendants of `editor.previewRegion`. The width of the picture divided by its height lies between 0.55 and 0.58, the picture is inside the region and in the middle of its width, and the button and the label start under it. The label reads "00:00 / 00:07", the button reads "Play" and is enabled.
+- Play and pause, on `two-clips`: after a tap the button reads "Pause". After 2 seconds and a second tap it reads "Play", the label reads "00:01", "00:02" or "00:03" before the slash, which equals the value of `editor.playhead`, and a second later it reads the same.
+- The end, with `-playhead 3600`: after a tap the test reads the label until it is "00:07 / 00:07", prints the seconds it waited and fails only above 9, three times an expected 3. Then the button reads "Play" and the label equals the playhead. A tap there gives "00:00", "00:01" or "00:02", and after one more tap the label equals the playhead again.
+- The scrub, with `-playhead 3000`: the label reads "00:05 / 00:07". Three drags of the strip 320 points to the right from a tenth of the region's width, where no handle lies because nothing is selected, leave `editor.playhead` at "00:00" and the label at "00:00 / 00:07".
+- The seed `empty`: the picture area is there, the label reads "00:00 / 00:00" and the button is disabled.
+- Arabic, on `two-clips`: the label reads "00:00 / 00:07", the button reads the Arabic line of the word file and is left of the label as in English, and the picture has the same shape in the middle of the region.
+- The wide canvas, on `two-clips-wide`, with no playhead value and with `-playhead 3000`: the width of the picture divided by its height lies between 1.74 and 1.81 and the picture is as wide as the region.
+
+On Linux, `Tests/ReelsmithCoreTests/PreviewWordsTests.swift` fails when `preview.play` or `preview.pause` is missing from the English, the Arabic or the Swedish word file.
+
+Screenshots: `m1-7-preview-01-first-frame` (blue whole with a black bar above and below), `m1-7-preview-01-first-frame-ar`, `m1-7-preview-02-placed` (red fills the area), `m1-7-preview-03-after-scrub` (blue with bars again), `m1-7-preview-04-empty` (black), `m1-7-preview-05-wide` (blue fills the wide area), `m1-7-preview-06-wide-bars` (red whole with a black bar left and right). Mark: `m1-7-preview-01-play`, the playback of the play and pause test.
+
+That the item is built again when the project changes, that an old build never replaces a new one, that nothing is reported after a `pause` and that a failed build leaves the area black cannot be seen in these tests and is read in the diff.
 <!-- end slot: m1-7-preview -->
 
 ### m1-9b-trim-handles

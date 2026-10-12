@@ -19,6 +19,7 @@ struct EditorScreen: View {
             }
             ZStack {
                 // slot: preview
+                PreviewPane(store: store)
                 // end slot: preview
             }
             .frame(maxHeight: .infinity)
