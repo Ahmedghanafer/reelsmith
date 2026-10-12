@@ -74,6 +74,22 @@ Reading a picked video and the state of the start screen.
 
 ### m1-8-timeline
 <!-- slot: m1-8-timeline -->
+The timeline strip, in the new folder `App/Editor/Timeline/`. It decides nothing: places and times come from `TimelineGeometry`, starts and positions from `Project`, and every change goes out as an `EditorAction`.
+
+`App/Editor/Timeline/TimelineView.swift` holds two types of one screen. Neither is named `TimelineView`, because SwiftUI has a type of that name.
+
+- `TimelineStrip` is the SwiftUI side, a `UIViewRepresentable` with `state: EditorState` and `send: @MainActor (EditorAction) -> Void`. The slot `timeline` of `EditorScreen` builds it from `store.state` and `store.send` and gives it a fixed height of 72 points, because a wrapped UIKit view takes all the height it is offered.
+- `TimelineStripView` is the UIKit view. `var state: EditorState` is the state it draws, and setting it draws it. `var send` is the way to send an action. `let strip: UIView` holds the blocks and moves under the playhead: its left edge is time zero, so a point of it at x is the time `TimelineGeometry.time(atX: x)`, it starts 8 points below the top of the view and ends 8 above the bottom. Everything is drawn in `layoutSubviews()`: the blocks are made or removed to match the clips, `strip` is put with its left edge at the middle minus `TimelineGeometry.x(of: state.playhead)`, each block at `x(of: project.start(of:))` with `width(of: clip.duration)`, and the playhead line in the middle of the view above `strip`.
+- A block is one `UILabel` in `strip` with the text "<position>\n<length as clockText>", the identifier `editor.clip.<position>` and the trait selected when its clip is the selection, which also gives it a wider outline. The playhead line has the identifier `editor.playhead` and the playhead's `clockText` as its value. Neither holds a word.
+- A drag with one finger anywhere on the view is a scrub: `pause` once when it starts, then `movePlayhead` with `TimelineGeometry.time(atX:)` of the playhead's x at the start minus the distance dragged to the right. Core clamps it. A tap inside `strip` sends `select` with the clip that `Project.clip(at:)` gives for the time under the finger.
+- The view never mirrors: every frame is set by hand from the left, and the view, `strip` and the blocks force left to right.
+
+The slot `handles` is the two lines `// slot: handles` and `// end slot: handles` at the end of `layoutSubviews()` of `TimelineStripView`, after the blocks and the playhead have their frames. Code there runs inside the view on every draw, so it can read `state`, `send`, `strip`, `playhead` and `bounds`, and it cannot add a stored property. A view above the clips is added there when it is not there yet, and gets its frame there.
+
+- A view that stays inside the bounds of `strip` is added to `strip`, in its coordinates. A new block is added above what `strip` already holds, so such a view is brought to the front there too.
+- A view that can lie outside `strip` is added to the strip view itself, below `playhead` (`insertSubview(_:belowSubview:)`), at `strip.frame.minX` plus its x and `strip.frame.minY` plus its y. A trim handle is such a view: the start handle of the first clip and the end handle of the last clip are drawn outside the edges of `strip`, and UIKit never hands a touch outside a view's bounds to its subviews, so a handle inside `strip` would be drawn there and could not be dragged.
+- The two recognizers of the strip view see the touches on a view above the clips too. A tap there also reaches the tap recognizer, which selects the clip at the finger's x when the point is inside `strip`, unless that view has a tap recognizer of its own. A drag there can also start the scrub, so a view that is dragged has a pan recognizer of its own.
+- To draw a state without sending it, as a trim drag does, set `state`. That preview is written over as soon as the store's state changes, because SwiftUI then hands the view the store's state again. So a drag that previews first sends `pause`, so that playback no longer moves the playhead under it, and then sets `state` on every step of the drag: a preview set in the same step as the `pause` can be written over once.
 <!-- end slot: m1-8-timeline -->
 
 ### m1-6b-new-project

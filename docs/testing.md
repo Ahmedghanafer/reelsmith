@@ -78,6 +78,18 @@ Both files run with `swift test` on macOS, on clips from `writeTestClip`. Sizes,
 
 ### m1-8-timeline
 <!-- slot: m1-8-timeline -->
+`UITests/TimelineTests.swift` holds the timeline strip on the seed `three-clips` (blue 3 seconds, red 4, green 2). It is built by the compile check and first runs in a wave run. Every test waits 60 seconds for `editor.root` after a start. The strip has no Linux test of its own: its positions and times are `TimelineGeometry`, held by `TimelineGeometryTests.swift`.
+
+- The blocks, started at 2700 ticks so a part of every block is on the screen: `editor.clip.1`, `editor.clip.2` and `editor.clip.3` are in one row inside `editor.timelineRegion`, in track order from left to right, touching, 180, 240 and 120 points wide. The label of a block is the text on it, the position and then the length, so it starts with "1" and ends with "00:03". After a pinch the widths are the same.
+- The playhead: `editor.playhead` is in the middle of the region's width and its value is the playhead's `clockText`. With no playhead value it reads "00:00" with the left edge of the first block under it, with `-playhead 3000` it reads "00:05" with the red block under it.
+- The scrub: a drag is a press on a point of `editor.timelineRegion` and a move sideways, and only the value of `editor.playhead` is read after it. To the right at the start leaves "00:00", 120 points to the left gives "00:01", "00:02" or "00:03", back to the right gives less, and three long drags to the left stop at "00:09". That `pause` is sent before `movePlayhead` cannot be seen on this screen and is read in the diff.
+- The tap, started at 2400 ticks: a tap in the middle of the red block makes `editor.clip.2` read as selected (`isSelected`) and the other two not, a tap on the blue block moves that to `editor.clip.1`, and the playhead still reads "00:04". No block is selected before the first tap.
+- The seed `empty`: `editor.playhead` is there, `editor.clip.1` is not, and a drag leaves "00:00".
+- Arabic, started at 2700 ticks: the same checks of the blocks as in English, so the order from left to right and the digits 0 to 9 hold, and a drag to the left gives a later time.
+
+Screenshots: `m1-8-timeline-01-strip`, `m1-8-timeline-01-strip-ar`, `m1-8-timeline-02-placed`, `m1-8-timeline-03-selected`, `m1-8-timeline-04-empty`. Marks: `m1-8-timeline-01-scrub`, `m1-8-timeline-02-scrub-ar`. The strip is 540 points long and the screen is narrower, so no picture shows all three blocks whole.
+
+For a later test of the strip: a block is one element, and its frame is expected to be the whole block, also where it is off the screen. That is confirmed by the first full simulator run, and the checks of the frames and the taps rest on it. A tap needs a point on the screen, so a test that taps a block first starts with a `-playhead` that puts the tapped point on the screen. `TimelineTests` starts at 2400 ticks, where the middles of the first two blocks are on the screen, and taps with `block.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()`. The view in `App/Editor/Timeline/TimelineView.swift` and its slot `handles` are described in the slot `m1-8-timeline` of `docs/architecture.md`.
 <!-- end slot: m1-8-timeline -->
 
 ### m1-6b-new-project
