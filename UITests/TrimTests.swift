@@ -53,6 +53,11 @@ final class TrimTests: XCTestCase {
         XCTAssertTrue(red.isSelected)
         // The drag was no scrub.
         XCTAssertEqual(playheadValue(app), "00:05")
+        // It was the end that was cut: the start is still the start of the source, so a drag of the start
+        // handle to the left, from x 69 to x 9, gives nothing back.
+        let width = red.frame.width
+        drag(element(app, "editor.trim.start"), byPoints: -60)
+        XCTAssertEqual(red.frame.width, width, accuracy: 1)
         let length = projectLength(app)
         XCTAssertTrue(["00:06", "00:07", "00:08"].contains(length), length)
     }
@@ -73,6 +78,11 @@ final class TrimTests: XCTestCase {
         XCTAssertEqual(red.frame.minX, blue.frame.maxX, accuracy: 1)
         XCTAssertTrue(red.isSelected)
         XCTAssertEqual(playheadValue(app), "00:05")
+        // It was the start that was cut: the end is still the end of the source, so a drag of the end
+        // handle to the right, from x 213 to x 333, gives nothing back.
+        let width = red.frame.width
+        drag(element(app, "editor.trim.end"), byPoints: 120)
+        XCTAssertEqual(red.frame.width, width, accuracy: 1)
         let length = projectLength(app)
         XCTAssertTrue(["00:06", "00:07", "00:08"].contains(length), length)
     }

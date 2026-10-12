@@ -80,11 +80,12 @@ final class TrimHandle: UIView, UIGestureRecognizerDelegate {
     }
 
     /// The scrub and the tap of the strip view wait for the two recognizers of the handle to fail,
-    /// so a drag on a handle never scrubs and a tap on it never selects. The two do not wait for each other.
+    /// so a drag on a handle never scrubs and a tap on it never selects. The recognizers of the handles
+    /// do not wait for each other.
     func gestureRecognizer(
         _ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
     ) -> Bool {
-        return otherGestureRecognizer.view !== self
+        return otherGestureRecognizer.view === superview
     }
 
     /// The drag starts by sending `pause`, so the state of the store stands still under the preview.
