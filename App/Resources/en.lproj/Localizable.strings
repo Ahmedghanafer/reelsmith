@@ -6,6 +6,8 @@
 /* end slot: m1-6b-new-project */
 
 /* slot: m1-7-preview */
+"preview.play" = "Play";
+"preview.pause" = "Pause";
 /* end slot: m1-7-preview */
 
 /* slot: m1-8-timeline */
