@@ -12,6 +12,8 @@
 /* end slot: m1-8-timeline */
 
 /* slot: m1-9a-split-delete */
+"tools.split" = "Dela upp";
+"tools.delete" = "Radera";
 /* end slot: m1-9a-split-delete */
 
 /* slot: m1-9b-trim-handles */

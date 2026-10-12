@@ -12,6 +12,8 @@
 /* end slot: m1-8-timeline */
 
 /* slot: m1-9a-split-delete */
+"tools.split" = "تقسيم";
+"tools.delete" = "حذف";
 /* end slot: m1-9a-split-delete */
 
 /* slot: m1-9b-trim-handles */

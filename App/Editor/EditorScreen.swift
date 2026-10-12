@@ -33,6 +33,7 @@ struct EditorScreen: View {
             .region("editor.timelineRegion")
             ZStack {
                 // slot: tools
+                ToolsRow(state: store.state, send: { action in store.send(action) })
                 // end slot: tools
             }
             .region("editor.toolsRegion")
