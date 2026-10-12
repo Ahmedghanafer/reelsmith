@@ -3,4 +3,5 @@ build/
 DerivedData/
 *.ipa
 *.xcarchive
+*.xcodeproj
 .DS_Store
