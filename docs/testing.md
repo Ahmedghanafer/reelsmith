@@ -148,6 +148,20 @@ Screenshots: `m1-9a-split-delete-01-tools`, `m1-9a-split-delete-01-tools-ar`, `m
 
 ### m1-10-export
 <!-- slot: m1-10-export -->
+On Linux, `Tests/ReelsmithCoreTests/ExportStateTests.swift` holds `ExportState`: the words and the percent text of each case, the percent that never goes down and stays between "0%" and "100%" with the digits 0 to 9, `allWords`, every move of `after(_:)`, and `canStart(_:)` on the seeds `two-clips` and `empty`. `Tests/ReelsmithCoreTests/ExportWordsTests.swift` fails when one of the seven keys of the export is missing from the English, the Arabic or the Swedish word file, and when a key of `ExportState.allWords` is missing from the English file.
+
+`UITests/ExportTests.swift` holds the button and the panel. Its class is `ExportPanelTests`, because the Engine tests hold a class `ExportTests`. It is built by the compile check and first runs in a wave run. Every test waits 60 seconds for `editor.root` after a start and finds controls by identifier only.
+
+- The button, on `two-clips`: `editor.export` is the one button among the descendants of `editor.exportRegion`, reads "Export" and is enabled.
+- The empty project, on `empty`: `editor.export` is disabled.
+- Saved, on `two-clips` with `-playhead 600`: after a tap on `editor.export` the button `export.done` comes, `export.words` reads "Saved to Photos", there is no `export.close`, and `editor.export`, `editor.split` and `editor.clip.1` cannot be touched behind the panel. After a tap on `export.done` the export button can be touched and is enabled again, the strip has two blocks and `editor.playhead` still reads "00:01".
+- Arabic, on `two-clips`: the saved panel reads the Arabic lines of `export.saved` and `export.done`.
+- Failed, on `two-clips` with `-export-fails`: the button `export.close` comes, `export.words` reads "Export failed. Nothing was saved.", there is no `export.done`, and nothing behind the panel can be touched. After a tap on `export.close` the export button is enabled again.
+- The wide canvas, on `two-clips-wide`: the export reaches the saved panel.
+
+The wait for a button of the panel prints a line that starts with "m1-10-export:" with the seconds it took, and fails only at three times the expected value: 20 seconds expected for the saved panel (the export of 7 seconds and the save), 5 for the failed one. The wave run grants the right to add to Photos before the tests, so no question is expected. If the system asks all the same, the wait prints "m1-10-export: the system asked a question during the export:" with the title of the question and taps its last button. That a tap sends `pause`, that the temporary file is removed and that nothing is added to the library after a failure cannot be seen on this screen: the first two are read in the diff, and the third shows in the count of videos the wave run prints before and after the UI tests, which grows by three, one for each export that is saved. The words of `export.notAllowed` are reached by no launch value and have no UI test: the key is held on Linux and the screen is judged at the test install.
+
+Screenshots: `m1-10-export-01-button`, `m1-10-export-02-empty`, `m1-10-export-03-saved`, `m1-10-export-03-saved-ar`, `m1-10-export-04-failed`, `m1-10-export-05-saved-wide`. Mark: `m1-10-export-01-export`, before the tap on `editor.export` in the saved test.
 <!-- end slot: m1-10-export -->
 
 ### m1-11-guard
