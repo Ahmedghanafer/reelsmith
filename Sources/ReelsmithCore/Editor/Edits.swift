@@ -19,7 +19,9 @@ extension EditorState {
 
 func addClips(_ state: EditorState, _ media: [MediaInfo]) -> EditorState {
     var next = state
-    for info in media {
+    for given in media {
+        // A media already in the project keeps the facts it has, so the clips that use it stay inside their source.
+        let info = next.project.media[given.id] ?? given
         let duration = info.duration.roundedDownToFrame
         if duration < TimelineGeometry.minimumClip {
             continue
