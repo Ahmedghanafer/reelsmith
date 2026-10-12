@@ -81,7 +81,7 @@ gh run download <run id> -n results -D results
 gh run download <run id> -n ipa -D ipa
 ```
 
-- `screens` holds one picture per screenshot of the UI tests, named `<attachment name>.png`, and the mark files `<mark name>.mark.txt`.
+- `screens` holds one picture per screenshot of the UI tests, named `<attachment name>.png`, and the mark files `<mark name>.mark.txt`. After a failed UI test it also holds a short `Screen Recording <date>.mp4` of that test, which the test system adds by itself.
 - `recording` holds `recording.mp4`, `recording-start.txt` and `recording-index.txt`. A line of the index is a mark's name, a space, and the seconds from the start of the recording to the mark, so that stretch is found by seeking to that second.
 - `results` holds the result bundle `Reelsmith.xcresult` of the UI tests and `simulator-log.txt`, the lines the app wrote to the simulator's log during the tests (a seed clip that could not be written says why there). The bundle opens only in Xcode. On this PC the log of the run says which test failed and why.
 - `ipa` holds `Reelsmith.ipa`, the build for the phone, only when the run was started with `ipa=true`.

@@ -96,6 +96,7 @@ jobs:
           done
           if kill -KILL "$recorder" 2>/dev/null; then
             echo "The recorder did not end on the interrupt and was ended hard."
+            status=1
           fi
           wait "$recorder" || true
           ls -l recording
@@ -109,9 +110,10 @@ jobs:
         if: ${{ !cancelled() && steps.layer4.outcome != 'skipped' }}
         run: |
           trap 'echo "simulator log: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          mkdir -p results
           xcrun simctl spawn "$SIMULATOR" log show --last 30m --predicate 'process == "Reelsmith"' > results/simulator-log.txt ||
             echo "The simulator log could not be read."
-          wc -l results/simulator-log.txt
+          wc -l results/simulator-log.txt || true
 
       - name: "Layer 5: export the screenshots and marks, write the recording index"
         id: layer5
