@@ -4,7 +4,7 @@ Each story writes only inside its own slot.
 
 ### m1-1-core-contracts
 <!-- slot: m1-1-core-contracts -->
-`Sources/ReelsmithCore` imports nothing but the standard library and Foundation, and is tested on Linux. Its types are public values, Equatable and Sendable.
+`Sources/ReelsmithCore` imports nothing but the standard library and Foundation, and is tested on Linux. The types in the files below are public values, Equatable and Sendable.
 
 - `Model/Time.swift`: `Time`, a whole number of ticks, 600 a second.
 - `Model/Media.swift`: `MediaID` and `MediaInfo`, the facts of one media file.

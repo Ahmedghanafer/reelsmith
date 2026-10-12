@@ -64,9 +64,14 @@ public func renderPlan(for project: Project) throws -> RenderPlan {
         let turned = info.quarterTurns % 2 != 0
         let uprightWidth = Double(turned ? info.height : info.width)
         let uprightHeight = Double(turned ? info.width : info.height)
-        let scale = min(canvasWidth / uprightWidth, canvasHeight / uprightHeight)
-        let width = uprightWidth * scale
-        let height = uprightHeight * scale
+        // The side that limits the fit takes the canvas value itself, so it is exact.
+        var width = canvasWidth
+        var height = canvasHeight
+        if uprightWidth * canvasHeight > uprightHeight * canvasWidth {
+            height = uprightHeight * canvasWidth / uprightWidth
+        } else {
+            width = uprightWidth * canvasHeight / uprightHeight
+        }
         let placement = Placement(
             quarterTurns: info.quarterTurns, x: (canvasWidth - width) / 2, y: (canvasHeight - height) / 2,
             width: width, height: height)
