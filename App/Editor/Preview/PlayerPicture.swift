@@ -187,5 +187,7 @@ final class PlayerPictureView: UIView {
         stop()
         store.send(.movePlayhead(store.state.project.duration))
         store.send(.pause)
+        // The player stands on its last frame, which is the picture of the end. No seek goes there.
+        shown = store.state.playhead
     }
 }
