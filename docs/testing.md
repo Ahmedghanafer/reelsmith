@@ -73,6 +73,15 @@ The helpers in `Support/MediaReading.swift` read a file back. Each takes the fil
 
 ### m1-11-guard
 <!-- slot: m1-11-guard -->
+`Tests/ReelsmithCoreTests/TrackGuardTests.swift` guards the edits as a whole and runs on Linux. It changes no product code and tests no single edit: what each edit does is held by `EditActionsTests.swift`.
+
+- Two tests play 1000 runs of 50 actions each, one from `Seed.threeClips` and one from a project of two media that are 1219 and 2417 ticks long, so not whole frames. The actions come from a random source in the file itself (SplitMix64, whole number arithmetic only) with the start numbers 1 to 1000, so a run is the same on every platform and every time.
+- After every action the state must be valid (each clip inside its source, each length whole frames and at least `minimumClip`, the playhead a whole frame inside the project, the selection a clip of the project or none), `renderPlan(for:)` must not throw and must give a plan as long as the project whose segments touch and lie inside their media, and a `split` or `deleteSelected` must change the state exactly when `canSplit` or `canDelete` was true.
+- The run from the seed also fails when a kind of action was never sent. The kinds are the cases of the enum `Kind` in the file: every case of `EditorAction`, amounts past each limit, clip ids that are not in the project, and a project that became empty.
+- A failure names the start number, the number of the action and what was broken, and prints the actions of that run. To play it again, send those actions to `reduce` one by one from the start state. The tests stop at the first run that fails.
+- Two small tests hold that a trim of a clip before the playhead leaves the playhead at its time, and that a `trimEnd` that rounds to nothing still pauses.
+
+Changing a weight, a range or the media list in the file changes every run, so the count of each kind must be looked at again.
 <!-- end slot: m1-11-guard -->
 
 ### m1-12-whole-path
