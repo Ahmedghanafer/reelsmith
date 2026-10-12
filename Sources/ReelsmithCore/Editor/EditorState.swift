@@ -15,14 +15,14 @@ public struct EditorState: Equatable, Sendable {
 
     /// "<playhead clockText> / <duration clockText>", for example "00:01 / 00:07".
     public var timeLabel: String {
-        ""
+        playhead.clockText + " / " + project.duration.clockText
     }
 
     public var canPlay: Bool {
-        false
+        !project.clips.isEmpty
     }
 
     public var canExport: Bool {
-        false
+        !project.clips.isEmpty
     }
 }

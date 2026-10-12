@@ -40,20 +40,42 @@ public struct Project: Equatable, Sendable {
 
     /// The sum of the clip lengths.
     public var duration: Time {
-        .zero
+        var sum = Time.zero
+        for clip in clips {
+            sum = sum + clip.duration
+        }
+        return sum
     }
 
     public func start(of clip: ClipID) -> Time? {
-        nil
+        var start = Time.zero
+        for candidate in clips {
+            if candidate.id == clip {
+                return start
+            }
+            start = start + candidate.duration
+        }
+        return nil
     }
 
     /// The clip whose range holds the time, the later one on a join, none at the end.
     public func clip(at time: Time) -> Clip? {
-        nil
+        var start = Time.zero
+        for candidate in clips {
+            let end = start + candidate.duration
+            if time >= start && time < end {
+                return candidate
+            }
+            start = end
+        }
+        return nil
     }
 
     /// 1 for the first clip.
     public func position(of clip: ClipID) -> Int? {
-        nil
+        guard let index = clips.firstIndex(where: { $0.id == clip }) else {
+            return nil
+        }
+        return index + 1
     }
 }
