@@ -40,6 +40,8 @@ final class ToolsTests: XCTestCase {
         split.tap()
         assertTheBlocks(app, widths: [60, 120, 240, 120])
         XCTAssertEqual(playheadValue(app), "00:01")
+        // The playhead is now on a join.
+        XCTAssertFalse(split.isEnabled)
         XCTAssertFalse(delete.isEnabled)
         screenshot("m1-9a-split-delete-02-after-split")
 
@@ -70,7 +72,6 @@ final class ToolsTests: XCTestCase {
             XCTAssertEqual(element(app, "editor.clip.1").exists, remaining == 1)
         }
 
-        XCTAssertFalse(element(app, "editor.clip.1").exists)
         XCTAssertFalse(split.isEnabled)
         XCTAssertFalse(delete.isEnabled)
         let info = app.staticTexts["editor.seedInfo"].label
