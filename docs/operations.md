@@ -64,7 +64,7 @@ The run creates one simulator, an iPhone 17 on the iOS 26.5 runtime, and works t
 2. The project is generated, and the app and the UI tests are built for testing.
 3. The simulator boots, the built app is installed, the right to add to Photos is granted to the app, the two clips are put into the photo library, and the count of videos in the library is printed.
 4. The clock second is written to `recording-start.txt`, one recording of the simulator starts, and the UI tests run without a rebuild into a result bundle.
-5. The screenshots and the mark files are exported from the result bundle under their attachment names, and each mark becomes one line of `recording-index.txt`.
+5. The screenshots and the mark files are exported from the result bundle under their attachment names, and each mark becomes one line of `recording-index.txt`. A name is made safe for the upload: each character the upload refuses (the double quote, colon, less than, greater than, vertical bar, asterisk, question mark, carriage return and line feed) becomes an underscore, and a name that is already taken gets a number before its ending, as in `<name>_2.txt`.
 6. The count of videos in the library is printed again.
 7. Only with `ipa=true`: the device build without code signing, packed as `Reelsmith.ipa`.
 
@@ -81,7 +81,7 @@ gh run download <run id> -n results -D results
 gh run download <run id> -n ipa -D ipa
 ```
 
-- `screens` holds one picture per screenshot of the UI tests, named `<attachment name>.png`, and the mark files `<mark name>.mark.txt`. After a failed UI test it also holds a short `Screen Recording <date>.mp4` of that test, which the test system adds by itself.
+- `screens` holds one picture per screenshot of the UI tests, named `<attachment name>.png`, and the mark files `<mark name>.mark.txt`. After a failed UI test it also holds a short `Screen Recording <date>.mp4` of that test, `Complete Issue Description.txt`, `App UI hierarchy for <bundle id>`, `UI Snapshot <date>`, and one debug description for each wait for an element that did not appear, all of which the test system adds by itself. A debug description is named ``Debug description for `"<identifier>" Any`.txt`` by the test system and is stored as ``Debug description for `_<identifier>_ Any`.txt``. Repeats of a name are numbered.
 - `recording` holds `recording.mp4`, `recording-start.txt` and `recording-index.txt`. A line of the index is a mark's name, a space, and the seconds from the start of the recording to the mark, so that stretch is found by seeking to that second.
 - `results` holds the result bundle `Reelsmith.xcresult` of the UI tests and `simulator-log.txt`, the lines the app wrote to the simulator's log during the tests (a seed clip that could not be written says why there). The bundle opens only in Xcode. On this PC the log of the run says which test failed and why.
 - `ipa` holds `Reelsmith.ipa`, the build for the phone, only when the run was started with `ipa=true`.
