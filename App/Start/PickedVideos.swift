@@ -4,17 +4,18 @@ import ReelsmithEngine
 import UniformTypeIdentifiers
 
 /// `<documents>/Media/`, the media folder of a project made from picked videos.
+/// M1 saves nothing, so the folder is removed with everything in it when this is first read.
+/// Swift runs the initialiser of a constant at file level once for a process, so nothing is removed
+/// under a running copy. The start screen reads it when it appears, which is at every start of the app.
 ///
 /// https://developer.apple.com/documentation/foundation/filemanager/urls(for:in:)
-let pickedMediaFolder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    .appendingPathComponent("Media")
-
-/// Removes the folder of picked videos with everything in it. M1 saves nothing, so it is called at every start.
-///
 /// https://developer.apple.com/documentation/foundation/filemanager/removeitem(at:)
-func emptyPickedMediaFolder() {
-    try? FileManager.default.removeItem(at: pickedMediaFolder)
-}
+let pickedMediaFolder: URL = {
+    let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Media")
+    try? FileManager.default.removeItem(at: folder)
+    return folder
+}()
 
 /// Copies each picked video to `<documents>/Media/<uuid>.<the picked file's extension>` and reads its facts.
 /// Gives the facts in the order of choosing. A video that cannot be copied or read is left out, and nothing is thrown.

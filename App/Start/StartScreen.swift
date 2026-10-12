@@ -10,6 +10,7 @@ import SwiftUI
 /// https://developer.apple.com/documentation/swiftui/accessibilitytraits/isselected
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityidentifier(_:)
 /// https://developer.apple.com/documentation/swiftui/view/background(_:in:fillstyle:)
+/// https://developer.apple.com/documentation/swiftui/view/contentshape(_:eofill:)
 struct StartScreen: View {
     let options: LaunchOptions
     let open: @MainActor (EditorStore) -> Void
@@ -38,6 +39,8 @@ struct StartScreen: View {
                                 in: RoundedRectangle(cornerRadius: 10)
                             )
                             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary))
+                            // The whole shape takes the tap, the padding of the one with no fill too.
+                            .contentShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier(shape.words.key)
@@ -63,7 +66,8 @@ struct StartScreen: View {
         .multilineTextAlignment(.center)
         .padding()
         .onAppear {
-            emptyPickedMediaFolder()
+            // The first read empties the folder, once for a process.
+            _ = pickedMediaFolder
         }
         .sheet(isPresented: $picking) {
             VideoPicker(closed: pickerClosed)

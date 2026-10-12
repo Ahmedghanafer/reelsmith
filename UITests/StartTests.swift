@@ -7,6 +7,8 @@ import XCTest
 // https://developer.apple.com/documentation/xctest/xcuiapplication/terminate()
 // https://developer.apple.com/documentation/xctest/xcuielementtypequeryprovider
 // https://developer.apple.com/documentation/xctest/xcuielementquery/allelementsboundbyindex
+// https://developer.apple.com/documentation/xctest/xcuielementquery/matching(identifier:)
+// https://developer.apple.com/documentation/xctest/xcuielement/coordinate(withnormalizedoffset:)
 // https://developer.apple.com/documentation/xctest/xctexpectfailure(_:options:)
 // https://developer.apple.com/documentation/xctest/xctexpectedfailure/options/isstrict
 @MainActor
@@ -45,7 +47,8 @@ final class StartTests: XCTestCase {
         let landscape = element(app, "start.landscape")
         let portrait = element(app, "start.portrait")
 
-        portrait.tap()
+        // Near the leading edge, inside the padding around the words: the whole shape takes the tap.
+        portrait.coordinate(withNormalizedOffset: CGVector(dx: 0.06, dy: 0.5)).tap()
         XCTAssertTrue(portrait.isSelected)
         XCTAssertFalse(landscape.isSelected)
         screenshot("m1-6b-new-project-05-portrait")
@@ -53,6 +56,12 @@ final class StartTests: XCTestCase {
         landscape.tap()
         XCTAssertTrue(landscape.isSelected)
         XCTAssertFalse(portrait.isSelected)
+
+        // The app is ended with portrait chosen. Nothing is saved, so the next start has landscape chosen again.
+        portrait.tap()
+        XCTAssertTrue(portrait.isSelected)
+        app.terminate()
+        assertTheStartScreen(startApp(seed: nil))
     }
 
     func testAfterAnEditorOnASeedARelaunchWithNoSeedShowsTheStartScreen() {
@@ -91,19 +100,21 @@ final class StartTests: XCTestCase {
         mark("m1-6b-new-project-01-picker")
         newProject.tap()
 
-        // The videos are the pictures inside the picker's scroll view. The wave run puts blue in first, then red.
-        let videos = app.scrollViews.images
-        let found = videos.firstMatch.waitForExistence(timeout: 10)
+        // The videos are the cells of the picker's grid, which the system names PXGGridLayout-Info. The picture
+        // at the head of the picker is no cell. The wave run puts blue in first, then red.
+        let videos = app.scrollViews.images.matching(identifier: "PXGGridLayout-Info")
+        let found = videos.firstMatch.waitForExistence(timeout: 40)
         if XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch.exists {
             print("m1-6b-new-project: the system asked a question at picking")
         }
         guard found, videos.count >= 2 else {
             return "fewer than two videos were found in the picker"
         }
+        for (place, video) in videos.allElementsBoundByIndex.prefix(3).enumerated() {
+            print("m1-6b-new-project: video " + String(place + 1) + " of the picker reads: " + video.label)
+        }
         let first = videos.element(boundBy: 0)
         let second = videos.element(boundBy: 1)
-        print("m1-6b-new-project: the first video reads: " + first.label)
-        print("m1-6b-new-project: the second video reads: " + second.label)
         guard first.isHittable, second.isHittable else {
             return "the two videos could not be tapped"
         }
