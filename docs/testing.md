@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 248 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 334 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 50 UI tests in nine classes.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 249 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 335 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 61 UI tests in ten classes.
 
 What comes back from the simulator run:
 
@@ -143,6 +143,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 - `Tests/ReelsmithCoreTests/PreviewWordsTests.swift` fails when `preview.play` or `preview.pause` is missing from the English, the Arabic or the Swedish word file.
 - `Tests/ReelsmithCoreTests/TrimWordsTests.swift` fails when `trim.start` or `trim.end` is missing from the English, the Arabic or the Swedish word file.
 - `Tests/ReelsmithCoreTests/ToolsWordsTests.swift` fails when `tools.split` or `tools.delete` is missing from the English, the Arabic or the Swedish word file.
+- `Tests/ReelsmithCoreTests/AddTextWordsTests.swift` fails when one of the six keys of the text button and the text panel (`tools.text`, `text.tab.type`, `text.tab.look`, `text.tab.more`, `text.done`, `text.field`) is missing from the English, the Arabic or the Swedish word file.
 
 ## The Engine tests
 
@@ -297,6 +298,26 @@ Screenshots: `m1-9b-trim-handles-01-handles`, `m1-9b-trim-handles-01-handles-ar`
 - Arabic, on `three-clips`: the two buttons read the Arabic lines of the word file and split is right of delete.
 
 Screenshots: `m1-9a-split-delete-01-tools`, `m1-9a-split-delete-01-tools-ar`, `m1-9a-split-delete-02-after-split`, `m1-9a-split-delete-03-after-delete`, `m1-9a-split-delete-04-empty`. No mark: nothing here moves.
+
+### UI tests of the text panel
+
+`UITests/AddTextTests.swift` holds the text button, the text region and the text panel in eleven tests, on the seed `two-clips-wide` unless a test names another. Every test waits for the editor after a seeded start with `waitForTheEditor` and finds every control by its identifier, the field as the text view `text.field`. The values of the selected text are read from `editor.textInfo`, whose first field is the position of the text, and its string as the value of `text.field`. No test reads the picture. After a tap or typing the test reads until the effect holds, expected within 1 second and failing only above 3, and prints a line that starts with `add-text: waited` with the seconds, the expected value and the limit. The keyboard is expected within 2 seconds and given up above 6. What each text action does, the blank rule and `canAddText` are held on Linux by `TextEditsTests.swift` and `TextStateTests.swift`, and the tests below hold that the screen follows them.
+
+- The button and the two lines: `editor.addText` is among the descendants of `editor.toolsRegion`, reads "Text", is enabled and right of `editor.delete`. `editor.textInfo` reads "none" and `editor.faceInfo` reads "Amiri-Regular Amiri-Bold", in that order under `editor.seedInfo`, and there is no `editor.textRegion`. Another name in `editor.faceInfo` means a bundled face could not be made from its file. A resource bundle that is not inside the app stops every seeded start instead.
+- The seed `empty`: the button is there and not enabled.
+- No seed: on the start screen neither `editor.textInfo` nor `editor.faceInfo` exists.
+- Add and type: after a tap on the button `editor.textRegion` lies between `editor.toolsRegion` and `editor.exportRegion`, and `editor.textInfo` reads `1 naskh 64 255,255,255 centre 960,540 0 ... 0+4200 0`. The three part buttons and `text.done` are in one row among the descendants of the region, with done right of them, `text.tab.type` has the trait selected, and `text.field` is under the row. After a tap on the field the keyboard is there and the field and done can both be tapped (`isHittable`). The test types "Peace", a line break and "be upon you": the value of the field holds both lines with the line break between them, and the position still reads 1. After a tap on done the region is gone and `editor.textInfo` reads "none", and the next text has the position 2.
+- Done from every part: after a tap on `text.tab.look` and after one on `text.tab.more` that button has the trait selected, `text.tab.type` has not, the field is gone, and done is there and can be tapped.
+- A blank text: add, done with nothing typed, add again, and the position reads 1. Then two spaces are typed, done, add, and the position reads 1 again.
+- Delete: after a typed "Peace" `editor.delete` is enabled. After a tap on it the region is gone, `editor.textInfo` reads "none", both blocks are there, `editor.time` ends with "00:07", and the next text has the position 1.
+- One selection, with `-playhead 2400`: a tap on `editor.clip.2` shows both trim handles, the tap on the text button takes them away and shows the region, and a tap on `editor.clip.1` takes the region away.
+- The text seeds: on `text-wide` the region is there after the start, `editor.textInfo` reads the line above, `text.tab.look` has the trait selected and there is no field. After a tap on `text.tab.type` the value of the field is the three lines of the seed with the Arabic line in the middle. On `text-box-wide` it reads `1 naskh 96 255,214,10 centre 960,540 0 ..b 600+900 0`, on the part look.
+- Arabic: the button and done read the Arabic lines of the word file. The text button is left of Delete, the part buttons run from right to left and done is left of them. `editor.play` is still left of `editor.time` and the first block left of the second.
+- Swedish: the button, the three part buttons and done read the Swedish lines, and done is right of the part buttons.
+
+Screenshots: `add-text-01-button` (three buttons in the tools row, three lines of a seed start on top), `add-text-04-panel` (the panel on the part type with an empty field), `add-text-02-keyboard` (the same with the keyboard up: how much of the picture area, the strip and the tools row is left above the panel is judged on it), `add-text-03-arabic-field` (the field of `text-wide` with its three lines: whether the Arabic line runs from the right is judged on it), `add-text-04-panel-ar` and `add-text-04-panel-sv` (the panel in Arabic, mirrored, and in Swedish). No mark: nothing here moves. No test types Arabic: the keyboard of the simulator run is not driven in another language.
+
+That the field sends `setString` on every change and that done sends nothing but `clearSelection` cannot be seen on this screen beyond their effect on `editor.textInfo` and the field, and that the picture follows a text is held by no test here.
 
 ### The export button and its panel
 
