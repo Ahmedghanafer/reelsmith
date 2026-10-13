@@ -59,8 +59,8 @@ struct EditorScreen: View {
             }
             .region("editor.exportRegion")
         }
-        // Nothing in the editor takes an animation from a transaction, so the layout does not slide when a
-        // tap changes its height: it changes in one frame.
+        // Takes the animation out of every transaction that comes down to the editor, so the text region
+        // does not slide in or out.
         // https://developer.apple.com/documentation/swiftui/view/transaction(_:)
         .transaction { $0.animation = nil }
         .accessibilityElement(children: .contain)
