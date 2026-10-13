@@ -42,3 +42,18 @@
 
 /* slot: m1-12-whole-path */
 /* end slot: m1-12-whole-path */
+
+/* slot: add-text */
+/* end slot: add-text */
+
+/* slot: text-look */
+/* end slot: text-look */
+
+/* slot: text-more */
+/* end slot: text-more */
+
+/* slot: text-row */
+/* end slot: text-row */
+
+/* slot: text-path */
+/* end slot: text-path */

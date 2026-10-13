@@ -1,5 +1,9 @@
 /// An action that cannot be done returns the state unchanged.
 public func reduce(_ state: EditorState, _ action: EditorAction) -> EditorState {
+    settleTexts(from: state, to: step(state, action))
+}
+
+private func step(_ state: EditorState, _ action: EditorAction) -> EditorState {
     var next = state
     switch action {
     case .addClips(let media):
@@ -15,9 +19,11 @@ public func reduce(_ state: EditorState, _ action: EditorAction) -> EditorState 
     case .select(let clip):
         if state.project.position(of: clip) != nil {
             next.selection = clip
+            next.selectedText = nil
         }
     case .clearSelection:
         next.selection = nil
+        next.selectedText = nil
     case .movePlayhead(let time):
         next.playhead = min(max(time, .zero), state.project.duration).roundedDownToFrame
     case .play:
@@ -29,6 +35,8 @@ public func reduce(_ state: EditorState, _ action: EditorAction) -> EditorState 
         }
     case .pause:
         next.isPlaying = false
+    case .text(let textAction):
+        return reduceText(state, textAction)
     }
     return next
 }

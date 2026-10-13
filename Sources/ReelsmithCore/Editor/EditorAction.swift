@@ -16,4 +16,5 @@ public enum EditorAction: Equatable, Sendable {
     /// From zero when the playhead is at the end. Nothing on an empty project.
     case play
     case pause
+    case text(TextAction)
 }

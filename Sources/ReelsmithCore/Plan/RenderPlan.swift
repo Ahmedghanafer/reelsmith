@@ -36,16 +36,47 @@ public struct Segment: Equatable, Sendable {
     }
 }
 
+public struct TextLayer: Equatable, Sendable {
+    public var text: TextID
+    public var string: String
+    /// The start of the text's range in the project.
+    public var timelineStart: Time
+    /// Its length. The layer is drawn in a frame at time t when timelineStart <= t < timelineStart + duration.
+    public var duration: Time
+    /// Canvas pixels: the centre of the block.
+    public var x: Double
+    public var y: Double
+    public var rotation: Double
+    public var style: TextStyle
+    /// Canvas pixels: a line longer than this wraps. The canvas width times TextGeometry.wrapShare.
+    public var lineWidth: Double
+
+    public init(text: TextID, string: String, timelineStart: Time, duration: Time, x: Double, y: Double, rotation: Double, style: TextStyle, lineWidth: Double) {
+        self.text = text
+        self.string = string
+        self.timelineStart = timelineStart
+        self.duration = duration
+        self.x = x
+        self.y = y
+        self.rotation = rotation
+        self.style = style
+        self.lineWidth = lineWidth
+    }
+}
+
 public struct RenderPlan: Equatable, Sendable {
     public var segments: [Segment]
     public var duration: Time
     /// Copied from the project.
     public var canvas: Canvas
+    /// In drawing order. Blank texts and texts with no range are left out.
+    public var texts: [TextLayer]
 
-    public init(segments: [Segment], duration: Time, canvas: Canvas = .portrait) {
+    public init(segments: [Segment], duration: Time, canvas: Canvas = .portrait, texts: [TextLayer] = []) {
         self.segments = segments
         self.duration = duration
         self.canvas = canvas
+        self.texts = texts
     }
 }
 
@@ -83,5 +114,14 @@ public func renderPlan(for project: Project) throws -> RenderPlan {
             duration: clip.duration, placement: placement, hasSound: info.hasSound))
         start = start + clip.duration
     }
-    return RenderPlan(segments: segments, duration: start, canvas: project.canvas)
+    var texts: [TextLayer] = []
+    for text in project.texts {
+        guard !text.isBlank, let range = project.range(of: text.id) else {
+            continue
+        }
+        texts.append(TextLayer(
+            text: text.id, string: text.string, timelineStart: range.start, duration: range.duration, x: text.x,
+            y: text.y, rotation: text.rotation, style: text.style, lineWidth: canvasWidth * TextGeometry.wrapShare))
+    }
+    return RenderPlan(segments: segments, duration: start, canvas: project.canvas, texts: texts)
 }

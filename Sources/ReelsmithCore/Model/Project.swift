@@ -31,12 +31,18 @@ public struct Project: Equatable, Sendable {
     public var media: [MediaID: MediaInfo]
     /// Starts at 1, each new clip takes it and adds 1.
     public var nextClipID: Int
+    /// In drawing order, the later one on top.
+    public var texts: [TextItem]
+    /// Starts at 1, each new text takes it and adds 1.
+    public var nextTextID: Int
 
     public init(canvas: Canvas = .portrait) {
         self.canvas = canvas
         clips = []
         media = [:]
         nextClipID = 1
+        texts = []
+        nextTextID = 1
     }
 
     /// The sum of the clip lengths.
@@ -78,5 +84,40 @@ public struct Project: Equatable, Sendable {
             return nil
         }
         return index + 1
+    }
+
+    public func text(_ id: TextID) -> TextItem? {
+        texts.first(where: { $0.id == id })
+    }
+
+    /// 1 for the first text of the list.
+    public func position(of text: TextID) -> Int? {
+        guard let index = texts.firstIndex(where: { $0.id == text }) else {
+            return nil
+        }
+        return index + 1
+    }
+
+    /// Whole: zero to the project length. A range is cut at the project end. Nil for an unknown id,
+    /// for an empty project, and for a range that starts at or after the end.
+    public func range(of text: TextID) -> TextRange? {
+        guard let item = self.text(text) else {
+            return nil
+        }
+        let end = duration
+        switch item.span {
+        case .whole:
+            return end > .zero ? TextRange(start: .zero, duration: end) : nil
+        case .range(let range):
+            guard range.start < end else {
+                return nil
+            }
+            return TextRange(start: range.start, duration: min(range.duration, end - range.start))
+        }
+    }
+
+    /// Canvas, clips and media are equal. The texts may differ.
+    public func sameFootage(as other: Project) -> Bool {
+        canvas == other.canvas && clips == other.clips && media == other.media
     }
 }
