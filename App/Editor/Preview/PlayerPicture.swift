@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreImage
 import ReelsmithCore
 import ReelsmithEngine
 import SwiftUI
@@ -26,6 +27,20 @@ struct PlayerPicture: UIViewRepresentable {
 /// the playhead when `isPlaying` turns true. While playing it reports its time with `movePlayhead`,
 /// which never makes it seek, and at the end it sends `pause`. Never mirrored.
 ///
+/// A new item has no frame to show at first. So the picture the layer shows is copied before the new
+/// item goes into the player and lies over the layer until the layer says that the first frame of
+/// the new item is ready for display, or until `oldPictureLimit` has passed. Each time one line goes
+/// to the log, starting with "old picture": laid, not laid and why, taken away after how long and why.
+///
+/// https://developer.apple.com/documentation/foundation/nslog(_:_:)
+/// https://developer.apple.com/documentation/avfoundation/avplayerlayer/isreadyfordisplay
+/// https://developer.apple.com/documentation/avfoundation/avplayerlayer/displayedreadonlypixelbuffer()
+/// https://developer.apple.com/documentation/corevideo/cvreadonlypixelbuffer
+/// https://developer.apple.com/documentation/coreimage/ciimage/init(cvpixelbuffer:)
+/// https://developer.apple.com/documentation/coreimage/cicontext/createcgimage(_:from:)
+/// https://developer.apple.com/documentation/uikit/uiimageview
+/// https://developer.apple.com/documentation/uikit/uiview/contentmode-swift.property
+/// https://developer.apple.com/documentation/swift/task/sleep(nanoseconds:)
 /// https://developer.apple.com/documentation/avfoundation/avplayer
 /// https://developer.apple.com/documentation/avfoundation/avplayerlayer
 /// https://developer.apple.com/documentation/avfoundation/avplayerlayer/pixelbufferattributes
@@ -72,6 +87,20 @@ final class PlayerPictureView: UIView {
     /// True while one seek is in flight. A newer playhead waits in `target` until it lands.
     private var isSeeking = false
     private var timeObserver: Any?
+    /// The picture of the item before the newest one, over the layer while it is not hidden.
+    private let oldPicture = UIImageView()
+    private let imageContext = CIContext()
+    /// Counts the items put into the player. What was registered for an older item does nothing.
+    /// What is registered for the newest item reads the layer's flag of the moment, so a late report
+    /// of ready for the item before, just after a newer one went in, can take the old picture away
+    /// early. The area is then black until the frame, as with no old picture, never a wrong picture.
+    private var shown = 0
+    /// When the old picture was laid. Nil while none lies.
+    private var laid: Date?
+    private var displayObservation: NSKeyValueObservation?
+    /// The seconds after which the old picture goes also when the layer never said it was ready: an
+    /// item that fails. A build and its first frame take under half a second in the simulator.
+    private static let oldPictureLimit: UInt64 = 15
 
     init(store: EditorStore) {
         self.store = store
@@ -89,6 +118,12 @@ final class PlayerPictureView: UIView {
         ]
         NotificationCenter.default.addObserver(
             self, selector: #selector(itemEnded(_:)), name: AVPlayerItem.didPlayToEndTimeNotification, object: nil)
+        // The layer shows a frame whole and in its middle, and so does this view.
+        oldPicture.contentMode = .scaleAspectFit
+        oldPicture.isHidden = true
+        oldPicture.frame = bounds
+        oldPicture.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(oldPicture)
     }
 
     required init?(coder: NSCoder) {
@@ -108,7 +143,8 @@ final class PlayerPictureView: UIView {
     /// Builds the item of the state's project and sends it to the playhead of that moment. Until it is
     /// ready the player follows nothing. Then it is brought to the state of that moment.
     /// An empty project gets no item and the one of the last build is let go. A build that throws
-    /// gets no item either: the area is black.
+    /// gets no item either: the area is black. While a build runs the player keeps the item before it
+    /// and stands still, so the area shows the picture from before the change.
     private func rebuild(for state: EditorState) {
         build += 1
         let number = build
@@ -117,6 +153,7 @@ final class PlayerPictureView: UIView {
         stop()
         guard state.canPlay else {
             item = nil
+            keepTheOldPicture(until: nil, without: "an empty project")
             player.replaceCurrentItem(with: nil)
             return
         }
@@ -138,6 +175,7 @@ final class PlayerPictureView: UIView {
 
     private func install(_ item: AVPlayerItem?, build number: Int) {
         self.item = item
+        keepTheOldPicture(until: item, without: "a failed build")
         player.replaceCurrentItem(with: item)
         // The first playhead goes with the item, so the player gets ready on that frame and not on
         // the first one. A seek with no completion handler may be sent before the item is ready.
@@ -153,6 +191,77 @@ final class PlayerPictureView: UIView {
                 self?.itemStatusChanged(number)
             }
         }
+    }
+
+    /// Called before an item goes into the player. With no item nothing is kept, so the area is black,
+    /// and `why` says for the log why there is none.
+    /// The layer gives its picture only while the player is paused, which it is here: every build
+    /// starts with a stop. When the layer gives none, what lies over it stays as it is: the picture
+    /// of a still older item whose follower never drew, or nothing.
+    private func keepTheOldPicture(until item: AVPlayerItem?, without why: String) {
+        shown += 1
+        let number = shown
+        displayObservation = nil
+        guard item != nil, let playerLayer = layer as? AVPlayerLayer else {
+            takeTheOldPictureAway(because: why)
+            return
+        }
+        var image: CGImage?
+        var missing = "the layer gave no buffer"
+        if let buffer = playerLayer.displayedReadOnlyPixelBuffer() {
+            missing = "no image came of the buffer"
+            image = buffer.withUnsafeBuffer { pixels in
+                let picture = CIImage(cvPixelBuffer: pixels)
+                return imageContext.createCGImage(picture, from: picture.extent)
+            }
+        }
+        if let image {
+            oldPicture.image = UIImage(cgImage: image)
+            oldPicture.isHidden = false
+            if laid == nil {
+                laid = Date()
+            }
+            NSLog("%@", "old picture laid, item \(number)")
+        } else {
+            let before = laid == nil ? "nothing lies" : "the one before still lies"
+            NSLog("%@", "old picture not laid, item \(number): \(missing), \(before)")
+        }
+        // Observed before the item goes in, so no change of the value is missed. The change can come
+        // on any thread.
+        displayObservation = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                self?.showThePlayer(number, onlyWhenReady: true)
+            }
+        }
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: PlayerPictureView.oldPictureLimit * 1_000_000_000)
+            self?.showThePlayer(number, onlyWhenReady: false)
+        }
+    }
+
+    /// For the newest item only: takes the old picture away when the layer says it is ready, or
+    /// whatever the layer says when the limit has passed.
+    private func showThePlayer(_ number: Int, onlyWhenReady: Bool) {
+        guard number == shown else {
+            return
+        }
+        if onlyWhenReady, (layer as? AVPlayerLayer)?.isReadyForDisplay != true {
+            return
+        }
+        takeTheOldPictureAway(
+            because: onlyWhenReady
+                ? "the layer reported ready" : "the limit of \(PlayerPictureView.oldPictureLimit) seconds")
+    }
+
+    /// Hides the old picture, so the area shows what the player shows. Writes a line when one lay.
+    private func takeTheOldPictureAway(because why: String) {
+        if let since = laid {
+            let lay = Int(Date().timeIntervalSince(since) * 1000)
+            NSLog("%@", "old picture taken away after \(lay) ms, item \(shown): \(why)")
+        }
+        laid = nil
+        oldPicture.isHidden = true
+        oldPicture.image = nil
     }
 
     private func itemStatusChanged(_ number: Int) {
