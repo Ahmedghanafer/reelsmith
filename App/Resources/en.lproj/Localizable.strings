@@ -44,6 +44,12 @@
 /* end slot: m1-12-whole-path */
 
 /* slot: add-text */
+"tools.text" = "Text";
+"text.tab.type" = "Type";
+"text.tab.look" = "Look";
+"text.tab.more" = "More";
+"text.done" = "Done";
+"text.field" = "Your text";
 /* end slot: add-text */
 
 /* slot: text-look */

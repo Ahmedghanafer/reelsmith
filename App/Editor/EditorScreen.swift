@@ -1,7 +1,9 @@
 import ReelsmithCore
+import ReelsmithEngine
 import SwiftUI
 
-/// The editor shell: four regions from top to bottom, each with the slot of the story that fills it.
+/// The editor shell: four regions from top to bottom, each with the slot of the story that fills it,
+/// and between the tools and the export a fifth, the text region, only while a text is selected.
 /// The root and the regions are accessibility containers, so a region is found while it is empty
 /// and a control inside it keeps its own identifier.
 ///
@@ -16,6 +18,12 @@ struct EditorScreen: View {
                 Text(text(seedInfo))
                     .font(.footnote)
                     .accessibilityIdentifier("editor.seedInfo")
+                Text(verbatim: store.state.textInfo)
+                    .font(.footnote)
+                    .accessibilityIdentifier("editor.textInfo")
+                Text(verbatim: faceName(of: .naskh) + " " + faceName(of: .naskhBold))
+                    .font(.footnote)
+                    .accessibilityIdentifier("editor.faceInfo")
             }
             ZStack {
                 // slot: preview
@@ -38,6 +46,12 @@ struct EditorScreen: View {
                 // end slot: tools
             }
             .region("editor.toolsRegion")
+            if let selected: TextID = store.state.selectedText {
+                // A panel is made anew for every text that gets selected, so it starts on the part of that text.
+                TextPanel(store: store)
+                    .id(selected)
+                    .region("editor.textRegion")
+            }
             ZStack {
                 // slot: export
                 ExportButton(store: store)

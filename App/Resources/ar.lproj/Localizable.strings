@@ -44,6 +44,12 @@
 /* end slot: m1-12-whole-path */
 
 /* slot: add-text */
+"tools.text" = "نص";
+"text.tab.type" = "كتابة";
+"text.tab.look" = "المظهر";
+"text.tab.more" = "المزيد";
+"text.done" = "تم";
+"text.field" = "النص";
 /* end slot: add-text */
 
 /* slot: text-look */

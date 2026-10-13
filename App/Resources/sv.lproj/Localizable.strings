@@ -44,6 +44,12 @@
 /* end slot: m1-12-whole-path */
 
 /* slot: add-text */
+"tools.text" = "Text";
+"text.tab.type" = "Skriv";
+"text.tab.look" = "Utseende";
+"text.tab.more" = "Mer";
+"text.done" = "Klar";
+"text.field" = "Din text";
 /* end slot: add-text */
 
 /* slot: text-look */
