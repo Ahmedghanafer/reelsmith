@@ -19,7 +19,6 @@ private func step(_ state: EditorState, _ action: EditorAction) -> EditorState {
     case .select(let clip):
         if state.project.position(of: clip) != nil {
             next.selection = clip
-            next.selectedText = nil
         }
     case .clearSelection:
         next.selection = nil
