@@ -29,7 +29,7 @@ struct PlayerPicture: UIViewRepresentable {
 /// it sends `pause`. Never mirrored.
 ///
 /// On a seeded start, and only then, the accessibility value of the area is the count of the items
-/// that were built, in the digits 0 to 9. A refresh does not change it.
+/// the view began to build, in the digits 0 to 9. A refresh does not change it.
 ///
 /// A new item has no frame to show at first. So the picture the layer shows is copied before the new
 /// item goes into the player and lies over the layer until the layer says that the first frame of
@@ -75,7 +75,7 @@ final class PlayerPictureView: UIView {
     private var build = 0
     /// True from the start of a build of an item until it lands.
     private var isBuilding = false
-    /// Counts the items that were built, for the accessibility value of a seeded start.
+    /// Counts the items the view began to build, for the accessibility value of a seeded start.
     private var built = 0
     /// The item of the newest build, the one whose status is observed.
     private var item: AVPlayerItem?

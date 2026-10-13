@@ -35,7 +35,8 @@ final class PreviewTextTests: XCTestCase {
     /// The picture is read once the blue frame stands, then a text is added and two letters are typed, with
     /// no tap on play and no scrub. With the keyboard up the picture area is small, so its share is only
     /// printed there, and done is tapped before the read that is asserted. Done changes neither the project
-    /// nor the playhead. The printed lines tell which step showed the letters.
+    /// nor the playhead. The asserted share is the lowest of the reads of one second, so nothing that only
+    /// passes over the area while the layout settles counts. The printed lines tell which step showed the letters.
     func testTwoTypedLettersShowInThePausedPictureWithNoNewItem() {
         let app = startText(seed: "two-clips-wide", playhead: 600)
         let picture = element(app, "editor.picture")
@@ -50,8 +51,7 @@ final class PreviewTextTests: XCTestCase {
         print("preview-text: with the keyboard up the share of white is \(whiteSmall), editor.picture \(builds(picture))")
 
         tapDone(app)
-        let whiteAfter = waitForTheShare(
-            of: white, "white after the typing", in: picture, moreThan: leastWhite, expected: 2)
+        let whiteAfter = lowestShareOfWhite(in: picture, "after the typing")
         let buildsAfter = builds(picture)
         print(
             "preview-text: the share of white before \(whiteBefore) and after \(whiteAfter), T \(leastWhite), editor.picture before \(buildsBefore) and after \(buildsAfter)"
@@ -72,10 +72,9 @@ final class PreviewTextTests: XCTestCase {
 
         addATextAndType(app, "MM")
         tapDone(app)
-        let found = waitForTheShare(of: white, "white", in: picture, moreThan: leastWhite)
+        let found = lowestShareOfWhite(in: picture, "typed at once after the start")
         print("preview-text: typed at once after the start, the share of white is \(found), editor.picture \(builds(picture))")
         XCTAssertGreaterThan(found, leastWhite, "white")
-        XCTAssertGreaterThan(share(of: blue, in: picture), 0.9, "blue")
     }
 
     func testTheTextOfTheSeedStandsOverTheBlueClipAndOverTheRedClip() {
@@ -200,15 +199,37 @@ final class PreviewTextTests: XCTestCase {
         waitUntil("the typed letters as the value of the field") { field.value as? String == string }
     }
 
-    /// Taps done and waits until the text region is gone and the picture is as wide as its region again,
-    /// as it is on the landscape canvas with no panel and no keyboard.
+    /// Taps done and waits until the text region and the keyboard are gone and the picture is as wide as
+    /// its region again, as it is on the landscape canvas with no panel and no keyboard.
     private func tapDone(_ app: XCUIApplication) {
         element(app, "text.done").tap()
-        waitUntil("the text region gone after the tap on done, the picture as wide as its region", expected: 2) {
-            !element(app, "editor.textRegion").exists
+        waitUntil(
+            "the text region and the keyboard gone after the tap on done, the picture as wide as its region",
+            expected: 2
+        ) {
+            !element(app, "editor.textRegion").exists && !app.keyboards.firstMatch.exists
                 && abs(element(app, "editor.picture").frame.width - element(app, "editor.previewRegion").frame.width)
                     <= 1
         }
+    }
+
+    /// For the picture of two typed letters after done. Waits until the area is blue but for a hundredth,
+    /// so the layout stands and nothing else lies in the area, then until the share of white is above T,
+    /// and from then reads it as often as the probe can for one second. Answers the lowest of those
+    /// reads: a white pixel of a control that only passes over the area is gone within that second.
+    private func lowestShareOfWhite(in picture: XCUIElement, _ when: String) -> Double {
+        let alone = waitForTheShare(
+            of: blue, "blue with the picture alone in its area", in: picture, moreThan: blueWithNoBox)
+        XCTAssertGreaterThan(alone, blueWithNoBox, "blue " + when)
+        var lowest = waitForTheShare(of: white, "white " + when, in: picture, moreThan: leastWhite, expected: 2)
+        let started = Date()
+        var reads = 1
+        repeat {
+            lowest = min(lowest, share(of: white, in: picture))
+            reads += 1
+        } while Date().timeIntervalSince(started) < 1
+        print("preview-text: \(reads) reads of white in one second \(when), the lowest share \(lowest), T \(leastWhite)")
+        return lowest
     }
 
     /// No element says when a frame is drawn, so the share is asked again until it is more than wanted.
