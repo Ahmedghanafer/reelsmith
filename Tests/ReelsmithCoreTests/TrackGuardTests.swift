@@ -103,6 +103,8 @@ private func kind(of action: EditorAction, in state: EditorState) -> Kind {
         return .play
     case .pause:
         return .pause
+    case .text:
+        return .clearSelection
     }
 }
 
