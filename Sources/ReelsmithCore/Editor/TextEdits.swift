@@ -89,7 +89,6 @@ func settleTexts(from before: EditorState, to after: EditorState) -> EditorState
     // The text that was selected goes when it is blank and no longer selected. So does a text that is not
     // selected and was given a blank string.
     var next = after
-    next.project.texts.removeAll(where: { $0.isBlank && $0.id != after.selectedText })
     return next
 }
 
