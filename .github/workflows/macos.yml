@@ -136,8 +136,11 @@ jobs:
           for file in UITests/*.swift; do
             class=$(sed -n -E 's/.*class[[:space:]]+([A-Za-z0-9_]+)[[:space:]]*:[[:space:]]*XCTestCase.*/\1/p' "$file")
             count=$(grep -c -E '^[[:space:]]*func test' "$file" || true)
-            # A run that chooses tests needs one test class in each file, or a class is in no group.
+            # A run that chooses tests needs one test class in each file with tests, or a class is in no group.
             set -- $class
+            if [ "$#" -eq 0 ] && [ "$count" -eq 0 ]; then
+              continue
+            fi
             if [ "$#" -ne 1 ] && { [ -n "$CLASSES" ] || [ "$GROUP" != 0 ]; }; then
               echo "Not one test class in $file, so a class would be in no group. Found: $*" | tee "$RUNNER_TEMP/selection.txt"
               exit 1
