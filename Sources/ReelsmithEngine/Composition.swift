@@ -18,9 +18,9 @@ public func makePlayerItem(plan: RenderPlan, media: [MediaID: MediaInfo], mediaF
 /// For an item that `makePlayerItem` made and a plan with the same segments: gives the item a new video
 /// composition built from the plan, so the texts of the plan are drawn from the next frame on. Loads no file
 /// and reads no asset: the picture track of each segment and the text pictures the plan uses again are taken
-/// from the instructions the item has. Throws `cannotRead` for an item it did not make or a plan with another
-/// number of segments, and `sourceMissing` as `makePlayerItem` does when the plan names media with no facts.
-/// After a throw the item has the video composition it had.
+/// from the instructions the item has. Throws `cannotRead` for an item it did not make, a plan with another
+/// number of segments or a segment whose time range is not that of its instruction, and `sourceMissing` as
+/// `makePlayerItem` does when the plan names media with no facts. After a throw the item has the video composition it had.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/videocomposition
 /// https://developer.apple.com/documentation/avfoundation/avvideocomposition/instructions
@@ -29,6 +29,12 @@ public func refreshPicture(of item: AVPlayerItem, plan: RenderPlan, media: [Medi
     guard let pieces = item.videoComposition?.instructions as? [PieceInstruction],
           pieces.count == plan.segments.count
     else { throw EngineError.cannotRead }
+    for (segment, piece) in zip(plan.segments, pieces) {
+        let range = CMTimeRange(
+            start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
+            duration: CMTime(value: segment.duration.ticks, timescale: 600))
+        guard range == piece.timeRange else { throw EngineError.cannotRead }
+    }
     item.videoComposition = try videoComposition(
         plan: plan, media: media, tracks: pieces.map { $0.track }, kept: pieces.flatMap { $0.texts })
 }

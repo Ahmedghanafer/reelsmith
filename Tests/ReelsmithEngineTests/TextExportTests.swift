@@ -80,6 +80,8 @@ final class TextExportTests: XCTestCase {
         print("text in the frame: a box over 128, 128, 128 reads \(box.r), \(box.g), \(box.b) in the exported "
             + "file, and the grey beside it \(beside.r), \(beside.g), \(beside.b)")
         XCTAssertLessThanOrEqual(worst(box, RGB(r: 51, g: 51, b: 51)), 6, "reads \(box)")
+        // The reader converts nothing: the grey of the clip reads as it was written.
+        XCTAssertLessThanOrEqual(worst(beside, RGB(r: 128, g: 128, b: 128)), 2, "the grey reads \(beside)")
     }
 
     func testATextIn142And142And147OverBlueHasAPixelOfThatColourInTheExportedFile() async throws {
@@ -128,21 +130,29 @@ final class TextExportTests: XCTestCase {
         XCTAssertGreaterThan(leftward, rightward)
     }
 
-    /// The ink is every pixel that is not the blue of the clip: the box and its letters.
+    /// The ink is every pixel that is not the blue of the clip: the box and its letters. The word is built
+    /// upright in the middle and reaches its place and its turn through a refresh, so its kept picture is put
+    /// anew. The box is the same on both sides of its centre, so the middle of its ink is the place of the layer.
     @MainActor
-    func testABoxedWordTurnedBy30HasItsRightEndLowerThanItsLeftEnd() async throws {
-        let layer = text("Constantinople", rotation: 30, size: 64, box: true)
-        let item = try await playerItem(of: handPlan(of: .blue, texts: [layer]))
+    func testABoxedWordTurnedBy30At480And270StandsThereWithItsRightEndLowerThanItsLeftEnd() async throws {
+        let upright = text("Constantinople", size: 64, box: true)
+        let turned = text("Constantinople", x: 480, y: 270, rotation: 30, size: 64, box: true)
+        let item = try await playerItem(of: handPlan(of: .blue, texts: [upright]))
+        try refreshPicture(
+            of: item, plan: handPlan(of: .blue, texts: [turned]), media: [TestClip.blue.info.id: TestClip.blue.info])
         let ink = try await frame(of: item, at: 600).places { worst($0, blue) > 24 }
 
         XCTAssertFalse(ink.isEmpty)
-        let middle = ink.reduce(0) { $0 + $1.x } / max(ink.count, 1)
-        let leftEnd = ink.filter { $0.x < middle }
-        let rightEnd = ink.filter { $0.x > middle }
+        let column = Double(ink.reduce(0) { $0 + $1.x }) / Double(max(ink.count, 1))
+        let row = Double(ink.reduce(0) { $0 + $1.y }) / Double(max(ink.count, 1))
+        let leftEnd = ink.filter { Double($0.x) < column }
+        let rightEnd = ink.filter { Double($0.x) > column }
         let leftRow = leftEnd.reduce(0) { $0 + $1.y } / max(leftEnd.count, 1)
         let rightRow = rightEnd.reduce(0) { $0 + $1.y } / max(rightEnd.count, 1)
-        print("text in the frame: a word turned by 30, mean row \(leftRow) of its left end "
-            + "and \(rightRow) of its right end")
+        print("text in the frame: a word turned by 30 at 480, 270 after a refresh, mean column \(column) and "
+            + "mean row \(row) of its ink, mean row \(leftRow) of its left end and \(rightRow) of its right end")
+        XCTAssertEqual(column, 480, accuracy: 2)
+        XCTAssertEqual(row, 270, accuracy: 2)
         XCTAssertGreaterThan(rightRow, leftRow)
     }
 
@@ -253,6 +263,15 @@ final class TextExportTests: XCTestCase {
         do {
             try refreshPicture(of: item, plan: renderPlan(for: three), media: three.media)
             XCTFail("a plan of three segments was taken for an item of two")
+        } catch {
+            XCTAssertEqual(error as? EngineError, .cannotRead)
+        }
+        // Two segments as the item has, the first of another length.
+        var trimmed = wide
+        trimmed.clips[0].duration = Time(ticks: 1200)
+        do {
+            try refreshPicture(of: item, plan: renderPlan(for: trimmed), media: trimmed.media)
+            XCTFail("a plan with a segment of another length was taken")
         } catch {
             XCTAssertEqual(error as? EngineError, .cannotRead)
         }
