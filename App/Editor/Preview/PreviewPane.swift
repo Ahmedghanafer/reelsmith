@@ -15,6 +15,7 @@ import SwiftUI
 /// https://developer.apple.com/documentation/swiftui/view/accessibilitylabel(_:)-5f0zj
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityidentifier(_:)
 /// https://developer.apple.com/documentation/swiftui/environmentvalues/layoutdirection
+/// https://developer.apple.com/documentation/swiftui/view/modifier(_:)
 struct PreviewPane: View {
     let store: EditorStore
 
@@ -29,6 +30,8 @@ struct PreviewPane: View {
                     CGSize(width: state.project.canvas.width, height: state.project.canvas.height),
                     contentMode: .fit
                 )
+                // On the picture itself, not on the space around it: the recognizers of `TextGestures`.
+                .modifier(TextGestures(store: store))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: 16) {
                 Button {
