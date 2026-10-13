@@ -7,7 +7,7 @@ final class HarnessTests: XCTestCase {
         let app = startApp(seed: "two-clips")
 
         // The seed start writes two clips first, which takes a while in a simulator.
-        XCTAssertTrue(app.descendants(matching: .any)["editor.root"].waitForExistence(timeout: 60))
+        waitForTheEditor(app)
         let regions = ["editor.previewRegion", "editor.timelineRegion", "editor.toolsRegion", "editor.exportRegion"]
             .map { app.descendants(matching: .any)[$0] }
         for region in regions {
@@ -43,7 +43,7 @@ final class HarnessTests: XCTestCase {
     func testAStartInSwedishWithAPlayheadAndAnExportFailureOpensTheShellInSwedish() {
         let app = startApp(seed: "two-clips", language: "sv", playhead: 3000, exportFails: true)
 
-        XCTAssertTrue(app.descendants(matching: .any)["editor.root"].waitForExistence(timeout: 60))
+        waitForTheEditor(app)
         // The seed text is the Swedish line of the word file, so the language reached the app.
         let info = app.staticTexts["editor.seedInfo"].label
         XCTAssertTrue(info.hasPrefix("2 klipp, "), info)
@@ -53,7 +53,7 @@ final class HarnessTests: XCTestCase {
     func testAStartInArabicOpensTheShellInArabic() {
         let app = startApp(seed: "two-clips", language: "ar")
 
-        XCTAssertTrue(app.descendants(matching: .any)["editor.root"].waitForExistence(timeout: 60))
+        waitForTheEditor(app)
         // The Arabic line of the word file with both numbers in it.
         let info = app.staticTexts["editor.seedInfo"].label
         XCTAssertTrue(info.contains("المقاطع: 2"), info)

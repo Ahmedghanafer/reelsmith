@@ -26,6 +26,7 @@ final class TrimTests: XCTestCase {
         XCTAssertFalse(end.exists)
 
         tap(red)
+        waitUntil("the red block selected after the tap on it") { red.isSelected }
         XCTAssertTrue(red.isSelected)
         assertTheHandlesAreOutsideTheEdges(app, of: red)
         XCTAssertEqual(start.label, "Trim start")
@@ -44,6 +45,7 @@ final class TrimTests: XCTestCase {
         let red = element(app, "editor.clip.2")
         let green = element(app, "editor.clip.3")
         tap(red)
+        waitUntil("the red block selected after the tap on it") { red.isSelected }
 
         mark("m1-9b-trim-handles-01-trim-end")
         drag(element(app, "editor.trim.end"), byPoints: -120)
@@ -68,6 +70,7 @@ final class TrimTests: XCTestCase {
         let blue = element(app, "editor.clip.1")
         let red = element(app, "editor.clip.2")
         tap(red)
+        waitUntil("the red block selected after the tap on it") { red.isSelected }
         let left = red.frame.minX
 
         mark("m1-9b-trim-handles-02-trim-start")
@@ -94,6 +97,7 @@ final class TrimTests: XCTestCase {
         let red = element(app, "editor.clip.2")
         let end = element(app, "editor.trim.end")
         tap(red)
+        waitUntil("the red block selected after the tap on it") { red.isSelected }
 
         mark("m1-9b-trim-handles-03-limits")
         drag(end, byPoints: -300)
@@ -116,6 +120,7 @@ final class TrimTests: XCTestCase {
         let blue = element(app, "editor.clip.1")
         let start = element(app, "editor.trim.start")
         tap(blue)
+        waitUntil("the blue block selected after the tap on it") { blue.isSelected }
         let left = blue.frame.minX
 
         mark("m1-9b-trim-handles-04-first-clip")
@@ -136,6 +141,7 @@ final class TrimTests: XCTestCase {
         let green = element(app, "editor.clip.3")
         let end = element(app, "editor.trim.end")
         tap(green)
+        waitUntil("the green block selected after the tap on it") { green.isSelected }
         let left = green.frame.minX
 
         mark("m1-9b-trim-handles-05-last-clip")
@@ -153,6 +159,7 @@ final class TrimTests: XCTestCase {
         let app = startTrim(seed: "three-clips", language: "ar", playhead: 3000)
         let red = element(app, "editor.clip.2")
         tap(red)
+        waitUntil("the red block selected after the tap on it") { red.isSelected }
 
         // The start handle is still at the left edge and the end handle at the right.
         assertTheHandlesAreOutsideTheEdges(app, of: red)
@@ -228,9 +235,11 @@ final class TrimTests: XCTestCase {
     /// and fails only above three: a hosted runner under load can hold the app for seconds.
     private func waitUntil(_ what: String, _ reached: () -> Bool) {
         let started = Date()
-        var waited: Double = 0
         var holds = reached()
-        while !holds && waited <= 3 {
+        var waited = Date().timeIntervalSince(started)
+        // The limit counts from the end of the first read, so a slow first read still gets a second one.
+        let first = waited
+        while !holds && waited <= first + 3 {
             Thread.sleep(forTimeInterval: 0.2)
             holds = reached()
             waited = Date().timeIntervalSince(started)
@@ -242,7 +251,7 @@ final class TrimTests: XCTestCase {
     /// Starts the app and waits for the editor: the first seeded start in a fresh simulator writes the clips first.
     private func startTrim(seed: String, language: String = "en", playhead: Int? = nil) -> XCUIApplication {
         let app = startApp(seed: seed, language: language, playhead: playhead)
-        XCTAssertTrue(element(app, "editor.root").waitForExistence(timeout: 60))
+        waitForTheEditor(app)
         return app
     }
 

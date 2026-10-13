@@ -105,7 +105,7 @@ final class ExportPanelTests: XCTestCase {
         seed: String, language: String = "en", playhead: Int? = nil, exportFails: Bool = false
     ) -> XCUIApplication {
         let app = startApp(seed: seed, language: language, playhead: playhead, exportFails: exportFails)
-        XCTAssertTrue(element(app, "editor.root").waitForExistence(timeout: 60))
+        waitForTheEditor(app)
         return app
     }
 
