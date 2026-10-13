@@ -4,8 +4,8 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test. That is 141 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 190 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test. That is 177 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 226 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 48 UI tests in nine classes.
 
 What comes back from the simulator run:
@@ -55,10 +55,26 @@ The files below are in `Tests/ReelsmithCoreTests` and run on Linux.
 - `Tests/ReelsmithCoreTests/WordsTests.swift`: a `Words` value with its key and its arguments.
 - `Tests/ReelsmithCoreTests/EditorStateTests.swift`: a new state, `timeLabel`, `canPlay` and `canExport`.
 - `Tests/ReelsmithCoreTests/ReduceTests.swift`: what `select`, `clearSelection`, `movePlayhead`, `play` and `pause` do.
-- `Tests/ReelsmithCoreTests/EditActionsTests.swift`: the five edit actions through `reduce`, `canSplit` and `canDelete`, on `Seed.threeClips` and `Seed.empty`. One test sends a fixed list of actions that holds every case of `EditorAction` and checks after each that the state is valid.
+- `Tests/ReelsmithCoreTests/EditActionsTests.swift`: the five edit actions through `reduce`, `canSplit` and `canDelete`, on `Seed.threeClips` and `Seed.empty`. One test sends a fixed list of actions that holds every case of `EditorAction` but `text` and checks after each that the state is valid.
 - `Tests/ReelsmithCoreTests/TimelineGeometryTests.swift`: the numbers of `TimelineGeometry`.
 - `Tests/ReelsmithCoreTests/RenderPlanTests.swift`: the segments of a plan and the places of pictures on the portrait canvas.
 - `Tests/ReelsmithCoreTests/SeedsTests.swift`: the values of the five test clips and the seeds `empty`, `two-clips` and `three-clips`.
+
+### The text model
+
+Four files hold the text model, with states built by hand. No test sends a text action, and no test reads what `reduceText`, `settleTexts` or `textPicture(for:)` returns.
+
+- `Tests/ReelsmithCoreTests/TextModelTests.swift`: the three faces with their raw values and word keys, the three sides, the standard style, the eight colours of the palette, `isBlank`, a string stored scalar for scalar, a new project with no text, `text(_:)` and `position(of:)`, `range(of:)` (a whole text, a range cut at the project end, and the cases with no range), and `sameFootage(as:)`.
+- `Tests/ReelsmithCoreTests/TextStateTests.swift`: the eight cases of `TextAction` with their labels, through a switch with no default in the file, so a ninth case does not compile. A new state with no selected text, `canAddText` on the seeds `empty` and `two-clips`, a `select` of a clip and a `clearSelection` on a state with a selected text, and `textInfo` compared as whole strings: "none", the two text seeds, a text with no range, and a text whose numbers must be rounded.
+- `Tests/ReelsmithCoreTests/TextPlanTests.swift`: a plan built with no texts, the one layer of each text seed with every value, the wrap width 864 on the portrait canvas, `wrapShare`, a blank text and a text with no range left out with the order kept and a cut range, an empty project, and the four times 580, 600, 1480 and 1500 ticks at the borders of the layer of `text-box-wide`. No function of Core decides whether a layer holds a time, so the file has a private one that writes the rule out.
+- `Tests/ReelsmithCoreTests/TextSeedsTests.swift`: the two text seeds by name, also through `LaunchOptions`, their clips, ids, length and canvas, the one text of each with every value, the Arabic line compared scalar by scalar, `Seed.selectedText` of all six seeds, and that the other four seeds have no text.
+
+`TextModelTests.swift` gives every Core test four helpers at file level. A test file that needs one uses it and writes no second one under the same name:
+
+- `arabicLineScalars`, the 21 scalars of the Arabic line of the seed `text-wide`, as `[UInt32]`.
+- `arabicLine()`, the same line as a `String`.
+- `textItem(_:_:_:)`, a text from an id as an `Int`, a string and a span, at 960, 540 with rotation 0 in `TextStyle.standard`.
+- `projectOfOneClip(ticks:)`, a portrait project with one clip of that length and `nextClipID` 2.
 
 ### The guard of the edits
 
@@ -66,7 +82,7 @@ The files below are in `Tests/ReelsmithCoreTests` and run on Linux.
 
 - Two tests play 1000 runs of 50 actions each, one from `Seed.threeClips` and one from a project of two media that are 1219 and 2417 ticks long, so not whole frames. The actions come from a random source in the file itself (SplitMix64, whole number arithmetic only) with the start numbers 1 to 1000, so a run is the same on every platform and every time.
 - After every action the state must be valid (each clip inside its source, each length whole frames and at least `minimumClip`, the playhead a whole frame inside the project, the selection a clip of the project or none), `renderPlan(for:)` must not throw and must give a plan as long as the project whose segments touch and lie inside their media, and a `split` or `deleteSelected` must change the state exactly when `canSplit` or `canDelete` was true.
-- The run from the seed also fails when a kind of action was never sent. The kinds are the cases of the enum `Kind` in the file: every case of `EditorAction`, amounts past each limit, clip ids that are not in the project, and a project that became empty.
+- The run from the seed also fails when a kind of action was never sent. The kinds are the cases of the enum `Kind` in the file: every case of `EditorAction` but `text`, amounts past each limit, clip ids that are not in the project, and a project that became empty. The runs send no text action. The function that names the kind of an action answers `clearSelection` for the case `text`, which no run reaches, and `Kind` has no case for it.
 - A failure names the start number, the number of the action and what was broken, and prints the actions of that run. To play it again, send those actions to `reduce` one by one from the start state. The tests stop at the first run that fails.
 - Two small tests hold single edits: that a trim of a clip before the playhead leaves the playhead at its time, and that a `trimEnd` that rounds to nothing still pauses.
 
@@ -74,7 +90,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 ### The canvas
 
-- `Tests/ReelsmithCoreTests/CanvasTests.swift` runs on Linux. It holds `Canvas`: the two cases in order, their sizes, `startChoice`, the two word keys and `allWords`. It holds the canvas on the project (`Project()` is portrait, `Project(canvas: .landscape)` is landscape, each empty) and in the plan (`renderPlan(for:)` copies it, for an empty project too, and a plan built with no canvas is portrait). On the landscape canvas it places one clip alone, with every number compared with no tolerance: a picture stored 1920 by 1080, 1280 by 720 or 3840 by 2160 at 0, 0, 1920 by 1080, one stored 1080 by 1920 and the clip `turned` at 656.25, 0, 607.5 by 1080, one stored 1080 by 1080 at 420, 0, 1080 by 1080, and one stored 2532 by 1170 with a width of exactly 1920 at x 0. It holds the seed `two-clips-wide` by its name, also through `LaunchOptions`, with its clips, ids, length, canvas and the two places of its plan, and that the other three seeds are portrait. Last, from that seed, the canvas is still landscape after `addClips`, a `split` at 600 ticks, `trimStart`, `trimEnd` and `deleteSelected` down to the empty project.
+- `Tests/ReelsmithCoreTests/CanvasTests.swift` runs on Linux. It holds `Canvas`: the two cases in order, their sizes, `startChoice`, the two word keys and `allWords`. It holds the canvas on the project (`Project()` is portrait, `Project(canvas: .landscape)` is landscape, each empty) and in the plan (`renderPlan(for:)` copies it, for an empty project too, and a plan built with no canvas is portrait). On the landscape canvas it places one clip alone, with every number compared with no tolerance: a picture stored 1920 by 1080, 1280 by 720 or 3840 by 2160 at 0, 0, 1920 by 1080, one stored 1080 by 1920 and the clip `turned` at 656.25, 0, 607.5 by 1080, one stored 1080 by 1080 at 420, 0, 1080 by 1080, and one stored 2532 by 1170 with a width of exactly 1920 at x 0. It holds the seed `two-clips-wide` by its name, also through `LaunchOptions`, with its clips, ids, length, canvas and the two places of its plan, and that the seeds `empty`, `two-clips` and `three-clips` are portrait. Last, from that seed, the canvas is still landscape after `addClips`, a `split` at 600 ticks, `trimStart`, `trimEnd` and `deleteSelected` down to the empty project.
 - The portrait canvas is held by the tests on the 9:16 seeds and on plans built with no canvas: `RenderPlanTests.swift`, and on macOS the Engine tests `ExportTests.swift` and `CompositionTests.swift`.
 
 ### The launch values
