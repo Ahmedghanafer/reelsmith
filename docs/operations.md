@@ -35,7 +35,7 @@ gh run view <run id> --log
 
 The workflow starts on every label and skips its job for any label but `compile`. So another label put on the pull request afterwards starts a skipped run, and that skipped run takes the place of the result in `gh pr checks`. The result that counts is the newest run in `gh run list --workflow "Compile check" --branch <branch>` that was not skipped and whose head is the head of the pull request.
 
-It can also be started by hand on any branch:
+It can also be started by hand on any branch that holds the workflow file:
 
 ```
 gh workflow run "Compile check" --ref <branch>

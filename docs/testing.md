@@ -88,7 +88,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 ### The word files
 
-- `Tests/ReelsmithCoreTests/WordFilesTests.swift` reads `App/Resources/<en, ar, sv>.lproj/Localizable.strings` from the repository and fails when their key sets differ, when a text is empty, when the placeholders of a key differ between languages, when a key appears twice, or when a file holds anything but comments and lines of a key. It shows each of the first four on word files it writes into a temporary folder. It stays green when a key is gone from all three files, so each part of the app that needs keys has a test that names them.
+- `Tests/ReelsmithCoreTests/WordFilesTests.swift` reads `App/Resources/<en, ar, sv>.lproj/Localizable.strings` from the repository and fails when their key sets differ, when a text is empty, when the placeholders of a key differ between languages, when a key appears twice, or when a file holds anything but comments and lines of a key. It shows each of the first four on word files it writes into a temporary folder. It stays green when a key is gone from all three files, so each part of the app that needs keys has a test that names them. For the seed text that test is in this file: it holds `editor.seedInfo` to the English file.
 - The same file gives every Linux test the function `wordKeys(of language: String) throws -> [String]`, the keys of the repository's word file of `"en"`, `"ar"` or `"sv"`. A test of a Core state that gives words holds its keys with it and writes no second reader, as `StartWordsTests.swift` does for every key of `StartState.allWords`.
 - `Tests/ReelsmithCoreTests/StartWordsTests.swift` runs on Linux, with `wordKeys(of:)`. It fails when one of the seven keys of the start screen is missing from the English, the Arabic or the Swedish word file, and when a key of `StartState.allWords` or of `Canvas.allWords` is missing from the English file.
 - `Tests/ReelsmithCoreTests/ExportWordsTests.swift` fails when one of the seven keys of the export is missing from the English, the Arabic or the Swedish word file, and when a key of `ExportState.allWords` is missing from the English file.
@@ -98,7 +98,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 ## The Engine tests
 
-A test makes its clips with `writeTestClip` in a folder of its own under the temporary folder. No media file is committed. Sizes, frame counts and lengths are exact, a colour matches within 24 of 255 per channel.
+The tests make their clips with `writeTestClip` in folders of their own under the temporary folder. No media file is committed. Sizes, frame counts and lengths are exact, a colour matches within 24 of 255 per channel.
 
 The helpers in `Tests/ReelsmithEngineTests/Support/MediaReading.swift` read a file back. Each takes the file's URL:
 
