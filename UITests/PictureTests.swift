@@ -65,7 +65,7 @@ final class PictureTests: XCTestCase {
     /// fresh simulator writes the clips first.
     private func startPicture(seed: String, playhead: Int) -> XCUIElement {
         let app = startApp(seed: seed, playhead: playhead)
-        XCTAssertTrue(app.descendants(matching: .any)["editor.root"].waitForExistence(timeout: 60))
+        waitForTheEditor(app)
         let picture = app.descendants(matching: .any)["editor.picture"]
         XCTAssertTrue(picture.exists)
         return picture
