@@ -119,6 +119,9 @@ final class WholePathTests: XCTestCase {
         // The rest of the last second.
         Thread.sleep(forTimeInterval: 2)
         XCTAssertTrue(theTwoSidesAreTheSame(app), element(app, "editor.time").label)
+        // The two sides read the same through the whole last second. At the end there is nothing to split,
+        // and a stop inside the blue clip would leave the button enabled.
+        XCTAssertFalse(element(app, "editor.split").isEnabled)
 
         // The export. The wave run grants the right to add to Photos, so no question is expected.
         element(app, "editor.export").tap()
