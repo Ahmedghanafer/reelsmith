@@ -55,7 +55,9 @@ extension XCTestCase {
         started = Date()
         var laidOut = block.exists && block.frame.width > 0 && block.frame.height > 0
         var waited = Date().timeIntervalSince(started)
-        while !laidOut && waited <= 3 {
+        // The limit counts from the end of the first read, so a slow first read still gets a second one.
+        let first = waited
+        while !laidOut && waited <= first + 3 {
             Thread.sleep(forTimeInterval: 0.2)
             laidOut = block.exists && block.frame.width > 0 && block.frame.height > 0
             waited = Date().timeIntervalSince(started)

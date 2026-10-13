@@ -109,7 +109,9 @@ final class ToolsTests: XCTestCase {
         let started = Date()
         var holds = reached()
         var waited = Date().timeIntervalSince(started)
-        while !holds && waited <= 3 {
+        // The limit counts from the end of the first read, so a slow first read still gets a second one.
+        let first = waited
+        while !holds && waited <= first + 3 {
             Thread.sleep(forTimeInterval: 0.2)
             holds = reached()
             waited = Date().timeIntervalSince(started)

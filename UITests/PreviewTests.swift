@@ -219,7 +219,9 @@ final class PreviewTests: XCTestCase {
         let started = Date()
         var reached = wanted(timeBeforeTheSlash(app))
         var waited = Date().timeIntervalSince(started)
-        while !reached && waited <= 3 * expected {
+        // The limit counts from the end of the first read, so a slow first read still gets a second one.
+        let first = waited
+        while !reached && waited <= first + 3 * expected {
             Thread.sleep(forTimeInterval: 0.1)
             reached = wanted(timeBeforeTheSlash(app))
             waited = Date().timeIntervalSince(started)
@@ -234,7 +236,9 @@ final class PreviewTests: XCTestCase {
         let started = Date()
         var reached = play.label == wanted
         var waited = Date().timeIntervalSince(started)
-        while !reached && waited <= 3 {
+        // The limit counts from the end of the first read, so a slow first read still gets a second one.
+        let first = waited
+        while !reached && waited <= first + 3 {
             Thread.sleep(forTimeInterval: 0.1)
             reached = play.label == wanted
             waited = Date().timeIntervalSince(started)
