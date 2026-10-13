@@ -220,6 +220,14 @@ final class TextEditsTests: XCTestCase {
         XCTAssertNil(next.selectedText)
     }
 
+    func testATextThatIsNotSelectedGoesWhenItIsGivenABlankString() {
+        let unselected = sendText(textWide, .setString(one, " \n"))
+        let selected = sendText(textWide, .select(one), .setString(one, " \n"))
+
+        XCTAssertEqual(unselected.project.texts, [])
+        XCTAssertEqual(selected.project.texts.map { $0.string }, [" \n"])
+    }
+
     // The string
 
     func testAStringIsStoredAsGivenScalarForScalar() {

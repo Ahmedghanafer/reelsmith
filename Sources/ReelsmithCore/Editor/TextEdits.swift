@@ -85,13 +85,10 @@ func reduceText(_ state: EditorState, _ action: TextAction) -> EditorState {
 
 /// The blank rule: a blank text exists only while it is selected. Called by reduce on every path.
 func settleTexts(from before: EditorState, to after: EditorState) -> EditorState {
-    guard let was = before.selectedText, after.selectedText != was,
-        let index = after.project.texts.firstIndex(where: { $0.id == was }), after.project.texts[index].isBlank
-    else {
-        return after
-    }
+    // The text that was selected goes when it is blank and no longer selected. So does a text that is not
+    // selected and was given a blank string.
     var next = after
-    next.project.texts.remove(at: index)
+    next.project.texts.removeAll(where: { $0.isBlank && $0.id != after.selectedText })
     return next
 }
 
