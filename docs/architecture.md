@@ -4,7 +4,7 @@ The page goes from the data to the screen: the Core package, the Engine, the app
 
 ## The Core package
 
-`Sources/ReelsmithCore` imports nothing but the standard library and Foundation, and is tested on Linux. The types in the files below are public values, Equatable and Sendable.
+`Sources/ReelsmithCore` imports nothing but the standard library and Foundation, and is tested on Linux. The types in the files below are public values, Equatable and Sendable, but `TimelineGeometry`, which holds only constants and functions.
 
 ### The model
 
@@ -47,7 +47,7 @@ The page goes from the data to the screen: the Core package, the Engine, the app
 
 `Sources/ReelsmithEngine` is the second package target and the only one that touches AVFoundation. It is the library product `ReelsmithEngine`, which the app links, and it depends on `ReelsmithCore`. It uses frameworks that exist on iOS and macOS alike, never UIKit or SwiftUI. Every file that imports an Apple framework sits whole inside `#if canImport(AVFoundation)`, so Linux compiles nothing of it. The Engine and its tests are in Swift 5 language mode.
 
-The Engine turns a render plan into video. Both entry points take the plan, the facts of its media and the media folder, and find the file of a media id at `<media folder>/<fileName>`.
+The Engine turns a render plan into video. Both entry points for that, `makePlayerItem` and `export`, take the plan, the facts of its media and the media folder, and find the file of a media id at `<media folder>/<fileName>`.
 
 - `Sources/ReelsmithEngine/EngineError.swift`: `EngineError`, what an entry point can throw. Its case `notBuilt` is thrown by nothing.
 - `Sources/ReelsmithEngine/MediaProbe.swift`: `readMediaInfo` reads the facts of the file `<media folder>/<fileName>` and returns them under the id and the file name it was given: the width and height of the picture as stored, the length of the picture track rounded down to a tick, the quarter turns, and whether the file has a sound track. The internal `quarterTurns(of:)` in the same file maps the stored transform of the picture track to the turns: b 1 is one turn, a minus 1 two turns, b minus 1 three turns, anything else none. The internal `wholeTicks(of:)` beside it rounds the length of the track down to a tick. It throws `sourceMissing` with the id when the file is not in the folder, and `cannotRead` when the file cannot be opened as a video or has no picture track.
@@ -138,7 +138,7 @@ The export button and its panel, in the folder `App/Editor/Export/`. They draw t
 ## The word files
 
 - `App/WordsText.swift`: `text(_:)` looks the key of a `Words` value up in `Localizable.strings` and puts its arguments in at `%1$@`, `%2$@` and so on. A fixed label is written with its key, as in `Text("start.title")`.
-- `App/Resources/<en, ar, sv>.lproj/Localizable.strings`: the words of the app in English, Arabic and Swedish, one line for each key, as in `"export.saved" = "Saved to Photos"` closed by a semicolon. The lines of a file stand in groups between the two comment lines `/* slot: <name> */` and `/* end slot: <name> */`, which mark the keys of one part of the app, and a group holds the same keys in all three files. English is the development language.
+- `App/Resources/<en, ar, sv>.lproj/Localizable.strings`: the words of the app in English, Arabic and Swedish, one line for each key, as in `"export.saved" = "Saved to Photos"` closed by a semicolon. The lines of a file stand in groups between the two comment lines `/* slot: <name> */` and `/* end slot: <name> */`, which mark the keys of one part of the app, and a group holds the same keys in all three files. A group may hold no key. English is the development language.
 - `App/Resources/<en, ar, sv>.lproj/InfoPlist.strings`: the one photo text, for adding only, under the key `NSPhotoLibraryAddUsageDescription`. `project.yml` puts the English text into the Info.plist.
 - The words of the start screen: the keys `start.title`, `start.newProject`, `start.landscape`, `start.portrait`, `start.copying`, `start.noneReadable` and `start.ok`. The numbers 16:9 and 9:16 are written with the digits 0 to 9 in every language.
 - The words of the export: the keys `export.button`, `export.exporting`, `export.saved`, `export.done`, `export.failed`, `export.notAllowed` and `export.close`.
