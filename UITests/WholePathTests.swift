@@ -215,7 +215,7 @@ final class WholePathTests: XCTestCase {
     }
 
     /// Taps `start.newProject`, chooses blue then red and confirms. The picker runs outside the app, so its
-    /// controls read as not hittable and are tapped by coordinate. They carry no identifier of ours and
+    /// controls read as not hittable and are tapped by coordinate, in the middle of their frames. They carry no identifier of ours and
     /// are found by the system's own identifier, by kind and by place, never by a word.
     private func drivePicker(_ app: XCUIApplication, picture: String?) -> String? {
         let newProject = element(app, "start.newProject")
@@ -248,17 +248,18 @@ final class WholePathTests: XCTestCase {
         guard redFrame.width > 1, redFrame.height > 1, blueFrame.width > 1, blueFrame.height > 1 else {
             return "a cell of the picker's grid had no frame to tap"
         }
-        blue.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let top = min(cells.element(boundBy: 0).frame.minY, redFrame.minY, blueFrame.minY)
+        // A tap may change the grid, so every later tap goes to a place read before the first one.
+        tap(app, theMiddleOf: blueFrame)
         Thread.sleep(forTimeInterval: 1)
-        red.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        tap(app, theMiddleOf: redFrame)
         Thread.sleep(forTimeInterval: 1)
         if let picture {
             screenshot(picture)
         }
 
         // The button that confirms: of the buttons above the grid, the one furthest to the right.
-        let top = min(cells.element(boundBy: 0).frame.minY, redFrame.minY, blueFrame.minY)
-        var confirm: XCUIElement?
+        var confirm: CGRect?
         var edge: CGFloat = 0
         for button in app.buttons.allElementsBoundByIndex {
             let frame = button.frame
@@ -268,7 +269,7 @@ final class WholePathTests: XCTestCase {
             }
             print("m1-12-whole-path: a button above the grid at \(frame), identifier: " + identifier)
             if frame.maxX > edge {
-                confirm = button
+                confirm = frame
                 edge = frame.maxX
             }
         }
@@ -276,7 +277,7 @@ final class WholePathTests: XCTestCase {
             print(app.debugDescription)
             return "no button above the picker's grid was found"
         }
-        confirm.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        tap(app, theMiddleOf: confirm)
 
         guard element(app, "editor.root").waitForExistence(timeout: 60) else {
             print(app.debugDescription)
@@ -292,6 +293,14 @@ final class WholePathTests: XCTestCase {
             return "the editor opened with " + lengths + ", and blue then red is 00:03 then 00:04"
         }
         return nil
+    }
+
+    /// Taps the screen in the middle of a frame that was read from an element. The app fills the screen,
+    /// so its top left corner is the zero point of the frames.
+    private func tap(_ app: XCUIApplication, theMiddleOf frame: CGRect) {
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            .withOffset(CGVector(dx: frame.midX, dy: frame.midY))
+            .tap()
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
