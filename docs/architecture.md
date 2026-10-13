@@ -232,6 +232,18 @@ The text button, the text region and the panel of the selected text. They decide
 - The parts `look` and `more` are the slots `look` and `more` of the file, both empty. A part put there has the `store` of the panel to hand and needs no state about the parts.
 - `text.done` sends `clearSelection` and nothing else, from every part. The panel removes no text itself: the blank rule of Core removes a text that is left blank when it stops being selected, by done, by a tap on a clip or by another new text, with no message. The Delete button removes the selected text through `deleteSelected` and leaves the clips.
 
+### The look of a text
+
+The part `look` of the text panel: the face, the colour and the size of the selected text.
+
+- `App/Editor/Text/TextLook.swift`: `TextLook`, with `let store: EditorStore`. The slot `look` of `TextPanel.swift` holds the one line that makes `TextLook(store: store)`. It holds no state and decides nothing: it reads the selected text as `state.selectedText.flatMap { state.project.text($0) }`, shows what its style holds, and draws nothing when no text is selected.
+- The faces: one row of three buttons in the order of `TextFont.allCases`, with the identifiers `text.font.naskh`, `text.font.naskh-bold` and `text.font.system` (`text.font.` and the raw value of the case). The word of a button comes from `TextFont.words` through `text(_:)`. The button of the face the text has is drawn bold and has the trait selected.
+- The colours: one row of eight buttons, one for each colour of `TextStyle.palette` in its order, with the identifiers `text.colour.1` to `text.colour.8`. A button is a disc of its colour, and its accessibility label is the key `text.colour` with the number of the swatch, written with the digits 0 to 9. The button of the colour the text has carries a ring and has the trait selected. The eight share the width of the row, each 44 points high.
+- The size: the word of the key `text.size` and the slider `text.size`, from `TextGeometry.minimumSize` to `TextGeometry.maximumSize` in steps of 2. The slider reads the size from the store at every call, so it shows the size Core holds.
+- Every control sends `text(.setStyle)` with the whole style the text has at that moment, changed in one value: the font, the colour or the size. The screen holds no limit of its own, Core holds the size between its two limits. The picture follows by the preview, under "The preview and text": `TextLook.swift` names no player, no item and no function of the Engine.
+- The rows lay out from leading to trailing, so Arabic mirrors them, the slider included. No control changes the height of the layout.
+- Its five word keys stand in the group `text-look` of the three word files: `text.font.naskh`, `text.font.naskhBold`, `text.font.system`, `text.colour` and `text.size`.
+
 ### The export button and its panel
 
 The export button and its panel, in the folder `App/Editor/Export/`. They draw the `ExportState` of `Sources/ReelsmithCore/Export/`.
