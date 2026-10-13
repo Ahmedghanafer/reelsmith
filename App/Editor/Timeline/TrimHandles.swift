@@ -74,7 +74,7 @@ final class TrimHandle: UIView, UIGestureRecognizerDelegate {
                 x: handle.isStart ? left - width : right,
                 y: view.strip.frame.minY,
                 width: width,
-                height: view.strip.frame.height
+                height: TimelineStripView.clipRow.height
             )
         }
     }

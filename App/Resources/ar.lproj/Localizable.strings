@@ -59,6 +59,9 @@
 /* end slot: text-more */
 
 /* slot: text-row */
+"textRow.bar" = "النص %1$@";
+"textRow.trimStart" = "بداية النص";
+"textRow.trimEnd" = "نهاية النص";
 /* end slot: text-row */
 
 /* slot: text-path */

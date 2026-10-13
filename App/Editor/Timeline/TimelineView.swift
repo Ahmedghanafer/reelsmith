@@ -31,6 +31,11 @@ struct TimelineStrip: UIViewRepresentable {
 /// https://developer.apple.com/documentation/objectivec/nsobject/accessibilitytraits
 /// https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier
 final class TimelineStripView: UIView {
+    /// The row of clips: 56 points high from y 8.
+    static let clipRow: (y: CGFloat, height: CGFloat) = (y: 8, height: 56)
+    /// The row of texts under it: 24 points high from y 72.
+    static let textRow: (y: CGFloat, height: CGFloat) = (y: 72, height: 24)
+
     var send: @MainActor (EditorAction) -> Void = { _ in }
 
     /// The state that is drawn. Setting it draws it.
@@ -86,9 +91,9 @@ final class TimelineStripView: UIView {
         let middle = bounds.width / 2
         strip.frame = CGRect(
             x: middle - CGFloat(TimelineGeometry.x(of: state.playhead)),
-            y: 8,
+            y: Self.clipRow.y,
             width: CGFloat(TimelineGeometry.width(of: state.project.duration)),
-            height: max(bounds.height - 16, 0)
+            height: Self.clipRow.height
         )
         for (clip, block) in zip(clips, blocks) {
             let start: Time = state.project.start(of: clip.id) ?? Time.zero
@@ -98,7 +103,7 @@ final class TimelineStripView: UIView {
                 x: CGFloat(TimelineGeometry.x(of: start)),
                 y: 0,
                 width: CGFloat(TimelineGeometry.width(of: clip.duration)),
-                height: strip.bounds.height
+                height: Self.clipRow.height
             )
             block.text = String(position) + "\n" + clip.duration.clockText
             block.accessibilityIdentifier = "editor.clip." + String(position)
@@ -119,6 +124,7 @@ final class TimelineStripView: UIView {
         // slot: handles
         TrimHandle.layout(in: self, below: playhead)
         // end slot: handles
+        TextBars.layout(in: self, below: playhead)
     }
 
     /// A scrub sends `pause`, then `movePlayhead`. The strip follows the finger, so a drag to the left
@@ -134,8 +140,9 @@ final class TimelineStripView: UIView {
         }
     }
 
-    /// A tap on a block selects it. A tap anywhere else on this view, beside the row of blocks or in the
-    /// band above or below it, sends `clearSelection`. A tap on a trim handle never comes here.
+    /// A tap on a block selects it. A tap anywhere else on this view, beside the row of blocks, in the
+    /// band above or below it or in the empty part of the text row, sends `clearSelection`. A tap on
+    /// a trim handle, on a text bar or on a handle of a text bar never comes here.
     @objc private func tapped(_ tap: UITapGestureRecognizer) {
         let point = tap.location(in: strip)
         if strip.bounds.contains(point),
