@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 249 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 335 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 68 UI tests in eleven classes.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 250 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 336 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 77 UI tests in twelve classes.
 
 What comes back from the simulator run:
 
@@ -144,6 +144,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 - `Tests/ReelsmithCoreTests/TrimWordsTests.swift` fails when `trim.start` or `trim.end` is missing from the English, the Arabic or the Swedish word file.
 - `Tests/ReelsmithCoreTests/ToolsWordsTests.swift` fails when `tools.split` or `tools.delete` is missing from the English, the Arabic or the Swedish word file.
 - `Tests/ReelsmithCoreTests/AddTextWordsTests.swift` fails when one of the six keys of the text button and the text panel (`tools.text`, `text.tab.type`, `text.tab.look`, `text.tab.more`, `text.done`, `text.field`) is missing from the English, the Arabic or the Swedish word file.
+- `Tests/ReelsmithCoreTests/TextRowWordsTests.swift` fails when one of the three keys of the text row (`textRow.bar`, `textRow.trimStart`, `textRow.trimEnd`) is missing from the English, the Arabic or the Swedish word file.
 
 ## The Engine tests
 
@@ -303,6 +304,26 @@ The screen is 402 points wide with the playhead at x 201, and a handle is 24 poi
 That nothing is sent while the finger moves, that one trim is sent on release and that a drag starts with `pause` cannot be seen on this screen and is held by no test.
 
 Screenshots: `m1-9b-trim-handles-01-handles`, `m1-9b-trim-handles-01-handles-ar`, `m1-9b-trim-handles-02-shortest`. Marks: `m1-9b-trim-handles-01-trim-end`, `m1-9b-trim-handles-02-trim-start`, `m1-9b-trim-handles-03-limits`, `m1-9b-trim-handles-04-first-clip`, `m1-9b-trim-handles-05-last-clip`.
+
+### UI tests of the text row
+
+`UITests/TextRowTests.swift` holds the text row of the strip on the landscape seeds: blue 3 seconds and red 4, so the blocks are 180 and 240 points wide, with one text from 600 ticks for 900 on `text-box-wide`, one text for the whole video on `text-wide`, and none on `two-clips-wide`. Every test waits for the editor after a start with `waitForTheEditor`. How far a text can be trimmed is `reduce`, held on Linux by the tests of the text edits, and the UI tests below hold that the bars and the handles follow it.
+
+The screen is 402 points wide with the playhead at x 201, and a handle of a bar is 24 points wide outside its edge. The values of the selected text are read from `editor.textInfo` by the place of a field, the ninth being "<start ticks>+<length ticks>", and what a bar shows is read as its value. A drag starts in the middle of a handle with `press(forDuration:thenDragTo:)`. After a tap or a drag the test reads until the effect is there, expected within 1 second and failing only above 3, and prints a line that starts with `text-row: waited`.
+
+- The two rows, on `text-box-wide`: `editor.timelineRegion` is 104 points high, `editor.clip.1` 56 points high from 8 points below its top, and `editor.text.1` 24 points high from 72 below its top. The bar begins 60 points right of the left edge of the first block, is 90 points wide and shows "BOX". After a tap on the blue block both trim handles are 56 points high at the height of the block.
+- The whole text, on `text-wide` at 3000 ticks: the bar is 420 points wide, as wide as both blocks, and shows "Peace". A drag of its end handle 60 points to the left gives a start of 0 and a length below 4200.
+- The blank text, on `two-clips-wide` at 3600 ticks: there is no bar. After a tap on `editor.addText` the bar `editor.text.1` is 420 points wide, shows nothing and is selected. A tap in the clip row right of the last block leaves no bar and `editor.textInfo` reading "none".
+- The tap, on `text-box-wide`: after `text.done` the bar has no handle. A tap on it makes `editor.textInfo` read the text again with the bar selected, `editor.textRegion` on the part `look` and one handle outside each edge of the bar, which read "Text start" and "Text end" beside the bar's "Text 1". A second tap and a tap on the start handle change nothing. A tap on the blue block takes the selection with its two trim handles, a tap on the bar takes it back, and a tap in the text row right of the end handle leaves nothing selected with the bar still there.
+- The end handle: a drag of 30 points to the left leaves a start of 600 and a length below 900, the bar narrower with its left edge where it was, and the same value of `editor.playhead`.
+- The start handle: a drag of 30 points to the right leaves a start above 600, the bar narrower with its right edge where it was, and the same value of `editor.playhead`.
+- The limits, at 2360 ticks, where both handles and the end of the first drag are on the screen: a drag of the end handle 120 points to the left leaves "600+60" with the bar 6 points wide and both handles outside its edges. A drag of 300 points to the right, a scrub of 150 points and a second drag of 150 points leave "600+3600". After a scrub back by 300 points a drag of the start handle 110 points to the left leaves "0+4200". Before a drag that follows a scrub the test reads the handle until it has room on the screen for the drag.
+- The scrub and the clip handles, at 1500 ticks: a drag of 150 points to the left that begins in the middle of the bar gives a later value of `editor.playhead` and leaves "600+900". After a tap on the red block a drag of `editor.trim.end` 60 points to the left leaves that block narrower and the bar 90 points wide, 60 points right of the left edge of the first block.
+- Arabic, on `text-box-wide`: the bar begins at the same place, the start handle is at its left edge and the end handle at its right, and the three read the Arabic lines of the word file.
+
+That nothing is sent while the finger moves, that one trim is sent on release and that a drag starts with `pause` cannot be seen on this screen and is held by no test.
+
+Screenshots: `text-row-01-row`, `text-row-02-handles`, `text-row-02-handles-ar`, `text-row-03-shortest`. Marks: `text-row-01-trim-end`, `text-row-02-trim-start`, `text-row-03-limits`.
 
 ### The split and the delete button
 
