@@ -162,6 +162,83 @@ final class TrimTests: XCTestCase {
         screenshot("m1-9b-trim-handles-01-handles-ar")
     }
 
+    func testATapOnEmptyStripClearsTheSelectionAndADragKeepsIt() {
+        // At 1.5 seconds the strip starts at x 111, so the 111 points left of the blue block are empty.
+        // The red block is from x 291 to 531, tapped at x 351, and its start handle is from x 267 to 291.
+        let app = startTrim(seed: "three-clips", playhead: 900)
+        let red = element(app, "editor.clip.2")
+        let start = element(app, "editor.trim.start")
+        let end = element(app, "editor.trim.end")
+        let delete = element(app, "editor.delete")
+        // The middle of the height at x 40, left of the first block.
+        let empty = element(app, "editor.timelineRegion")
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
+        let before = playheadValue(app)
+        XCTAssertFalse(before.isEmpty)
+
+        // With nothing selected a tap on empty strip changes nothing.
+        empty.tap()
+        // A pause, never a limit: nothing is expected to change.
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertFalse(red.isSelected)
+        XCTAssertFalse(start.exists)
+        XCTAssertFalse(delete.isEnabled)
+        XCTAssertEqual(playheadValue(app), before)
+
+        tap(red)
+        waitUntil("the red block selected after the tap on it") { red.isSelected && start.exists && end.exists }
+        XCTAssertTrue(delete.isEnabled)
+
+        empty.tap()
+        waitUntil("nothing selected after the tap left of the first block") { !red.isSelected }
+        XCTAssertFalse(element(app, "editor.clip.1").isSelected)
+        XCTAssertFalse(element(app, "editor.clip.3").isSelected)
+        XCTAssertFalse(start.exists)
+        XCTAssertFalse(end.exists)
+        XCTAssertFalse(delete.isEnabled)
+        XCTAssertEqual(playheadValue(app), before)
+        screenshot("m1-14-clear-selection-01-cleared")
+
+        // The band above the row of blocks: 4 points below the top of the strip view, which is the top
+        // of the playhead line, above the point of the red block that was tapped. The app fills the screen,
+        // so its top left corner is the zero point of the frames.
+        tap(red)
+        waitUntil("the red block selected again") { red.isSelected }
+        let band = CGVector(
+            dx: red.frame.minX + red.frame.width / 4, dy: element(app, "editor.playhead").frame.minY + 4)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(band).tap()
+        waitUntil("nothing selected after the tap in the band above the blocks") { !red.isSelected }
+        XCTAssertFalse(start.exists)
+        XCTAssertFalse(end.exists)
+        XCTAssertEqual(playheadValue(app), before)
+
+        // A drag that starts on the same empty point scrubs and keeps the selection. 200 points to
+        // the right is past the start, which is 90 points away.
+        tap(red)
+        waitUntil("the red block selected before the drag") { red.isSelected }
+        empty.press(forDuration: 0.1, thenDragTo: empty.withOffset(CGVector(dx: 200, dy: 0)))
+        waitUntil("the playhead at 00:00 after the drag") { playheadValue(app) == "00:00" }
+        XCTAssertTrue(red.isSelected)
+        XCTAssertTrue(start.exists)
+        XCTAssertTrue(end.exists)
+        XCTAssertTrue(delete.isEnabled)
+    }
+
+    /// Reads until the condition holds, for the effect of a tap or a drag. It is expected within a second
+    /// and fails only above three: a hosted runner under load can hold the app for seconds.
+    private func waitUntil(_ what: String, _ reached: () -> Bool) {
+        let started = Date()
+        var waited: Double = 0
+        var holds = reached()
+        while !holds && waited <= 3 {
+            Thread.sleep(forTimeInterval: 0.2)
+            holds = reached()
+            waited = Date().timeIntervalSince(started)
+        }
+        print("m1-14-clear-selection: waited \(waited) seconds for \(what), expected 1")
+        XCTAssertTrue(holds, what)
+    }
+
     /// Starts the app and waits for the editor: the first seeded start in a fresh simulator writes the clips first.
     private func startTrim(seed: String, language: String = "en", playhead: Int? = nil) -> XCUIApplication {
         let app = startApp(seed: seed, language: language, playhead: playhead)

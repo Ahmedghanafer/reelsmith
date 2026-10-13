@@ -140,6 +140,7 @@ The screen is 402 points wide with the playhead at x 201, and a handle is 24 poi
 - The first clip, with no playhead value: the start handle of blue lies left of the strip. A drag of 120 points to the right leaves blue narrower with its left edge under the playhead.
 - The last clip, at 4200 ticks: the end handle of green lies right of the strip. A drag of 60 points to the left leaves green narrower, and the length reads "00:07" or "00:08".
 - Arabic, at 3000 ticks: the start handle is still at the left edge of the red block and the end handle at the right, and they read the Arabic lines of the word file.
+- The tap on empty strip (m1-14-clear-selection), at 900 ticks, where the 111 points left of the blue block are empty: `testATapOnEmptyStripClearsTheSelectionAndADragKeepsIt` taps x 40 with nothing selected and reads no change, selects the red block and taps x 40 again, then reads no block selected, both handles gone, `editor.delete` disabled and the same value of `editor.playhead` (screenshot `m1-14-clear-selection-01-cleared`), reads the same after a tap 4 points below the top of the strip view above the red block, and after a drag from x 40 to the right reads "00:00" with red still selected and both handles there.
 
 That nothing is sent while the finger moves, that one trim is sent on release and that a drag starts with `pause` cannot be seen on this screen and is read in the diff.
 
