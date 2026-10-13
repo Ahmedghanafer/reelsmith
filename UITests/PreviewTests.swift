@@ -2,8 +2,8 @@ import XCTest
 
 // The preview on the seeds two-clips (blue 1920 by 1080 for 3 seconds, then red 1080 by 1920 for 4,
 // on the 9:16 canvas), two-clips-wide (the same clips on the 16:9 canvas) and empty.
-// A UI test cannot see the colour of the picture: what the area shows is judged on the screenshots,
-// and the tests read the frame of the area, the labels and the enabled states.
+// What the area shows is judged on the screenshots, and the tests read the frame of the area, the labels
+// and the enabled states. Only the play and pause test reads colours, through the probe `share(of:in:)`.
 //
 // https://developer.apple.com/documentation/xcuiautomation/xcuielement/tap()
 // https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/frame
@@ -53,18 +53,37 @@ final class PreviewTests: XCTestCase {
         waitForTheButton(play, toRead: "Pause")
         // Only the player's reports move the time, so a play that starts nothing fails this wait.
         waitForTheTime(app, "the first second of the playback", expected: 2) { $0 >= "00:01" }
+        // "mm:ss" texts are in the order of their times, and the project ends at "00:07".
+        let atTheTap = timeBeforeTheSlash(app)
+        print("m1-7-preview: the time read at the second tap is " + atTheTap)
+        guard atTheTap < "00:07" else {
+            XCTFail("the playback ended before the pause: the runner held the test")
+            return
+        }
         play.tap()
 
         waitForTheButton(play, toRead: "Play")
         XCTAssertEqual(play.label, "Play")
         let stopped = timeBeforeTheSlash(app)
         XCTAssertNotEqual(stopped, "00:00")
-        // "mm:ss" texts are in the order of their times, and the project ends at "00:07".
         XCTAssertLessThan(stopped, "00:07")
         XCTAssertEqual(stopped, playheadValue(app))
-        // The picture stands still: a second later the label is the same.
+        // The label stands still: a second later it is the same.
         Thread.sleep(forTimeInterval: 1)
         XCTAssertEqual(timeBeforeTheSlash(app), stopped)
+
+        // The picture stands still: blue stands between black bars until the join at 3 seconds, then red
+        // fills. A player that ran on after the pause shows red 4 seconds later.
+        guard stopped < "00:03" else {
+            print("m1-7-preview: the picture check was skipped, the pause came at " + stopped
+                + " and blue ends at 00:03")
+            return
+        }
+        let picture = element(app, "editor.picture")
+        XCTAssertGreaterThan(share(of: (r: 0, g: 0, b: 255), in: picture), 0.2, "blue at the pause")
+        Thread.sleep(forTimeInterval: 4)
+        XCTAssertGreaterThan(share(of: (r: 0, g: 0, b: 255), in: picture), 0.2, "blue 4 seconds after the pause")
+        XCTAssertLessThan(share(of: (r: 255, g: 0, b: 0), in: picture), 0.5, "red 4 seconds after the pause")
     }
 
     func testPlaybackRunsToTheEndPausesThereAndStartsAgainFromZero() {
@@ -198,8 +217,8 @@ final class PreviewTests: XCTestCase {
         _ app: XCUIApplication, _ what: String, expected: Double, _ wanted: (String) -> Bool
     ) {
         let started = Date()
-        var waited: Double = 0
         var reached = wanted(timeBeforeTheSlash(app))
+        var waited = Date().timeIntervalSince(started)
         while !reached && waited <= 3 * expected {
             Thread.sleep(forTimeInterval: 0.1)
             reached = wanted(timeBeforeTheSlash(app))
@@ -213,8 +232,8 @@ final class PreviewTests: XCTestCase {
     /// seconds it waited, expected within 1 and failing only above 3.
     private func waitForTheButton(_ play: XCUIElement, toRead wanted: String) {
         let started = Date()
-        var waited: Double = 0
         var reached = play.label == wanted
+        var waited = Date().timeIntervalSince(started)
         while !reached && waited <= 3 {
             Thread.sleep(forTimeInterval: 0.1)
             reached = play.label == wanted

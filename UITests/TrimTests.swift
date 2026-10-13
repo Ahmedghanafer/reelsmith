@@ -235,8 +235,8 @@ final class TrimTests: XCTestCase {
     /// and fails only above three: a hosted runner under load can hold the app for seconds.
     private func waitUntil(_ what: String, _ reached: () -> Bool) {
         let started = Date()
-        var waited: Double = 0
         var holds = reached()
+        var waited = Date().timeIntervalSince(started)
         while !holds && waited <= 3 {
             Thread.sleep(forTimeInterval: 0.2)
             holds = reached()

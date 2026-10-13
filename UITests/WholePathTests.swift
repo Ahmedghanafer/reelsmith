@@ -400,8 +400,8 @@ final class WholePathTests: XCTestCase {
     /// the expected seconds: a hosted runner under load can hold the app for seconds.
     private func waitUntil(_ what: String, expected: Double, _ reached: () -> Bool) {
         let started = Date()
-        var waited: Double = 0
         var holds = reached()
+        var waited = Date().timeIntervalSince(started)
         while !holds && waited <= 3 * expected {
             Thread.sleep(forTimeInterval: 0.2)
             holds = reached()

@@ -53,8 +53,8 @@ extension XCTestCase {
         }
         let block = app.descendants(matching: .any)["editor.clip.1"]
         started = Date()
-        var waited: Double = 0
         var laidOut = block.exists && block.frame.width > 0 && block.frame.height > 0
+        var waited = Date().timeIntervalSince(started)
         while !laidOut && waited <= 3 {
             Thread.sleep(forTimeInterval: 0.2)
             laidOut = block.exists && block.frame.width > 0 && block.frame.height > 0
