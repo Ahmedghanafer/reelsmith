@@ -65,8 +65,9 @@ final class PlayerPictureView: UIView {
     /// True from the moment the state turns to playing until the player is stopped.
     private var isPlaying = false
     /// The playhead of the last seek with a completion handler, or the end when the item has played
-    /// to it. Nil when the player is not known to stand on a playhead of the state: a new item, a
-    /// seek that did not finish, from a start on.
+    /// to it. While one seek is in flight it can be a newer playhead, whose seek is sent when the one
+    /// in flight has ended. Nil when the player is not known to stand on a playhead of the state: a
+    /// new item, a seek that did not finish, from a start on.
     private var target: Time?
     /// True while one seek is in flight. A newer playhead waits in `target` until it lands.
     private var isSeeking = false
