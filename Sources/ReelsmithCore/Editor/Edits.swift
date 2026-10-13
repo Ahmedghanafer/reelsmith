@@ -10,6 +10,9 @@ extension EditorState {
     }
 
     public var canDelete: Bool {
+        if let selectedText {
+            return project.text(selectedText) != nil
+        }
         guard let selection else {
             return false
         }
@@ -88,6 +91,17 @@ func trimEnd(_ state: EditorState, _ clip: ClipID, by amount: Time) -> EditorSta
 }
 
 func deleteSelected(_ state: EditorState) -> EditorState {
+    // A selected text is what is deleted, and then no clip is touched.
+    if let selectedText = state.selectedText {
+        guard let index = state.project.texts.firstIndex(where: { $0.id == selectedText }) else {
+            return state
+        }
+        var next = state
+        next.project.texts.remove(at: index)
+        next.selectedText = nil
+        next.isPlaying = false
+        return next
+    }
     guard let selection = state.selection,
         let index = state.project.clips.firstIndex(where: { $0.id == selection })
     else {

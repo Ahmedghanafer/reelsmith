@@ -11,6 +11,9 @@ public enum TextGeometry {
     /// A length in points of the screen as canvas pixels, signed, for a picture drawn that many points wide.
     /// 0 when the picture width is not above 0.
     public static func canvasLength(ofPoints points: Double, pictureWidth: Double, canvas: Canvas) -> Double {
-        0
+        guard pictureWidth > 0 else {
+            return 0
+        }
+        return points * Double(canvas.width) / pictureWidth
     }
 }

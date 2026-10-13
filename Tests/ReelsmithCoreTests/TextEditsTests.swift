@@ -516,7 +516,7 @@ final class TextEditsTests: XCTestCase {
 
         XCTAssertEqual(past.project.texts, Seed.textBoxWide.project.texts)
         XCTAssertNil(past.project.range(of: one))
-        XCTAssertEqual(past.textInfo.split(separator: " ").map(String.init)[8], "hidden")
+        XCTAssertEqual(past.textInfo.split(separator: " ").map(String.init).dropFirst(8).first, "hidden")
         XCTAssertEqual(try renderPlan(for: past.project).texts, [])
 
         let longer = send(past, .addClips([TestClip.green.info, TestClip.fast.info]))
