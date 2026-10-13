@@ -22,6 +22,8 @@ private let facesAreRegistered: Bool = {
 
 /// The face of a choice at a size in canvas pixels. A bundled face that cannot be made gives the platform's own
 /// face: a name that is not found is answered with a best match, so the name of what came back is compared.
+/// The fallback covers a face that cannot be made from its file. A resource bundle that is not inside the app
+/// stops the app, in the accessor the package makes for `Bundle.module`.
 ///
 /// https://developer.apple.com/documentation/coretext/ctfontcreatewithname(_:_:_:)
 /// https://developer.apple.com/documentation/coretext/ctfontcopypostscriptname(_:)

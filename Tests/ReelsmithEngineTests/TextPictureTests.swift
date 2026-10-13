@@ -50,16 +50,43 @@ final class TextPictureTests: XCTestCase {
 
     // MARK: From the layout
 
-    func testEveryRunOfTheMarkedLineIsOfItsFaceAndRunsRightToLeft() {
+    func testEveryRunOfTheArabicLineIsOfItsFaceAndRunsRightToLeft() {
         for choice in [TextFont.naskh, .naskhBold] {
-            let found = runs(of: layer(marked, font: choice))
+            for line in [marked, bare] {
+                let found = runs(of: layer(line, font: choice))
 
-            XCTAssertFalse(found.isEmpty, choice.rawValue)
-            for run in found {
-                XCTAssertEqual(face(of: run), faceName(of: choice), choice.rawValue)
-                XCTAssertTrue(CTRunGetStatus(run).contains(.rightToLeft), choice.rawValue)
+                XCTAssertFalse(found.isEmpty, choice.rawValue)
+                for run in found {
+                    XCTAssertEqual(face(of: run), faceName(of: choice), choice.rawValue)
+                    XCTAssertTrue(CTRunGetStatus(run).contains(.rightToLeft), choice.rawValue)
+                }
             }
         }
+    }
+
+    /// A run of Arabic letters runs right to left in any paragraph, so the direction of the paragraph is read
+    /// from a full stop after an Arabic word: it stands left of every letter only when the line itself runs
+    /// right to left.
+    func testTheDirectionOfALineIsLeftToItsOwnText() throws {
+        let word = "\u{0639}\u{0644}\u{064A}\u{0643}\u{0645}"
+        var stop: CGFloat?
+        var letters: [CGFloat] = []
+        for run in runs(of: layer(word + ".")) {
+            let count = CTRunGetGlyphCount(run)
+            var places = [CFIndex](repeating: 0, count: count)
+            var positions = [CGPoint](repeating: .zero, count: count)
+            CTRunGetStringIndices(run, CFRange(location: 0, length: 0), &places)
+            CTRunGetPositions(run, CFRange(location: 0, length: 0), &positions)
+            for index in 0..<count {
+                if places[index] == word.utf16.count {
+                    stop = positions[index].x
+                } else {
+                    letters.append(positions[index].x)
+                }
+            }
+        }
+
+        XCTAssertLessThan(try XCTUnwrap(stop), try XCTUnwrap(letters.min()))
     }
 
     /// The last lam, the ain and the last meem of the line each stand joined inside a word.
@@ -97,6 +124,7 @@ final class TextPictureTests: XCTestCase {
         for run in found {
             XCTAssertNotEqual(face(of: run), faceName(of: .naskh))
             XCTAssertNotEqual(face(of: run), faceName(of: .naskhBold))
+            XCTAssertTrue(CTRunGetStatus(run).contains(.rightToLeft))
         }
     }
 
@@ -105,10 +133,10 @@ final class TextPictureTests: XCTestCase {
     func testTheImageOfJoinedLettersIsNarrowerThanTheLettersHeldApart() throws {
         let apart = bare.unicodeScalars.map { String($0) }.joined(separator: "\u{200C}")
         for choice in TextFont.allCases {
-            let joined = try XCTUnwrap(textPicture(for: layer(bare, font: choice)))
-            let held = try XCTUnwrap(textPicture(for: layer(apart, font: choice)))
+            let joined = try inkWidth(of: layer(bare, font: choice))
+            let held = try inkWidth(of: layer(apart, font: choice))
 
-            XCTAssertLessThan(joined.image.width, held.image.width, choice.rawValue)
+            XCTAssertLessThan(joined, held, choice.rawValue)
         }
     }
 
@@ -122,8 +150,14 @@ final class TextPictureTests: XCTestCase {
             XCTAssertTrue(
                 rows.contains { with.ink(rows: $0..<$0 + 1) != nil && without.ink(rows: $0..<$0 + 1) == nil },
                 choice.rawValue)
+            // The marks stand above their letters, so the ink of the marked line begins in a higher row.
+            let inkWith = try XCTUnwrap(with.ink(rows: 0..<with.height))
+            let inkWithout = try XCTUnwrap(without.ink(rows: 0..<without.height))
+            XCTAssertLessThan(inkWith.top, inkWithout.top, choice.rawValue)
             let difference = with.width - without.width
+            let inkDifference = inkWith.right - inkWith.left - (inkWithout.right - inkWithout.left)
             print("Width of the marked line less the bare line in \(choice.rawValue) at size 64: \(difference) pixels")
+            print("Width of the ink of the marked line less the bare line in \(choice.rawValue): \(inkDifference) pixels")
             // The first run on the hosted Mac printed 17 for both faces of Amiri, with the letters joined, and 0
             // for the system face. The marks of Amiri have no advance of their own in its files, so the width
             // comes from how the face sets the letters under them. The bound is the printed number and 1.
@@ -146,7 +180,12 @@ final class TextPictureTests: XCTestCase {
         let picture = try XCTUnwrap(textPicture(for: try seedLayer()))
         let pixels = try Pixels(picture.image)
         let ink = try XCTUnwrap(pixels.ink(rows: 0..<pixels.height))
+        let block = textBlock(for: try seedLayer())
 
+        // The block grown by 0.3 of the size on every side, which is 38.4 at size 64.
+        print("The picture of the seed is \(picture.width) by \(picture.height), its block \(block.width) by \(block.height)")
+        XCTAssertEqual(picture.width, block.width + 38.4, accuracy: 0.01)
+        XCTAssertEqual(picture.height, block.height + 38.4, accuracy: 0.01)
         XCTAssertEqual(picture.image.width, Int(picture.width.rounded(.up)))
         XCTAssertEqual(picture.image.height, Int(picture.height.rounded(.up)))
         XCTAssertLessThanOrEqual(picture.image.width, 1575)
@@ -287,6 +326,9 @@ final class TextPictureTests: XCTestCase {
             XCTAssertLessThanOrEqual(Double(after.right - before.right), most, "letters in \(colour)")
             XCTAssertLessThanOrEqual(Double(before.top - after.top), most, "letters in \(colour)")
             XCTAssertLessThanOrEqual(Double(after.bottom - before.bottom), most, "letters in \(colour)")
+            // The line shows 0.08 of the size around the letters, which is 5.12 pixels.
+            print("With the outline the ink of letters in \(colour) grows to the left by \(before.left - after.left) pixels")
+            XCTAssertGreaterThanOrEqual(before.left - after.left, 4, "letters in \(colour)")
         }
     }
 
@@ -312,6 +354,10 @@ final class TextPictureTests: XCTestCase {
         let before = try XCTUnwrap(plain.ink(rows: 0..<plain.height))
         let after = try XCTUnwrap(shaded.ink(rows: 0..<shaded.height))
         XCTAssertGreaterThan(after.bottom - before.bottom, before.top - after.top)
+        // Moved down by 0.06 of the size, the shadow reaches twice that further below, which is 7.68 pixels.
+        let further = (after.bottom - before.bottom) - (before.top - after.top)
+        print("The shadow reaches \(after.bottom - before.bottom) pixels below and \(before.top - after.top) above: \(further) further below")
+        XCTAssertGreaterThanOrEqual(further, 6)
     }
 
     // MARK: What a picture depends on
@@ -463,6 +509,13 @@ private struct Pixels {
         }
         return found
     }
+}
+
+/// The width of the drawn ink of a layer, from its first column to its last.
+private func inkWidth(of layer: TextLayer) throws -> Int {
+    let pixels = try Pixels(XCTUnwrap(textPicture(for: layer)).image)
+    let ink = try XCTUnwrap(pixels.ink(rows: 0..<pixels.height))
+    return ink.right - ink.left
 }
 
 /// The largest difference of one channel between two colours.
