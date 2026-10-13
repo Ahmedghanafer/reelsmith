@@ -4,7 +4,7 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine target and its tests compile to nothing.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the target of the Engine tests compiles to nothing.
 - On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 48 UI tests in nine classes.
 
@@ -68,7 +68,7 @@ The files below are in `Tests/ReelsmithCoreTests` and run on Linux.
 - After every action the state must be valid (each clip inside its source, each length whole frames and at least `minimumClip`, the playhead a whole frame inside the project, the selection a clip of the project or none), `renderPlan(for:)` must not throw and must give a plan as long as the project whose segments touch and lie inside their media, and a `split` or `deleteSelected` must change the state exactly when `canSplit` or `canDelete` was true.
 - The run from the seed also fails when a kind of action was never sent. The kinds are the cases of the enum `Kind` in the file: every case of `EditorAction`, amounts past each limit, clip ids that are not in the project, and a project that became empty.
 - A failure names the start number, the number of the action and what was broken, and prints the actions of that run. To play it again, send those actions to `reduce` one by one from the start state. The tests stop at the first run that fails.
-- Two small tests hold one edit each: that a trim of a clip before the playhead leaves the playhead at its time, and that a `trimEnd` that rounds to nothing still pauses.
+- Two small tests hold single edits: that a trim of a clip before the playhead leaves the playhead at its time, and that a `trimEnd` that rounds to nothing still pauses.
 
 Changing a weight, a range or the media list in the file changes every run, so the count of each kind must be looked at again.
 
@@ -98,7 +98,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 ## The Engine tests
 
-The tests make their clips with `writeTestClip` in folders of their own under the temporary folder. No media file is committed. Sizes, frame counts and lengths are exact, a colour matches within 24 of 255 per channel.
+The tests make their clips with `writeTestClip` in folders they make under the temporary folder. No media file is committed. Sizes, frame counts and lengths are exact, a colour matches within 24 of 255 per channel.
 
 The helpers in `Tests/ReelsmithEngineTests/Support/MediaReading.swift` read a file back. Each takes the file's URL:
 
@@ -224,7 +224,7 @@ Screenshots: `m1-10-export-01-button`, `m1-10-export-02-empty`, `m1-10-export-03
 
 ### The whole path
 
-`UITests/WholePathTests.swift` holds the whole path in three tests. It finds every control of the app by its identifier, the cells of the system picker by the system's identifier and the control that confirms in the picker by its place. This test reads no pixel: what the preview shows is judged on the screenshots and in the recording. The waits of the helper `waitUntil` print a line that starts with "m1-12-whole-path: waited" with the seconds they took and fail only above three times the expected value: 1 second expected for a block to read as selected after a tap on it, for a playhead after a drag and for the blocks after a split, a delete or a trim, 3 for the end of the playback, 30 for the saved panel. The waits with `waitForExistence` print nothing: 60 seconds for `start.newProject`, 3 for `editor.trim.end` after the tap on the red block, and 40, 60 and 10 inside the picker try. The editor after a seeded start is waited for with `waitForTheEditor`.
+`UITests/WholePathTests.swift` holds the whole path in three tests. It adds nothing to the product and finds every control of the app by its identifier, the cells of the system picker by the system's identifier and the control that confirms in the picker by its place. This test reads no pixel: what the preview shows is judged on the screenshots and in the recording. The waits of the helper `waitUntil` print a line that starts with "m1-12-whole-path: waited" with the seconds they took and fail only above three times the expected value: 1 second expected for a block to read as selected after a tap on it, for a playhead after a drag and for the blocks after a split, a delete or a trim, 3 for the end of the playback, 30 for the saved panel. The waits with `waitForExistence` print nothing: 60 seconds for `start.newProject`, 3 for `editor.trim.end` after the tap on the red block, and 40, 60 and 10 inside the picker try. The editor after a seeded start is waited for with `waitForTheEditor`.
 
 The walk, `testTheWholePathFromAColdStartToASavedVideo`, in English, took 141 seconds in a whole run, which is why the allowance of a UI test is 600 seconds:
 
