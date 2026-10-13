@@ -84,7 +84,7 @@ final class PlayerTimeTests: XCTestCase {
     }
 
     /// A time between two ticks shows the rounding: 1801 thousandths of a second are 1080.6 ticks.
-    /// https://developer.apple.com/documentation/avfoundation/avplayer/seek(to:tolerancebefore:toleranceafter:)
+    /// https://developer.apple.com/documentation/avfoundation/avplayer/seek(to:tolerancebefore:toleranceafter:completionhandler:)
     @MainActor
     func testAReportIsThePlayersTimeRoundedTowardZeroToATick() async throws {
         let player = try await readyPlayer(with: try await wideItem())
@@ -93,7 +93,9 @@ final class PlayerTimeTests: XCTestCase {
             seen.times.append(time)
         }
 
-        player.seek(to: CMTime(value: 1801, timescale: 1000), toleranceBefore: .zero, toleranceAfter: .zero)
+        let landed = await player.seek(
+            to: CMTime(value: 1801, timescale: 1000), toleranceBefore: .zero, toleranceAfter: .zero)
+        XCTAssertTrue(landed)
         do {
             try await wait("a report came for the jump", expected: 5) { seen.times.contains(Time(ticks: 1080)) }
         } catch {
