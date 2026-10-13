@@ -68,7 +68,7 @@ The run creates one simulator, an iPhone 17 on the iOS 26.5 runtime, and works t
 6. The count of videos in the library is printed again.
 7. Only with `ipa=true`: the device build without code signing, packed as `Reelsmith.ipa`.
 
-A layer is attempted whenever what it needs was built, also after an earlier layer failed. The last step, `Summary`, prints the result of every layer, the two counts and the seconds of each step, and the same text is on the run's page. A layer that reads `skipped` was not attempted. The run is red if any layer failed. A library that does not take the clips, or a count that cannot be read, is printed and does not make the run red. A UI test that runs longer than 600 seconds is ended and counts as failed. The run stops itself after 30 minutes. The export of the pictures taken until then is still attempted, and the uploads still happen.
+A layer is attempted whenever what it needs was built, also after an earlier layer failed. The last step, `Summary`, prints the result of every layer, the two counts and the seconds of each step, and the same text is on the run's page. A layer that reads `skipped` was not attempted. The run is red if any layer failed. A library that does not take the clips, or a count that cannot be read, is printed and does not make the run red. A UI test that runs longer than 600 seconds is ended and counts as failed. The run stops itself after 45 minutes. The export of the pictures taken until then is still attempted, and the uploads still happen.
 
 ## Fetch the artifacts
 

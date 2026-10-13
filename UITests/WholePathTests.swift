@@ -21,7 +21,10 @@ import XCTest
 // https://developer.apple.com/documentation/xctest/xcuielementquery/matching(identifier:)
 // https://developer.apple.com/documentation/xctest/xcuielementquery/element(boundby:)
 // https://developer.apple.com/documentation/xctest/xcuielementquery/count
-// https://developer.apple.com/documentation/xctest/xcuielementquery/allelementsboundbyindex
+// https://developer.apple.com/documentation/xctest/xcuielementsnapshotproviding/snapshot()
+// https://developer.apple.com/documentation/xctest/xcuielementsnapshot/children
+// https://developer.apple.com/documentation/xctest/xcuielementattributes/elementtype
+// https://developer.apple.com/documentation/xctest/xctestcase/continueafterfailure
 // https://developer.apple.com/documentation/xctest/xctexpectfailure(_:options:failingblock:)
 // https://developer.apple.com/documentation/xctest/xctexpectedfailure/options/isstrict
 // https://developer.apple.com/documentation/foundation/thread/sleep(fortimeinterval:)
@@ -29,6 +32,7 @@ import XCTest
 final class WholePathTests: XCTestCase {
     func testTheWholePathFromAColdStartToASavedVideo() {
         mark("m1-12-whole-path-01-path")
+        let began = Date()
         var app = startApp(seed: nil)
         assertTheStartScreen(app)
         screenshot("m1-12-whole-path-01-start")
@@ -94,6 +98,10 @@ final class WholePathTests: XCTestCase {
         let region = element(app, "editor.timelineRegion")
         let red = element(app, "editor.clip.2")
         scrub(app, fromX: 0.95, byPoints: Double(region.frame.maxX - 74 - red.frame.maxX))
+        // The tap is placed from the frame of the block, so the frame is read only after the drag has moved it.
+        waitUntil("the end of the red block on the screen after the drag", expected: 1) {
+            red.frame.maxX < region.frame.maxX - 24
+        }
         // A quarter of its width from its left edge, away from the playhead line.
         red.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5)).tap()
         let end = element(app, "editor.trim.end")
@@ -103,9 +111,11 @@ final class WholePathTests: XCTestCase {
         handle.press(forDuration: 0.1, thenDragTo: handle.withOffset(CGVector(dx: -300, dy: 0)))
         // The trim below the playhead moved the strip, so the frame is read again.
         waitUntil("the red block at its shortest after the trim", expected: 1) { red.frame.width < 7.5 }
+        // The handle draws the width before the trim reaches the store, so the label is waited for too.
+        waitUntil("00:00, 00:01 or 00:02 after the slash after the trim", expected: 1) {
+            ["00:00", "00:01", "00:02"].contains(timeSides(app).last ?? "")
+        }
         XCTAssertEqual(red.frame.width, 6, accuracy: 1)
-        let afterTrim = timeSides(app).last ?? ""
-        XCTAssertTrue(["00:00", "00:01", "00:02"].contains(afterTrim), afterTrim)
         pauseForThePicture()
         screenshot("m1-12-whole-path-06-trim")
 
@@ -138,19 +148,24 @@ final class WholePathTests: XCTestCase {
         screenshot("m1-12-whole-path-08-relaunch")
 
         // The chosen shape reaches the editor, only when the picker was driven above.
-        guard stopped == nil else {
+        if stopped != nil {
             print("m1-12-whole-path: the portrait start is skipped, the picker was not driven")
-            return
+        } else {
+            element(app, "start.portrait").tap()
+            if let stoppedAgain = tryThePicker(app, picture: nil) {
+                print("m1-12-whole-path: picker not driven at the portrait start: " + stoppedAgain)
+            } else {
+                let tall = element(app, "editor.picture").frame
+                XCTAssertGreaterThan(tall.height, tall.width)
+                pauseForThePicture()
+                screenshot("m1-12-whole-path-12-portrait")
+            }
         }
-        element(app, "start.portrait").tap()
-        if let stoppedAgain = tryThePicker(app, picture: nil) {
-            print("m1-12-whole-path: picker not driven at the portrait start: " + stoppedAgain)
-            return
-        }
-        let tall = element(app, "editor.picture").frame
-        XCTAssertGreaterThan(tall.height, tall.width)
-        pauseForThePicture()
-        screenshot("m1-12-whole-path-12-portrait")
+
+        // A run in which this line is missing did not walk, whatever its result says.
+        let seconds = String(Int(Date().timeIntervalSince(began)))
+        print("m1-12-whole-path: walk finished, " + (stopped == nil ? "driven" : "not driven") + ", " + seconds
+            + " seconds")
     }
 
     func testInArabicTheThreeStatesMirrorWhereTheyShould() {
@@ -210,7 +225,12 @@ final class WholePathTests: XCTestCase {
 
     /// One try at the system picker from the start screen. Nil when the editor opened with blue then red,
     /// else the step that failed. The picker alone never fails the walk: a failure inside the try is expected.
+    /// An expected failure still ends a test that does not continue after a failure, so the test continues
+    /// after one for the length of the try, and the try reads nothing that can change under it.
     private func tryThePicker(_ app: XCUIApplication, picture: String?) -> String? {
+        let before = continueAfterFailure
+        continueAfterFailure = true
+        defer { continueAfterFailure = before }
         let options = XCTExpectedFailure.Options()
         options.isStrict = false
         return XCTExpectFailure("The picker alone never fails the walk.", options: options) {
@@ -243,7 +263,11 @@ final class WholePathTests: XCTestCase {
         }
         let red = cells.element(boundBy: count - 2)
         let blue = cells.element(boundBy: count - 1)
+        let first = cells.element(boundBy: 0)
         print("m1-12-whole-path: the picker's grid holds " + String(count) + " cells")
+        guard red.exists, blue.exists, first.exists else {
+            return "the last two cells of the picker's grid were gone when they were read"
+        }
         print("m1-12-whole-path: the cell before the last reads: " + red.label)
         print("m1-12-whole-path: the last cell reads: " + blue.label)
         let redFrame = red.frame
@@ -252,51 +276,69 @@ final class WholePathTests: XCTestCase {
         guard redFrame.width > 1, redFrame.height > 1, blueFrame.width > 1, blueFrame.height > 1 else {
             return "a cell of the picker's grid had no frame to tap"
         }
-        let top = min(cells.element(boundBy: 0).frame.minY, redFrame.minY, blueFrame.minY)
+        let top = min(first.frame.minY, redFrame.minY, blueFrame.minY)
         // A tap may change the grid, so every later tap goes to a place read before the first one.
         tap(app, theMiddleOf: blueFrame)
         Thread.sleep(forTimeInterval: 1)
         tap(app, theMiddleOf: redFrame)
-        Thread.sleep(forTimeInterval: 1)
+        Thread.sleep(forTimeInterval: 2)
         if let picture {
             screenshot(picture)
         }
 
-        // The button that confirms: of the buttons above the grid, the one furthest to the right.
-        var confirm: CGRect?
-        var edge: CGFloat = 0
-        for button in app.buttons.allElementsBoundByIndex {
-            let frame = button.frame
-            let identifier = button.identifier
-            if identifier.hasPrefix("start.") || frame.isEmpty || frame.midY > top {
-                continue
-            }
-            print("m1-12-whole-path: a button above the grid at \(frame), identifier: " + identifier)
-            if frame.maxX > edge {
-                confirm = frame
-                edge = frame.maxX
-            }
+        // The whole tree once, for the log of the run, and one snapshot of it for the search: the picker
+        // changes after a choice, and a snapshot cannot change under the search.
+        print(app.debugDescription)
+        guard let tree = try? app.snapshot() else {
+            return "no snapshot of the picker could be taken"
         }
-        guard let confirm else {
-            print(app.debugDescription)
+        let all = flattened(tree).filter { !$0.identifier.hasPrefix("start.") && $0.frame.width > 1 }
+        // The bar of the picker is the row of its topmost button.
+        let bar = all.filter { $0.elementType == .button && $0.frame.midY < top }
+            .min { $0.frame.minY < $1.frame.minY }
+        guard let bar else {
             return "no button above the picker's grid was found"
         }
-        tap(app, theMiddleOf: confirm)
+        // The control that confirms is found by place and by no word: of the small elements of any kind
+        // in the row of the bar, the one furthest to the right, when it lies in the right third of the screen.
+        let row = all.filter { abs($0.frame.midY - bar.frame.midY) <= 24 && $0.frame.width <= 120 }
+        for one in row {
+            print("m1-12-whole-path: in the bar of the picker, kind \(one.elementType.rawValue) at \(one.frame): "
+                + one.label)
+        }
+        let confirm = row.filter { $0.frame.midX > tree.frame.width * 2 / 3 }
+            .max { $0.frame.maxX < $1.frame.maxX }
+        guard let confirm else {
+            return "no element was found on the right of the picker's bar"
+        }
+        print("m1-12-whole-path: tapped to confirm, kind \(confirm.elementType.rawValue) at \(confirm.frame): "
+            + confirm.label)
+        tap(app, theMiddleOf: confirm.frame)
 
         guard element(app, "editor.root").waitForExistence(timeout: 60) else {
             print(app.debugDescription)
-            return "the editor did not open within 60 seconds of the tap on the right button above the grid"
+            return "the editor did not open within 60 seconds of the tap on the right of the picker's bar"
         }
         // A block ends with the length of its clip: blue is 3 seconds long and red 4.
-        let second = element(app, "editor.clip.2")
-        guard second.waitForExistence(timeout: 10) else {
+        let one = element(app, "editor.clip.1")
+        let two = element(app, "editor.clip.2")
+        guard two.waitForExistence(timeout: 10), one.exists else {
             return "the editor opened with fewer than two blocks"
         }
-        let lengths = String(element(app, "editor.clip.1").label.suffix(5)) + " then " + String(second.label.suffix(5))
+        let lengths = String(one.label.suffix(5)) + " then " + String(two.label.suffix(5))
         guard lengths == "00:03 then 00:04" else {
             return "the editor opened with " + lengths + ", and blue then red is 00:03 then 00:04"
         }
         return nil
+    }
+
+    /// Every element of a snapshot, the element itself first.
+    private func flattened(_ node: any XCUIElementSnapshot) -> [any XCUIElementSnapshot] {
+        var all: [any XCUIElementSnapshot] = [node]
+        for child in node.children {
+            all += flattened(child)
+        }
+        return all
     }
 
     /// Taps the screen in the middle of a frame that was read from an element. The app fills the screen,
