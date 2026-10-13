@@ -317,7 +317,7 @@ Screenshots: `m1-9a-split-delete-01-tools`, `m1-9a-split-delete-01-tools-ar`, `m
 
 Screenshots: `add-text-01-button` (three buttons in the tools row, three lines of a seed start on top), `add-text-04-panel` (the panel on the part type with an empty field), `add-text-02-keyboard` (the same with the keyboard up: how much of the picture area, the strip and the tools row is left above the panel is judged on it), `add-text-03-arabic-field` (the field of `text-wide` with its three lines: whether the Arabic line runs from the right is judged on it), `add-text-04-panel-ar` and `add-text-04-panel-sv` (the panel in Arabic, mirrored, and in Swedish). No mark: nothing here moves. No test types Arabic: the keyboard of the simulator run is not driven in another language.
 
-That the field sends `setString` on every change and that done sends nothing but `clearSelection` cannot be seen on this screen beyond their effect on `editor.textInfo` and the field, and that the picture follows a text is held by no test here.
+That the field sends `setString` on every change and that done sends nothing but `clearSelection` cannot be seen on this screen beyond their effect on `editor.textInfo` and the field, and that the picture follows a text is held by no test here. Nothing on this screen shows a text that is not selected, and the next add removes a blank one all the same, so that done removes a text with nothing typed is held on Linux by `TextEditsTests.swift`. The half with typed spaces fails when a text of spaces is kept.
 
 ### The export button and its panel
 

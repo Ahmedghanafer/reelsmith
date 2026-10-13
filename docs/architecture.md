@@ -195,6 +195,7 @@ The text button, the text region and the panel of the selected text. They decide
 - The part `type` holds the field `text.field`, a `TextEditor` 88 points high whose accessibility label is the key `text.field`. It is bound to the string of the selected text: it reads the string from the store and sends `text(.setString)` with the whole string on every change, a line break included. The field sets no direction, so a line takes its direction from what is typed. The keyboard goes with the field: on another part, on done and on a delete.
 - The parts `look` and `more` are the slots `look` and `more` of the file, both empty. A part put there has the `store` of the panel to hand and needs no state about the parts.
 - `text.done` sends `clearSelection` and nothing else, from every part. The panel removes no text itself: the blank rule of Core removes a text that is left blank when it stops being selected, by done, by a tap on a clip or by another new text, with no message. The Delete button removes the selected text through `deleteSelected` and leaves the clips.
+
 ### The export button and its panel
 
 The export button and its panel, in the folder `App/Editor/Export/`. They draw the `ExportState` of `Sources/ReelsmithCore/Export/`.

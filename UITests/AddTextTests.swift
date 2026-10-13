@@ -120,7 +120,8 @@ final class AddTextTests: XCTestCase {
     func testABlankTextIsGoneAfterDone() {
         let app = startText(seed: "two-clips-wide")
 
-        // Nothing typed: the text is gone, so the next one is the first again.
+        // Nothing typed: the next text is the first again. A blank text that done left behind would be
+        // removed by the next add all the same, so that done removes it is held by the Core tests.
         addAText(app)
         waitUntil("the position 1 for the first text") { position(app) == "1" }
         tapDone(app)
