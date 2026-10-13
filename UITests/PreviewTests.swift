@@ -105,10 +105,11 @@ final class PreviewTests: XCTestCase {
         // only the player's reports give "00:01".
         play.tap()
         waitForTheTime(app, "the first second after the restart", expected: 2) { $0 >= "00:01" && $0 < "00:07" }
-        // On a held runner the playback can have ended by now, and a tap at "00:07" would start it again.
+        // A tap that lands after the end would start the playback again. From "00:06" on the end is less
+        // than a second away, so no tap is sent and the playback ends by itself inside the wait below.
         let beforeTheLastTap = timeBeforeTheSlash(app)
         print("preview: the time read before the last tap is " + beforeTheLastTap)
-        if beforeTheLastTap < "00:07" {
+        if beforeTheLastTap < "00:06" {
             play.tap()
         }
         waitForTheButton(play, toRead: "Play")
@@ -124,10 +125,11 @@ final class PreviewTests: XCTestCase {
 
         play.tap()
         waitForTheTime(app, "a second inside the red clip", expected: 3) { $0 >= "00:04" }
-        // On a held runner the playback can have ended by now, and a tap at "00:07" would start it again.
+        // A tap that lands after the end would start the playback again. From "00:06" on the end is less
+        // than a second away, so no tap is sent and the playback ends by itself inside the wait below.
         let beforeTheLastTap = timeBeforeTheSlash(app)
         print("preview: the time read before the last tap is " + beforeTheLastTap)
-        if beforeTheLastTap < "00:07" {
+        if beforeTheLastTap < "00:06" {
             play.tap()
         }
         waitForTheButton(play, toRead: "Play")
