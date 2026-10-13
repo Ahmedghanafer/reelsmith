@@ -93,7 +93,7 @@ final class PlayerPictureView: UIView {
     private var displayObservation: NSKeyValueObservation?
     /// The seconds after which the old picture goes also when the layer never said it was ready: an
     /// item that fails. A build and its first frame take under half a second in the simulator.
-    private static let oldPictureLimit: UInt64 = 10
+    private static let oldPictureLimit: UInt64 = 15
 
     init(store: EditorStore) {
         self.store = store

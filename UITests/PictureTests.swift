@@ -103,14 +103,14 @@ final class PictureTests: XCTestCase {
 
         // A delete that changes the picture: the rest of green goes and the picture is the last
         // frame of red, which fills the area as green did. Black is read here, and then red is
-        // waited for. The app lets go of the old picture 10 seconds after a new item at the latest,
+        // waited for. The app lets go of the old picture 15 seconds after a new item at the latest,
         // which is past the limit of the wait, so an old picture that only the limit took away fails.
         select(app.descendants(matching: .any)["editor.clip.3"])
         mark("picture-04-edit-delete-last")
         delete.tap()
         shares = readForHalfASecond(black, "black", in: picture, after: "the delete of the last of green")
         XCTAssertLessThan(shares.max() ?? 1, 0.1, "black after the delete of the last of green")
-        print("picture: the app lets go of the old picture 10 seconds after a new item at the latest")
+        print("picture: the app lets go of the old picture 15 seconds after a new item at the latest")
         XCTAssertGreaterThan(waitForTheShare(of: red, "red", in: picture, moreThan: 0.9), 0.9, "red")
         screenshot("picture-07-red-after-delete")
     }
