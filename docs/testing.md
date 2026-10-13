@@ -17,6 +17,8 @@ What comes back from the simulator run:
 - Before the UI tests the run puts `blue.mov` and `red.mov` into the simulator's photo library and grants the app the right to add to Photos, so no test meets the system's question.
 - The run prints the count of videos in the library before and after the UI tests. It grows by six, one for each export that is saved: three in `ExportPanelTests` and three in `WholePathTests`.
 
+The simulator run has three kinds, started as `docs/operations.md` tells. With no input it runs every UI test on one machine. With classes named it is a part run: the named classes and the smoke set, five tests listed as `SMOKE_TESTS` in `.github/workflows/macos.yml` (a start with no seed, a start on a seed, the first frame of the preview, a split and a delete on the strip, an export to the saved panel). A part run proves its classes and that the app still starts, shows a picture, edits and saves, and says nothing about the other tests, so the count of videos grows only by the exports it ran. A split run deals every test class into three groups on three machines and proves the same as the run on one machine. The line `UI tests of this run:` in the log of layer 4 and in the Summary tells which kind a run was.
+
 ## The shared helpers of the UI tests
 
 The helpers in `UITests/Support/Harness.swift` are methods of `XCTestCase`, in an extension marked `@MainActor`. A test class that uses them is marked `@MainActor` too, as in `@MainActor final class TimelineTests: XCTestCase`:

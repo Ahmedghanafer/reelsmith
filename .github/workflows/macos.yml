@@ -7,6 +7,18 @@ on:
         description: Also make the unsigned device build
         type: boolean
         default: false
+      classes:
+        description: UI test classes to run with the smoke set, separated by spaces or commas (empty runs every UI test)
+        type: string
+        default: ""
+      split:
+        description: Run every UI test in three groups on three machines
+        type: boolean
+        default: false
+      image_simulator:
+        description: Use the image's own iPhone 17 on iOS 26.5 if it has one
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -15,8 +27,24 @@ defaults:
   run:
     shell: bash
 
+env:
+  # The smoke set, added to a run of named classes: a start with no seed, a start on a seed, the first
+  # frame of the preview, one edit on the strip and an export that reaches the saved panel.
+  SMOKE_TESTS: >-
+    StartTests/testWithNoSeedTheStartScreenShowsWithLandscapeChosen
+    HarnessTests/testASeedStartOpensTheShellAndWritesItsClips
+    PreviewTests/testTheFirstFrameIsInAnAreaOfTheShapeOfTheCanvas
+    ToolsTests/testASplitAtOneSecondThenADeleteOfTheFirstBlock
+    ExportPanelTests/testAnExportReachesTheSavedPanelAndDoneReturnsToTheEditorAsItWas
+
 jobs:
   build:
+    # Group 0 is the one machine of a run that is not split, and keeps the names of today.
+    name: ${{ matrix.group == 0 && 'build' || format('build {0}', matrix.group) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        group: ${{ fromJSON(inputs.split && '[1, 2, 3]' || '[0]') }}
     runs-on: macos-26
     timeout-minutes: 45
     steps:
@@ -24,15 +52,31 @@ jobs:
 
       - name: Select Xcode 26.6 and create the simulator
         id: setup
+        env:
+          IMAGE_SIMULATOR: ${{ inputs.image_simulator }}
         run: |
           trap 'echo "setup: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           sudo xcode-select -s /Applications/Xcode_26.6.app
           xcodebuild -version
           xcrun simctl list runtimes
           runtime=$(xcrun simctl list runtimes --json | jq -er '[.runtimes[] | select(.name == "iOS 26.5" and .isAvailable)][0].identifier')
-          udid=$(xcrun simctl create "Reelsmith wave run" "iPhone 17" "$runtime")
+          xcrun simctl list devices
+          udid=""
+          if [ "$IMAGE_SIMULATOR" = true ]; then
+            udid=$(xcrun simctl list devices --json | jq -r --arg runtime "$runtime" '[.devices[$runtime][]? | select(.name == "iPhone 17" and .isAvailable)][0].udid // empty')
+            if [ -z "$udid" ]; then
+              echo "The image has no iPhone 17 on $runtime."
+            fi
+          fi
+          if [ -n "$udid" ]; then
+            echo "SIMULATOR_ORIGIN=of the image" >> "$GITHUB_ENV"
+            echo "Uses the simulator of the image $udid on $runtime"
+          else
+            udid=$(xcrun simctl create "Reelsmith wave run" "iPhone 17" "$runtime")
+            echo "SIMULATOR_ORIGIN=created by the run" >> "$GITHUB_ENV"
+            echo "Created the simulator $udid on $runtime"
+          fi
           echo "SIMULATOR=$udid" >> "$GITHUB_ENV"
-          echo "Created the simulator $udid on $runtime"
 
       - name: "Layer 1: build the package and run its tests on macOS"
         id: layer1
@@ -62,6 +106,7 @@ jobs:
         run: |
           trap 'echo "layer 3: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           xcrun simctl bootstatus "$SIMULATOR" -b
+          echo "the boot, inside layer 3, of the simulator $SIMULATOR_ORIGIN: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"
           xcrun simctl install "$SIMULATOR" build/simulator/Build/Products/Debug-iphonesimulator/Reelsmith.app
           xcrun simctl privacy "$SIMULATOR" grant photos-add com.ghanafer.reelsmith
           if xcrun simctl addmedia "$SIMULATOR" "$REELSMITH_CLIP_DIR/blue.mov" "$REELSMITH_CLIP_DIR/red.mov"; then
@@ -76,8 +121,78 @@ jobs:
       - name: "Layer 4: record the simulator and run the UI tests"
         id: layer4
         if: ${{ !cancelled() && steps.layer2.outcome == 'success' }}
+        env:
+          CLASSES: ${{ inputs.classes }}
+          GROUP: ${{ matrix.group }}
         run: |
           trap 'echo "layer 4: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          # What this run executes. The test classes are read from the files of UITests, one class a file.
+          # Named classes run with the smoke set, a group of a split run takes every third class by name,
+          # and with neither every UI test runs. A test is chosen with -only-testing of xcodebuild:
+          # https://developer.apple.com/library/archive/technotes/tn2339/_index.html
+          all=""
+          total=0
+          for file in UITests/*.swift; do
+            class=$(sed -n -E 's/.*class[[:space:]]+([A-Za-z0-9_]+)[[:space:]]*:[[:space:]]*XCTestCase.*/\1/p' "$file")
+            if [ -z "$class" ] && [ "$GROUP" != 0 ]; then
+              echo "No test class was found in $file, so it would be in no group." | tee "$RUNNER_TEMP/selection.txt"
+              exit 1
+            fi
+            all="$all $class"
+            total=$((total + $(grep -c -E '^[[:space:]]*func test' "$file" || true)))
+          done
+          tests_of() {
+            grep -c -E '^[[:space:]]*func test' "$(grep -l -E "class[[:space:]]+$1[[:space:]]*:" UITests/*.swift)" || true
+          }
+          only=()
+          chosen=""
+          selected=0
+          if [ -n "$CLASSES" ] && [ "$GROUP" != 0 ]; then
+            echo "Both classes and split are set. A run takes one of them." | tee "$RUNNER_TEMP/selection.txt"
+            exit 1
+          fi
+          if [ -n "$CLASSES" ]; then
+            for class in $(printf '%s' "$CLASSES" | tr ',' ' '); do
+              if [[ " $all " != *" $class "* ]]; then
+                echo "No UI test class is named $class. The classes are:$all" | tee "$RUNNER_TEMP/selection.txt"
+                exit 1
+              fi
+              if [[ " $chosen " == *" $class "* ]]; then
+                continue
+              fi
+              chosen="$chosen $class"
+              only+=("-only-testing:ReelsmithUITests/$class")
+              selected=$((selected + $(tests_of "$class")))
+            done
+            if [ -z "$chosen" ]; then
+              echo "The input classes names no class." | tee "$RUNNER_TEMP/selection.txt"
+              exit 1
+            fi
+            for test in $SMOKE_TESTS; do
+              if [[ " $chosen " == *" ${test%%/*} "* ]]; then
+                continue
+              fi
+              only+=("-only-testing:ReelsmithUITests/$test")
+              selected=$((selected + 1))
+            done
+            echo "UI tests of this run: a PART run, not every UI test. Classes asked for:$chosen. Tests selected: $selected, the smoke set added." |
+              tee "$RUNNER_TEMP/selection.txt"
+          elif [ "$GROUP" != 0 ]; then
+            number=0
+            for class in $(printf '%s\n' $all | LC_ALL=C sort); do
+              if [ $((number % 3 + 1)) -eq "$GROUP" ]; then
+                chosen="$chosen $class"
+                only+=("-only-testing:ReelsmithUITests/$class")
+                selected=$((selected + $(tests_of "$class")))
+              fi
+              number=$((number + 1))
+            done
+            echo "UI tests of this run: group $GROUP of 3 of a split run, $number classes in all. Classes of this group:$chosen. Tests selected: $selected of $total." |
+              tee "$RUNNER_TEMP/selection.txt"
+          else
+            echo "UI tests of this run: every UI test on one machine. Tests in the files: $total." |
+              tee "$RUNNER_TEMP/selection.txt"
+          fi
           xcrun simctl bootstatus "$SIMULATOR" -b
           # One seeded start before the recording and the tests. It writes every clip a seed needs and builds
           # the editor once, so no start inside a test follows the writing of a clip. The app logs a line
@@ -105,7 +220,14 @@ jobs:
             -derivedDataPath build/simulator -parallel-testing-enabled NO \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 600 \
             -maximum-test-execution-time-allowance 600 \
-            -resultBundlePath results/Reelsmith.xcresult || status=$?
+            -resultBundlePath results/Reelsmith.xcresult "${only[@]}" 2>&1 | tee "$RUNNER_TEMP/ui-tests.txt" || status=$?
+          # The last line with a count is the total of the run.
+          executed=$(grep -E 'Executed [0-9]+ tests?, with' "$RUNNER_TEMP/ui-tests.txt" | tail -n 1 | sed -E 's/.*Executed ([0-9]+) tests?, with.*/\1/' || true)
+          echo "UI tests executed: ${executed:-not read}" | tee -a "$RUNNER_TEMP/selection.txt"
+          if [ "${#only[@]}" -gt 0 ] && [ "$executed" != "$selected" ]; then
+            echo "Selected $selected tests and executed ${executed:-none}: the selection did not run as asked." | tee -a "$RUNNER_TEMP/selection.txt"
+            status=1
+          fi
           kill -INT "$recorder" || true
           for _ in $(seq 30); do
             kill -0 "$recorder" 2>/dev/null || break
@@ -195,27 +317,27 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
-          name: screens
+          name: ${{ matrix.group == 0 && 'screens' || format('screens-{0}', matrix.group) }}
           path: screens
           retention-days: 3
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
-          name: recording
+          name: ${{ matrix.group == 0 && 'recording' || format('recording-{0}', matrix.group) }}
           path: recording
           retention-days: 3
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
-          name: results
+          name: ${{ matrix.group == 0 && 'results' || format('results-{0}', matrix.group) }}
           path: results
           retention-days: 3
 
       - name: "Layer 7: build for a device without code signing"
         id: layer7
-        if: ${{ !cancelled() && inputs.ipa && hashFiles('Reelsmith.xcodeproj/project.pbxproj') != '' }}
+        if: ${{ !cancelled() && inputs.ipa && matrix.group < 2 && hashFiles('Reelsmith.xcodeproj/project.pbxproj') != '' }}
         run: |
           trap 'echo "layer 7: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           xcodebuild build -project Reelsmith.xcodeproj -scheme Reelsmith -configuration Release \
@@ -226,7 +348,7 @@ jobs:
           zip -qr Reelsmith.ipa Payload
 
       - uses: actions/upload-artifact@v4
-        if: ${{ always() && inputs.ipa }}
+        if: ${{ always() && inputs.ipa && matrix.group < 2 }}
         with:
           name: ipa
           path: Reelsmith.ipa
@@ -245,6 +367,8 @@ jobs:
             echo "Layer 6, the count again: ${{ steps.layer6.outcome }}"
             echo "Layer 7, the device build: ${{ inputs.ipa && steps.layer7.outcome || 'not asked for' }}"
             echo "A layer that reads skipped was not attempted."
+            echo
+            cat "$RUNNER_TEMP/selection.txt" 2>/dev/null || echo "The choice of the UI tests was not reached."
             echo
             cat "$RUNNER_TEMP/library.txt" 2>/dev/null || echo "The library was not reached."
             echo
