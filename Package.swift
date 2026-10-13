@@ -12,7 +12,7 @@ let package = Package(
         .target(name: "ReelsmithCore"),
         .testTarget(name: "ReelsmithCoreTests", dependencies: ["ReelsmithCore"]),
         .target(
-            name: "ReelsmithEngine", dependencies: ["ReelsmithCore"],
+            name: "ReelsmithEngine", dependencies: ["ReelsmithCore"], resources: [.copy("Fonts")],
             swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(
             name: "ReelsmithEngineTests", dependencies: ["ReelsmithCore", "ReelsmithEngine"],
