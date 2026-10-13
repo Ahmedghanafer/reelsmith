@@ -195,7 +195,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 ### m1-12-whole-path
 <!-- slot: m1-12-whole-path -->
-`UITests/WholePathTests.swift` holds the whole path in three tests. It is built by the compile check and first runs in a wave run. It adds nothing to the product and finds every control by its identifier. No test reads a pixel: what the preview shows is judged on the screenshots and in the recording. Every wait prints a line that starts with "m1-12-whole-path: waited" with the seconds it took and fails only above three times the expected value: 1 second expected after a drag or a tap, 3 for the end of the playback, 30 for the saved panel.
+`UITests/WholePathTests.swift` holds the whole path in three tests. It is built by the compile check and first runs in a wave run. It adds nothing to the product and finds every control by its identifier. No test reads a pixel: what the preview shows is judged on the screenshots and in the recording. A wait for the effect of a drag, a tap, the playback or the export prints a line that starts with "m1-12-whole-path: waited" with the seconds it took and fails only above three times the expected value: 1 second expected after a drag or a tap, 3 for the end of the playback, 30 for the saved panel. A wait for a screen after a start (60 seconds for `start.newProject`, 90 for `editor.root`) prints nothing.
 
 The walk, `testTheWholePathFromAColdStartToASavedVideo`, in English, is expected to take about 200 seconds, which is why the allowance of a UI test is 600 seconds:
 

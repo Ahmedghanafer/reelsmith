@@ -215,8 +215,8 @@ final class WholePathTests: XCTestCase {
     }
 
     /// Taps `start.newProject`, chooses blue then red and confirms. The picker runs outside the app, so its
-    /// controls read as not hittable and are tapped by coordinate, in the middle of their frames. They carry no identifier of ours and
-    /// are found by the system's own identifier, by kind and by place, never by a word.
+    /// controls read as not hittable and are tapped by coordinate, in the middle of their frames. They carry
+    /// no identifier of ours and are found by the system's own identifier, by kind and by place, never by a word.
     private func drivePicker(_ app: XCUIApplication, picture: String?) -> String? {
         let newProject = element(app, "start.newProject")
         guard newProject.exists else {
