@@ -34,6 +34,7 @@ struct PlayerPicture: UIViewRepresentable {
 /// https://developer.apple.com/documentation/avfoundation/avplayer/replacecurrentitem(with:)
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/status-swift.property
 /// https://developer.apple.com/documentation/objectivec/nsobject-swift.class/observe(_:options:changehandler:)
+/// https://developer.apple.com/documentation/avfoundation/avplayer/seek(to:tolerancebefore:toleranceafter:)
 /// https://developer.apple.com/documentation/avfoundation/avplayer/seek(to:tolerancebefore:toleranceafter:completionhandler:)
 /// https://developer.apple.com/documentation/avfoundation/avplayer/play()
 /// https://developer.apple.com/documentation/avfoundation/avplayer/pause()
@@ -56,7 +57,9 @@ final class PlayerPictureView: UIView {
     private var project: Project?
     /// Counts the builds, so the result of a build that a newer one superseded is dropped.
     private var build = 0
-    /// True while the item of `project` is in the player and ready to play.
+    /// The item of the newest build, the one whose status is observed.
+    private var item: AVPlayerItem?
+    /// True while `item` is ready to play.
     private var isReady = false
     private var statusObservation: NSKeyValueObservation?
     /// True from the moment the state turns to playing until the player is stopped.
@@ -77,7 +80,7 @@ final class PlayerPictureView: UIView {
         accessibilityIdentifier = "editor.picture"
         (layer as? AVPlayerLayer)?.player = player
         // Without this request the simulator's layer refuses every frame of a clip that fills the canvas
-        // unscaled and shows black. It names a kind of buffer only, so no frame is converted for it.
+        // unscaled and shows black. It names a kind of buffer. What it costs on a device is not measured.
         (layer as? AVPlayerLayer)?.pixelBufferAttributes = [
             kCVPixelBufferIOSurfacePropertiesKey as String: [String: Any]()
         ]
@@ -99,8 +102,8 @@ final class PlayerPictureView: UIView {
         }
     }
 
-    /// Builds the item of the state's project. Until it is ready the player follows nothing. Then it is
-    /// brought to the state of that moment, so the playhead is kept.
+    /// Builds the item of the state's project and sends it to the playhead of that moment. Until it is
+    /// ready the player follows nothing. Then it is brought to the state of that moment.
     /// An empty project gets no item, and neither does a build that throws: the area is black.
     private func rebuild(for state: EditorState) {
         build += 1
@@ -124,7 +127,14 @@ final class PlayerPictureView: UIView {
             guard number == self.build else {
                 return
             }
+            self.item = item
             self.player.replaceCurrentItem(with: item)
+            // The first playhead goes with the item, so the player gets ready on that frame and not on
+            // the first one. A seek with no completion handler may be sent before the item is ready.
+            let first: Time = self.store.state.playhead
+            self.target = first
+            self.player.seek(
+                to: CMTime(value: first.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
             // A seek with a completion handler needs an item that is ready, so the player waits for it.
             // The change can come on any thread.
             self.statusObservation = item?.observe(\.status, options: [.initial, .new]) { [weak self] _, _ in
@@ -136,11 +146,10 @@ final class PlayerPictureView: UIView {
     }
 
     private func itemStatusChanged(_ number: Int) {
-        guard number == build, !isReady, player.currentItem?.status == .readyToPlay else {
+        guard number == build, !isReady, item?.status == .readyToPlay else {
             return
         }
         isReady = true
-        target = nil
         isSeeking = false
         bring(to: store.state)
     }

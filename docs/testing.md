@@ -122,9 +122,9 @@ The words "Copying videos" and the state with `start.noneReadable` and `start.ok
 
 On Linux, `Tests/ReelsmithCoreTests/PreviewWordsTests.swift` fails when `preview.play` or `preview.pause` is missing from the English, the Arabic or the Swedish word file.
 
-Screenshots: `m1-7-preview-01-first-frame` (blue whole with a black bar above and below), `m1-7-preview-01-first-frame-ar`, `m1-7-preview-02-placed` (red fills the area), `m1-7-preview-03-after-scrub` (blue with bars again), `m1-7-preview-04-empty` (black), `m1-7-preview-05-wide` (blue fills the wide area), `m1-7-preview-06-wide-bars` (red whole with a black bar left and right). Mark: `m1-7-preview-01-play`, the playback of the play and pause test. The pictures `m1-7-preview-02-placed` and `m1-7-preview-05-wide` are the two where a clip fills the canvas unscaled: both were black in the first simulator run while their tests passed, so they are looked at after every run.
+Screenshots: `m1-7-preview-01-first-frame` (blue whole with a black bar above and below), `m1-7-preview-01-first-frame-ar`, `m1-7-preview-02-placed` (red fills the area), `m1-7-preview-03-after-scrub` (blue with bars again), `m1-7-preview-04-empty` (black), `m1-7-preview-05-wide` (blue fills the wide area), `m1-7-preview-06-wide-bars` (red whole with a black bar left and right). Mark: `m1-7-preview-01-play`, the playback of the play and pause test. No test sees a black area, so the pictures `m1-7-preview-02-placed` and `m1-7-preview-05-wide`, the two where a clip fills the canvas unscaled, are looked at after every run.
 
-That the item is built again when the project changes, that an old build never replaces a new one, that nothing is reported after a `pause` and that a failed build leaves the area black cannot be seen in these tests and is read in the diff.
+That the item is built again when the project changes, that an old build never replaces a new one, that nothing is reported after a `pause`, that one seek is in flight at a time and that a failed build leaves the area black cannot be seen in these tests and is read in the diff.
 <!-- end slot: m1-7-preview -->
 
 ### m1-9b-trim-handles
