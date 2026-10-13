@@ -5,8 +5,43 @@ import CoreImage
 import CoreMedia
 import CoreVideo
 import Foundation
+import ReelsmithCore
 
-/// One for each segment of the plan: the track that holds its picture and where that picture goes.
+/// One text of an instruction: its picture, the three values the picture was drawn from, and where and when
+/// it is put.
+struct PieceText {
+    let string: String
+    let style: TextStyle
+    let lineWidth: Double
+    /// The picture as it was drawn, with no colour space, as a source frame is read.
+    let image: CIImage
+    /// The picture turned around its centre and put at its place, counted from the bottom left of the canvas.
+    let placed: CIImage
+    /// The text is drawn in a frame at time t when start <= t < end.
+    let start: CMTime
+    let end: CMTime
+}
+
+/// The texts of one instruction: every layer of the plan whose time overlaps the range, in the order of the
+/// plan. The one place that asks for a text picture. A picture is taken from `kept` when one there was drawn
+/// from the same string, style and wrap width, so a text that only moved or turned draws nothing. `drawn` counts
+/// the calls of `textPicture(for:)`. A layer with no picture, as a blank one, is left out.
+///
+/// The place of a layer is counted from the top left of the canvas and Core Image counts from the bottom left,
+/// where a turn clockwise as she sees it is a negative angle. A picture that is not turned is put on whole
+/// pixels, so its letters stay sharp.
+///
+/// https://developer.apple.com/documentation/coreimage/ciimage/init(cgimage:options:)
+/// https://developer.apple.com/documentation/coreimage/ciimageoption/colorspace
+/// https://developer.apple.com/documentation/coregraphics/cgaffinetransform/init(rotationangle:)
+func pieceTexts(
+    of plan: RenderPlan, in range: CMTimeRange, kept: [PieceText]
+) -> (texts: [PieceText], drawn: Int) {
+    return ([], 0)
+}
+
+/// One for each segment of the plan: the track that holds its picture, where that picture goes, and the texts
+/// of the plan whose time overlaps its range, each with its picture.
 /// It answers true for `containsTweening`, so every frame of its range is asked for by its own time.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avvideocompositioninstructionprotocol
@@ -22,11 +57,19 @@ final class PieceInstruction: NSObject, AVVideoCompositionInstructionProtocol {
     let track: CMPersistentTrackID
     /// From the source frame to the canvas, both counted from the bottom left as Core Image counts.
     let placing: CGAffineTransform
+    /// In drawing order, the later one on top.
+    let texts: [PieceText]
+    /// How many times a text picture was asked for when this instruction was built.
+    let drawn: Int
 
-    init(timeRange: CMTimeRange, track: CMPersistentTrackID, placing: CGAffineTransform) {
+    init(
+        timeRange: CMTimeRange, track: CMPersistentTrackID, placing: CGAffineTransform, texts: [PieceText], drawn: Int
+    ) {
         self.timeRange = timeRange
         self.track = track
         self.placing = placing
+        self.texts = texts
+        self.drawn = drawn
         requiredSourceTrackIDs = [NSNumber(value: track)]
         super.init()
     }
