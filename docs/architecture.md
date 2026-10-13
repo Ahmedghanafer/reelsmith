@@ -31,7 +31,7 @@ A text is a value of the project. All its geometry is in canvas pixels from the 
 
 ### Text edits
 
-What each text action does, in `Sources/ReelsmithCore/Editor/TextEdits.swift`. A value past a limit is held at the limit and never refused. An action that names a text that is not in the project returns the state unchanged, the playing flag included.
+What each text action does, in `Sources/ReelsmithCore/Editor/TextEdits.swift`. A value past a limit is held at the limit and never refused. An action that names a text that is not in the project returns the state unchanged, the playing flag included. So does a `setStyle` with a size or a line spacing, a `move` with an x or a y, and a `turn` with an angle that is not a finite number: not a number, or infinite.
 
 - `add` appends one text and selects it: the next text id, an empty string, `whole`, the centre of the canvas (960, 540 on the landscape canvas and 540, 960 on the portrait one), rotation 0 and `TextStyle.standard`. `nextTextID` grows by 1, so an id is never used twice. `selection` becomes nil and the state is paused. On a project with no clip it changes nothing.
 - `select` sets `selectedText`, sets `selection` to nil and leaves `isPlaying` as it was.
@@ -40,7 +40,7 @@ What each text action does, in `Sources/ReelsmithCore/Editor/TextEdits.swift`. A
 - `move` stores the new centre held inside the canvas, and the edge is inside: x from 0 to the canvas width and y from 0 to the canvas height, so 0 to 1920 and 0 to 1080 on the landscape canvas.
 - `turn` stores an angle above minus 180 and at most 180: whole turns are taken off, so 190 becomes minus 170 and minus 180 becomes 180. An angle at most 3 from 0, 3 included, becomes 0.
 - `trimStart` and `trimEnd` work on `range(of:)`, the range as it is seen, and a positive amount makes the text shorter. The amount is held so that the range stays inside the project, from zero to the project length, and stays at least `TextGeometry.minimumText` long, 60 ticks, and is then rounded toward zero to whole frames. The result is stored as a range, or as `whole` when it runs from zero to the project length. A trim of a text with no range changes nothing. When the seen range is shorter than `minimumText`, because a clip edit cut it, a `trimStart` moves the start back until the range is at least `minimumText` long, and a `trimEnd` changes nothing.
-- `setString`, `setStyle`, `move`, `turn` and a trim that is done pause the state.
+- `setString`, `setStyle`, `move`, `turn` and a trim that is done pause the state, also when the value is the one the text had.
 - The blank rule, `settleTexts(from:to:)`: a blank text exists only while it is selected. After every action, on every path of `reduce`, each blank text that is not the selected one is removed from the project. So `clearSelection`, a `select` of a clip, a `select` of another text and an `add` all remove a blank text that was selected, and a `setString` that gives a blank string to a text that is not selected removes that text.
 - `deleteSelected`, in `Sources/ReelsmithCore/Editor/Edits.swift`: when `selectedText` is set it removes that text, sets `selectedText` to nil, pauses and touches no clip. `canDelete` is true when `selectedText` names a text of the project, and with no selected text when `selection` names a clip.
 - No clip action changes a text. A text whose range lies past the end of a shortened project keeps its values, has no range and no layer in the plan, and has its range again when the project grows.

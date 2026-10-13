@@ -1,6 +1,7 @@
 // The text actions, the blank rule and the nearest text.
 
-/// What reduce calls for the case text. An action that names an unknown text returns the state unchanged.
+/// What reduce calls for the case text. An action that names an unknown text returns the state unchanged,
+/// and so does one with a size, a line spacing, a place or an angle that is not a finite number.
 func reduceText(_ state: EditorState, _ action: TextAction) -> EditorState {
     var next = state
     switch action {
@@ -32,7 +33,7 @@ func reduceText(_ state: EditorState, _ action: TextAction) -> EditorState {
         }
         next.project.texts[index].string = string
     case .setStyle(let id, let style):
-        guard let index = place(of: id, in: state) else {
+        guard let index = place(of: id, in: state), style.size.isFinite, style.lineSpacing.isFinite else {
             return state
         }
         var held = style
@@ -40,14 +41,14 @@ func reduceText(_ state: EditorState, _ action: TextAction) -> EditorState {
         held.lineSpacing = min(max(style.lineSpacing, 0), 2)
         next.project.texts[index].style = held
     case .move(let id, let x, let y):
-        guard let index = place(of: id, in: state) else {
+        guard let index = place(of: id, in: state), x.isFinite, y.isFinite else {
             return state
         }
         let canvas = state.project.canvas
         next.project.texts[index].x = min(max(x, 0), Double(canvas.width))
         next.project.texts[index].y = min(max(y, 0), Double(canvas.height))
     case .turn(let id, let angle):
-        guard let index = place(of: id, in: state) else {
+        guard let index = place(of: id, in: state), angle.isFinite else {
             return state
         }
         var held = angle.truncatingRemainder(dividingBy: 360)
