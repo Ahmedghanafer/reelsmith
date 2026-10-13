@@ -113,6 +113,10 @@ final class PreviewTests: XCTestCase {
             play.tap()
         }
         waitForTheButton(play, toRead: "Play")
+        if beforeTheLastTap < "00:06" {
+            // A tap that does nothing lets the playback run to the end inside the wait.
+            XCTAssertLessThan(timeBeforeTheSlash(app), "00:07", "the last tap did not pause the playback")
+        }
         XCTAssertEqual(timeBeforeTheSlash(app), playheadValue(app))
     }
 
@@ -123,16 +127,28 @@ final class PreviewTests: XCTestCase {
         XCTAssertEqual(element(app, "editor.time").label, "00:02 / 00:07")
         waitForThePicture()
 
+        let beforePlay = Date()
         play.tap()
         waitForTheTime(app, "a second inside the red clip", expected: 3) { $0 >= "00:04" }
         // A tap that lands after the end would start the playback again. From "00:06" on the end is less
         // than a second away, so no tap is sent and the playback ends by itself inside the wait below.
         let beforeTheLastTap = timeBeforeTheSlash(app)
-        print("preview: the time read before the last tap is " + beforeTheLastTap)
+        let seconds = Date().timeIntervalSince(beforePlay)
+        print("preview: the time read before the last tap is " + beforeTheLastTap
+            + ", \(seconds) seconds after the tap on play")
+        // From 2.5 seconds to the end are 4.5 seconds of playback, and a held runner only adds time. An
+        // item that ends with the blue clip puts the time at the end of the project at once.
+        if beforeTheLastTap == "00:07" && seconds < 4 {
+            XCTFail("the time reached the end in \(seconds) seconds: the playback did not play through the red clip")
+        }
         if beforeTheLastTap < "00:06" {
             play.tap()
         }
         waitForTheButton(play, toRead: "Play")
+        if beforeTheLastTap < "00:06" {
+            // A tap that does nothing lets the playback run to the end inside the wait.
+            XCTAssertLessThan(timeBeforeTheSlash(app), "00:07", "the last tap did not pause the playback")
+        }
         XCTAssertEqual(timeBeforeTheSlash(app), playheadValue(app))
     }
 
