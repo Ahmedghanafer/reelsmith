@@ -204,6 +204,10 @@ jobs:
               fi
               number=$((number + 1))
             done
+            if [ -z "$chosen" ]; then
+              echo "Group $GROUP of 3 holds no class." | tee "$RUNNER_TEMP/selection.txt"
+              exit 1
+            fi
             echo "UI tests of this run: group $GROUP of 3 of a split run, $number classes in all. Classes of this group:$chosen. Tests selected: $selected of $total." |
               tee "$RUNNER_TEMP/selection.txt"
           else
