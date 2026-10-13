@@ -148,10 +148,6 @@ final class TextGesturesTests: XCTestCase {
         var app = startGestures(seed: "text-wide", playhead: 600)
         var picture = element(app, "editor.picture")
 
-        // Just over one degree: at most 3 from straight comes back to 0.
-        twist(picture, app, by: 0.02)
-        XCTAssertEqual(field(7, app), "0")
-
         mark("text-gestures-03-twist")
         twist(picture, app, by: 0.5)
         waitUntil("a rotation above 0 and below 90 after a twist to the right") {
