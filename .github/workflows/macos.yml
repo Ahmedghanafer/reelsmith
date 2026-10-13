@@ -79,6 +79,23 @@ jobs:
         run: |
           trap 'echo "layer 4: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           xcrun simctl bootstatus "$SIMULATOR" -b
+          # One seeded start before the recording and the tests. It writes every clip a seed needs and builds
+          # the editor once, so no start inside a test follows the writing of a clip. The app logs a line
+          # with "old picture" when its first item goes into the player, which is after the editor is built.
+          warm=$SECONDS
+          seen=no
+          xcrun simctl launch "$SIMULATOR" com.ghanafer.reelsmith -seed three-clips ||
+            seen="no, the app did not start"
+          while [ "$seen" = no ] && [ $((SECONDS - warm)) -lt 180 ]; do
+            sleep 3
+            xcrun simctl spawn "$SIMULATOR" log show --last 5m --predicate 'process == "Reelsmith"' \
+              > "$RUNNER_TEMP/warm-start.txt" || true
+            if grep -q "old picture" "$RUNNER_TEMP/warm-start.txt"; then
+              seen=yes
+            fi
+          done
+          echo "The warm start: $((SECONDS - warm)) seconds, the line of the first item seen: $seen"
+          xcrun simctl terminate "$SIMULATOR" com.ghanafer.reelsmith || true
           mkdir -p recording results
           date +%s > recording/recording-start.txt
           xcrun simctl io "$SIMULATOR" recordVideo --codec h264 recording/recording.mp4 &
