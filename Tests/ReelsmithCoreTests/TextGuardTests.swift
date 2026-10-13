@@ -158,19 +158,11 @@ private func textKinds(of action: TextAction, in state: EditorState) -> [TextKin
         guard project.text(id) != nil else {
             return [.setStyleUnknown]
         }
-        var kinds: [TextKind] = []
-        if style.size < TextGeometry.minimumSize {
-            kinds.append(.sizeBelow)
-        }
-        if style.size > TextGeometry.maximumSize {
-            kinds.append(.sizeAbove)
-        }
-        if style.lineSpacing < 0 {
-            kinds.append(.spacingBelow)
-        }
-        if style.lineSpacing > 2 {
-            kinds.append(.spacingAbove)
-        }
+        let past: [(Bool, TextKind)] = [
+            (style.size < TextGeometry.minimumSize, .sizeBelow), (style.size > TextGeometry.maximumSize, .sizeAbove),
+            (style.lineSpacing < 0, .spacingBelow), (style.lineSpacing > 2, .spacingAbove),
+        ]
+        let kinds = past.filter({ $0.0 }).map({ $0.1 })
         return kinds.isEmpty ? [.setStyle] : kinds
     case .move(let id, let x, let y):
         guard project.text(id) != nil else {
@@ -178,35 +170,14 @@ private func textKinds(of action: TextAction, in state: EditorState) -> [TextKin
         }
         let width = Double(project.canvas.width)
         let height = Double(project.canvas.height)
-        var kinds: [TextKind] = []
-        if x < 0 {
-            kinds.append(.movePastLeft)
-        }
-        if x > width {
-            kinds.append(.movePastRight)
-        }
-        if y < 0 {
-            kinds.append(.movePastTop)
-        }
-        if y > height {
-            kinds.append(.movePastBottom)
-        }
-        if kinds.isEmpty {
-            kinds.append(.move)
-        }
-        if x == 0 {
-            kinds.append(.moveOnLeft)
-        }
-        if x == width {
-            kinds.append(.moveOnRight)
-        }
-        if y == 0 {
-            kinds.append(.moveOnTop)
-        }
-        if y == height {
-            kinds.append(.moveOnBottom)
-        }
-        return kinds
+        let past: [(Bool, TextKind)] = [
+            (x < 0, .movePastLeft), (x > width, .movePastRight), (y < 0, .movePastTop), (y > height, .movePastBottom),
+        ]
+        let edges: [(Bool, TextKind)] = [
+            (x == 0, .moveOnLeft), (x == width, .moveOnRight), (y == 0, .moveOnTop), (y == height, .moveOnBottom),
+        ]
+        let kinds = past.filter({ $0.0 }).map({ $0.1 })
+        return (kinds.isEmpty ? [.move] : kinds) + edges.filter({ $0.0 }).map({ $0.1 })
     case .turn(let id, let angle):
         guard project.text(id) != nil else {
             return [.turnUnknown]
@@ -651,17 +622,6 @@ private func playRuns(from seed: Seed, counts: inout [String: Int]) -> Bool {
                         + "The actions of this run, the last one being the one that failed: \(sent)")
                 return false
             }
-            if !next.project.clips.isEmpty
-                && next.project.texts.contains(where: { next.project.range(of: $0.id) == nil })
-            {
-                counts["count: states with a text past the end of a project with clips", default: 0] += 1
-            }
-            if let selected = next.selectedText, next.project.range(of: selected) == nil {
-                counts["count: states with a hidden selected text", default: 0] += 1
-            }
-            if state.project.texts.contains(where: { $0.isBlank }) && !next.project.texts.contains(where: { $0.isBlank }) {
-                counts["count: actions after which a blank text was gone", default: 0] += 1
-            }
             highest = max(highest, next.project.texts.map({ $0.id.raw }).max() ?? 0)
             state = next
         }
@@ -676,9 +636,6 @@ final class TextGuardTests: XCTestCase {
             guard playRuns(from: seed, counts: &counts) else {
                 return
             }
-        }
-        for name in counts.keys.sorted() {
-            print("text guard: \(counts[name, default: 0]) \(name)")
         }
         for kind in ClipKind.allCases.map(\.rawValue) + TextKind.allCases.map(\.rawValue) {
             XCTAssertGreaterThan(counts[kind, default: 0], 0, "the runs never drew: \(kind)")
