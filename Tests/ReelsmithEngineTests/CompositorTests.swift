@@ -115,7 +115,7 @@ final class CompositorTests: XCTestCase {
 
         for (side, x) in [("left", 480), ("right", 1440)] {
             let wanted = try await pixel(of: source, at: Time(ticks: 600), x: x, y: 540)
-            let colour = try pixel(of: image, x: x, y: 540)
+            let colour = try self.colour(in: image, x: x, y: 540)
             print("compositor: mid tone, frame of the player item against source file, \(side) half: "
                 + "source \(wanted.r), \(wanted.g), \(wanted.b), frame \(colour.r), \(colour.g), \(colour.b), "
                 + "difference \(differences(colour, wanted))")
@@ -174,7 +174,7 @@ final class CompositorTests: XCTestCase {
 
     /// The colour of one pixel of a picture, read as `pixel(of:at:x:y:)` reads a frame of a file.
     /// https://developer.apple.com/documentation/coregraphics/cgcontext/draw(_:in:byTiling:)
-    private func pixel(of image: CGImage, x: Int, y: Int) throws -> RGB {
+    private func colour(in image: CGImage, x: Int, y: Int) throws -> RGB {
         let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
         let context = try XCTUnwrap(CGContext(
             data: nil, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4,
