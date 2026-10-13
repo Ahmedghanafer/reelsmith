@@ -80,6 +80,8 @@ final class PictureTests: XCTestCase {
         handle.press(forDuration: 0.1, thenDragTo: handle.withOffset(CGVector(dx: -30, dy: 0)))
         var shares = readForHalfASecond(green, "green", in: picture, after: "the trim")
         XCTAssertGreaterThan(shares.min() ?? 0, 0.9, "green after the trim")
+        // The block was 120 points wide.
+        XCTAssertLessThan(app.descendants(matching: .any)["editor.clip.3"].frame.width, 120, "the trim trimmed")
         screenshot("picture-04-after-trim")
 
         // The split: green becomes a part from 7 to 8 seconds and a part from 8 seconds on.
@@ -102,34 +104,61 @@ final class PictureTests: XCTestCase {
         screenshot("picture-06-after-delete")
 
         // A delete that changes the picture: the rest of green goes and the picture is the last
-        // frame of red, which fills the area as green did. Nothing says when the new item goes into
-        // the player, so black and red are read in turn from the tap until red is there, expected
-        // within 3 seconds and given up above 9. The app lets go of the old picture 15 seconds after
-        // a new item at the latest, so an old picture that only that limit took away fails here.
+        // frame of red, which fills the area as green did.
         select(app.descendants(matching: .any)["editor.clip.3"])
         mark("picture-04-edit-delete-last")
         delete.tap()
+        readBlackUntil(red, "red", in: picture, after: "the delete of the last of green")
+        screenshot("picture-07-red-after-delete")
+    }
+
+    /// A delete that changes the clip under a playhead that stays where it is. At 4 seconds red is
+    /// under the playhead and the blue block is from x -39 to 141. With blue gone, red is from 0 to 4
+    /// seconds and green starts at 4, under the playhead. Red and green both fill the area.
+    func testADeleteBeforeThePlayheadNeverLeavesThePictureAreaBlack() {
+        let app = startApp(seed: "three-clips", playhead: 2400)
+        waitForTheEditor(app)
+        let picture = app.descendants(matching: .any)["editor.picture"]
+        XCTAssertGreaterThan(waitForTheShare(of: red, "red", in: picture, moreThan: 0.9), 0.9, "red")
+
+        // Blue is tapped at x 96, three quarters into it.
+        select(app.descendants(matching: .any)["editor.clip.1"], at: 0.75)
+        mark("picture-05-edit-delete-before")
+        app.descendants(matching: .any)["editor.delete"].tap()
+        readBlackUntil(green, "green", in: picture, after: "the delete of blue")
+        XCTAssertEqual(app.descendants(matching: .any)["editor.playhead"].value as? String, "00:04")
+        screenshot("picture-08-green-after-delete")
+    }
+
+    /// Nothing says when the new item goes into the player, so black and the colour are read in turn
+    /// from the moment the call of the edit has come back until the colour is above 0.9, expected
+    /// within 3 seconds and given up above 9. No read may find black above 0.1. The app lets go of
+    /// the old picture after 15 seconds at the latest (`oldPictureLimit` in the app, typed here
+    /// again), so an old picture that only that limit took away fails here.
+    private func readBlackUntil(
+        _ colour: (r: Int, g: Int, b: Int), _ what: String, in picture: XCUIElement, after edit: String
+    ) {
         let started = Date()
         var blacks: [Double] = []
         var found: Double = 0
         var waited: Double = 0
         repeat {
             blacks.append(share(of: black, in: picture))
-            found = share(of: red, in: picture)
+            found = share(of: colour, in: picture)
             waited = Date().timeIntervalSince(started)
         } while !(found > 0.9) && waited <= 3 * expectedFrame
         print(
-            "picture: \(blacks.count) reads of black in \(waited) seconds from the delete of the last of green to red, the highest share of black \(blacks.max() ?? 1), red \(found), expected \(expectedFrame), the app lets go of the old picture after 15 seconds"
+            "picture: \(blacks.count) reads of black in \(waited) seconds from \(edit) to \(what), the highest share of black \(blacks.max() ?? 1), \(what) \(found), expected \(expectedFrame), the app lets go of the old picture after 15 seconds"
         )
-        XCTAssertLessThan(blacks.max() ?? 1, 0.1, "black after the delete of the last of green")
-        XCTAssertGreaterThan(found, 0.9, "red")
-        screenshot("picture-07-red-after-delete")
+        XCTAssertLessThan(blacks.max() ?? 1, 0.1, "black after \(edit)")
+        XCTAssertGreaterThan(found, 0.9, what)
     }
 
-    /// Taps a block a quarter of its width from its left edge, away from the playhead line, and
-    /// waits for it to be selected, expected within 1 second and failing only above 3.
-    private func select(_ block: XCUIElement) {
-        block.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5)).tap()
+    /// Taps a block at a part of its width from its left edge, a quarter when none is given, away
+    /// from the playhead line, and waits for it to be selected, expected within 1 second and failing
+    /// only above 3.
+    private func select(_ block: XCUIElement, at part: Double = 0.25) {
+        block.coordinate(withNormalizedOffset: CGVector(dx: part, dy: 0.5)).tap()
         let started = Date()
         var waited: Double = 0
         while !block.isSelected && waited <= 3 {
