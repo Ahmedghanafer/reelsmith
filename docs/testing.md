@@ -4,8 +4,8 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test. That is 246 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 295 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, which sits inside `#if canImport(CoreText)`. That is 248 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 316 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 50 UI tests in nine classes.
 
 What comes back from the simulator run:
@@ -168,6 +168,24 @@ Two more files of `Tests/ReelsmithEngineTests/Support` make clips that are no te
 
 - `Tests/ReelsmithEngineTests/TestClipMakerTests.swift` holds the five test clips to the table: stored size, H.264, the exact frame count, the exact length of the picture track, the two colours at half the length, the sound track of blue and red with its peak, the 709 colour properties, the stored transform of `turned.mov` and the identity transform of the other four, the write under a temporary name and the kept file.
 - When `REELSMITH_CLIP_DIR` is set, `testLeavesBlueAndRedInTheClipFolder` leaves `blue.mov` and `red.mov` in that folder. When it is not set the test is skipped.
+
+### Tests of faces and text pictures
+
+No reference image is used: every test reads numbers.
+
+- `Tests/ReelsmithCoreTests/FontFilesTests.swift` runs on Linux. It finds the folder `Sources/ReelsmithEngine/Fonts/` from the place of its own source file and holds that it has exactly `Amiri-Bold.ttf`, `Amiri-Regular.ttf` and `OFL.txt`, and that the licence text names the SIL Open Font License, Version 1.1, and has a line that begins "Copyright 2010-2022 The Amiri Project Authors".
+- `Tests/ReelsmithEngineTests/TextPictureTests.swift` runs with `swift test` on macOS. The layout, `font(_:size:)` and `textPicture(for:)` are internal, so the file imports the Engine with `@testable`. Every text is at size 64 with a wrap width of 1536 unless a test says otherwise. The marked line is the Arabic line of the seed `text-wide`, taken from its string, and the bare line is the same without its nine marks.
+- The faces: the test reads the PostScript name out of each font file with no face registered, prints both, and holds `faceName(of:)` of `naskh` and `naskhBold` to them. The name of `system` is not empty and is neither of the two, and a face asked for twice has the same name. One test prints the cap height of `naskh` at size 64 and asserts nothing.
+- From the layout: every glyph run of the marked line in `naskh` and in `naskhBold` reports that face and runs right to left. Every run of "Peace" in `naskh` reports `naskh` and runs left to right. In `system` no run of the marked line reports a bundled face. In each of the three faces, on the marked line and on the bare line, the glyph of the last lam, of the ain and of the last meem differs from the glyph of that letter laid out alone.
+- From the image, in each of the three faces: the bare line is narrower than its letters held apart by U+200C. The marked line has ink in rows where the bare line has none, and its image is as wide as that of the bare line within 2 pixels. The test prints the difference.
+- The rectangle: the picture of the layer of `text-wide` has the pixel width and height of its `width` and `height` rounded up, is at most 1575 wide, has no ink in its outermost rows and columns, and is taller than the picture of its first line. With `box` on the four corner pixels are black with an alpha of 153 within 24, with it off they are clear, and the size is the same.
+- The wrap: forty words give a picture at most 1575 wide and taller than one word, and at a `lineWidth` of 400 one at most 439 wide and taller still.
+- The alignment, for a short line above a long one that begins and ends with the same letters, in Latin and in Arabic: with `left` the ink of both lines starts in the same column within 1 pixel, at most 27 pixels from the left edge, and the short line ends before the middle. `right` is the mirror of that. With `centre` the middle of the ink of the short line is within 2 pixels of the middle of the ink of the long line, which fills the block.
+- A `lineSpacing` of 1 makes a picture of two lines taller by 64 within 1 pixel.
+- The colour: every pixel of full alpha of a text in 255, 214, 10 and of a white text reads that colour.
+- The outline: a white text gets full black pixels where it had none and keeps white ones, a black text gets white ones, and the ink grows on each side by no more than 0.08 of the size and 1 pixel.
+- The shadow: the pixels it adds where there was nothing are black with an alpha of at most 153 and 24, and they reach further below the ink than above it.
+- A string that is empty or holds only spaces and line breaks gives nil. Two layers that differ only in their id, their time, their centre and their rotation give images of equal size and equal pixels.
 
 ### Reading a media file
 
