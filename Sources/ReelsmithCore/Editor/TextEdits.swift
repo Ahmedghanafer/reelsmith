@@ -37,7 +37,7 @@ func reduceText(_ state: EditorState, _ action: TextAction) -> EditorState {
             return state
         }
         var held = style
-        held.size = min(max(style.size, TextGeometry.minimumSize), TextGeometry.maximumSize)
+        held.size = max(style.size, TextGeometry.minimumSize)
         held.lineSpacing = min(max(style.lineSpacing, 0), 2)
         next.project.texts[index].style = held
     case .move(let id, let x, let y):
