@@ -19,7 +19,12 @@ enum TextBars {
         }
 
         let state: EditorState = view.state
-        let texts: [TextItem] = state.project.texts.filter { state.project.range(of: $0.id) != nil }
+        var texts: [(item: TextItem, range: TextRange)] = []
+        for item in state.project.texts {
+            if let range: TextRange = state.project.range(of: item.id) {
+                texts.append((item: item, range: range))
+            }
+        }
         var bars: [TextBar] = view.subviews.compactMap { $0 as? TextBar }
         while bars.count > texts.count {
             bars.removeLast().removeFromSuperview()
@@ -32,10 +37,9 @@ enum TextBars {
 
         let row = TimelineStripView.textRow
         var selectedFrame: CGRect?
-        for (item, bar) in zip(texts, bars) {
-            guard let range: TextRange = state.project.range(of: item.id) else {
-                continue
-            }
+        for (entry, bar) in zip(texts, bars) {
+            let item: TextItem = entry.item
+            let range: TextRange = entry.range
             let position: Int = state.project.position(of: item.id) ?? 0
             let selected = item.id == state.selectedText
             bar.shown = item.id
