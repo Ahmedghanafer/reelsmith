@@ -1,7 +1,7 @@
 import ReelsmithCore
 import SwiftUI
 
-/// The row of the two edit buttons. It decides nothing: Core says whether a button is enabled,
+/// The row of the two edit buttons and the text button. It decides nothing: Core says whether a button is enabled,
 /// and a tap sends one action. A row of SwiftUI lays out from leading to trailing, so Arabic mirrors it.
 ///
 /// https://developer.apple.com/documentation/swiftui/button
@@ -20,6 +20,10 @@ struct ToolsRow: View {
             Button("tools.delete") { send(.deleteSelected) }
                 .disabled(!state.canDelete)
                 .accessibilityIdentifier("editor.delete")
+            Button("tools.text") { send(.text(.add)) }
+                .disabled(!state.canAddText)
+                .accessibilityIdentifier("editor.addText")
         }
+        .buttonStyle(RowButtonStyle())
     }
 }

@@ -22,6 +22,7 @@ func seedStart(_ options: LaunchOptions) async -> EditorStore? {
     }
     let project: Project = seed.project
     var state = EditorState(project: project)
+    state.selectedText = seed.selectedText
     if let playhead: Time = options.playhead {
         state = reduce(state, .movePlayhead(playhead))
     }
