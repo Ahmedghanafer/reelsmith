@@ -68,6 +68,7 @@ final class WholePathTests: XCTestCase {
 
         // The delete of the first block, which ends under the playhead, so its middle is on the screen.
         element(app, "editor.clip.1").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(element(app, "editor.clip.1").isSelected)
         element(app, "editor.delete").tap()
         waitUntil("two blocks after the delete", expected: 1) { !element(app, "editor.clip.3").exists }
         XCTAssertTrue(element(app, "editor.clip.2").exists)
@@ -120,7 +121,7 @@ final class WholePathTests: XCTestCase {
         Thread.sleep(forTimeInterval: 2)
         XCTAssertTrue(theTwoSidesAreTheSame(app), element(app, "editor.time").label)
         // The two sides read the same through the whole last second. At the end there is nothing to split,
-        // and a stop inside the blue clip would leave the button enabled.
+        // and a stop earlier inside the blue clip would leave the button enabled.
         XCTAssertFalse(element(app, "editor.split").isEnabled)
 
         // The export. The wave run grants the right to add to Photos, so no question is expected.
