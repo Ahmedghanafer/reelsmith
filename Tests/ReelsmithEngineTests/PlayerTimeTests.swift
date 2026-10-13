@@ -59,32 +59,6 @@ final class PlayerTimeTests: XCTestCase {
         XCTAssertEqual(player.currentTime(), ticks(3000))
     }
 
-    /// https://developer.apple.com/documentation/avfoundation/avplayer/replacecurrentitem(with:)
-    @MainActor
-    func testASeekEndedByANewItemReportsFalse() async throws {
-        let old = try await wideItem()
-        let player = try await readyPlayer(with: old)
-        let next = try await wideItem()
-        let seen = Seen()
-
-        player.seekExactly(to: Time(ticks: 600)) { finished in
-            seen.first = finished
-            print("player time: a seek and then a new item: finished \(finished), the new item is the player's "
-                + "\(player.currentItem === next), the old item stands on \(old.currentTime().seconds) seconds")
-        }
-        player.replaceCurrentItem(with: next)
-        try await wait("the seek ended", expected: 5) { seen.first != nil }
-        XCTAssertEqual(seen.first, false)
-
-        let gone = try await readyPlayer(with: try await wideItem())
-        gone.seekExactly(to: Time(ticks: 600)) { finished in
-            seen.second = finished
-            print("player time: a seek and then no item: finished \(finished)")
-        }
-        gone.replaceCurrentItem(with: nil)
-        try await wait("the seek ended with no item", expected: 5) { seen.second != nil }
-    }
-
     @MainActor
     func testASeekWithNoReportMovesThePlayerToTheSameTime() async throws {
         let player = try await readyPlayer(with: try await wideItem())

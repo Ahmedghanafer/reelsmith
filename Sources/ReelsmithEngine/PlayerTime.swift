@@ -17,7 +17,8 @@ extension AVPlayer {
         seek(to: CMTime(value: time.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
     }
 
-    /// Tolerance zero before and after. `done` gets false when another seek or a new item ended this one.
+    /// Tolerance zero before and after. `done` gets false when another seek ended this one. A new item does
+    /// not end a seek: it still lands on the old item and `done` gets true, so the caller keeps its own guard.
     @MainActor public func seekExactly(to time: Time, then done: @escaping @MainActor (Bool) -> Void) {
         // The handler can come on any thread.
         seek(
