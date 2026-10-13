@@ -35,15 +35,15 @@ gh run view <run id> --log
 
 The workflow starts on every label and skips its job for any label but `compile`. So another label put on the pull request afterwards starts a skipped run, and that skipped run takes the place of the result in `gh pr checks`. The result that counts is the newest run in `gh run list --workflow "Compile check" --branch <branch>` that was not skipped and whose head is the head of the pull request.
 
-Once the workflow file is on `dev` it can also be started by hand on any branch:
+It can also be started by hand on any branch:
 
 ```
 gh workflow run "Compile check" --ref <branch>
 ```
 
-## Start a wave run
+## Start a simulator run
 
-The `macOS build` workflow is the wave run: one run on a macOS runner with Xcode 26.6 that builds everything, runs the Engine tests and the UI tests in an iPhone simulator, and brings back the pictures, one recording and the test results. The repository is public, so runner time is free and a wave run is repeated after each fix until it is green. It starts by hand only. It is started on `dev` when a group of changes is merged, and again after a fix:
+The `macOS build` workflow is the simulator run: one run on a macOS runner with Xcode 26.6 that builds everything, runs the Engine tests and the UI tests in an iPhone simulator, and brings back the pictures, one recording and the test results. The repository is public, so runner time is free and a simulator run is repeated after each fix until it is green. It starts by hand only. It is started on `dev` when a group of changes is merged, and again after a fix:
 
 ```
 gh workflow run "macOS build" --ref dev
@@ -64,7 +64,7 @@ The run creates one simulator, an iPhone 17 on the iOS 26.5 runtime, and works t
 2. The project is generated, and the app and the UI tests are built for testing.
 3. The simulator boots, the built app is installed, the right to add to Photos is granted to the app, the two clips are put into the photo library, and the count of videos in the library is printed.
 4. The clock second is written to `recording-start.txt`, one recording of the simulator starts, and the UI tests run without a rebuild into a result bundle.
-5. The screenshots and the mark files are exported from the result bundle under their attachment names, and each mark becomes one line of `recording-index.txt`. A name is made safe for the upload: each character the upload refuses (the double quote, colon, less than, greater than, vertical bar, asterisk, question mark, carriage return and line feed) becomes an underscore, and a name that is already taken gets a number before its ending, as in `<name>_2.txt`.
+5. The screenshots and the mark files are exported from the result bundle under their attachment names, and each mark becomes one line of `recording-index.txt`. A name is made safe for the upload: each character the upload refuses (the double quote, colon, less than, greater than, vertical bar, asterisk, question mark, carriage return and line feed) becomes an underscore, and a name that is already taken gets a number before its ending, as in `<name>_2.txt`. The ending of a mark file is `.mark.txt` and that of any other name is what follows its last dot, so a taken name whose last dot is not an ending gets its number before that dot, as in `App UI hierarchy for com.ghanafer_2.reelsmith`.
 6. The count of videos in the library is printed again.
 7. Only with `ipa=true`: the device build without code signing, packed as `Reelsmith.ipa`.
 
@@ -90,7 +90,7 @@ gh run download <run id> -n ipa -D ipa
 
 This works: on 2026-10-12 an unsigned build of this project was installed with Sideloadly and a free Apple ID on an iPhone with iOS 26.6.2, and it opened. The steps:
 
-1. Remove the Microsoft Store versions of iTunes and iCloud if they are installed (they do not work). Install iTunes and iCloud for Windows from Apple's website, then install Sideloadly from sideloadly.io.
+1. Remove the Microsoft Store version of iTunes if it is installed (it does not work). Install iTunes for Windows from Apple's website and check that Apple Mobile Device Support is installed with it: it comes in the same installer, and a silent install of iTunes can leave it out. iCloud is not needed. Then install Sideloadly from sideloadly.io.
 2. Connect the iPhone with a USB cable, unlock it and tap Trust.
 3. Open Sideloadly, pick the phone, drag `Reelsmith.ipa` into the window, type the free Apple ID and press Start. Enter the Apple ID password when asked.
 4. On the iPhone, open Settings, General, VPN & Device Management, tap the Apple ID and tap Trust.
