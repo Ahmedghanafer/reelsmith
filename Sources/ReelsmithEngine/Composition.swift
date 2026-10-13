@@ -17,14 +17,14 @@ public func makePlayerItem(plan: RenderPlan, media: [MediaID: MediaInfo], mediaF
 
 /// The one builder for the player item and for the export. One picture track, one sound track when a segment
 /// has sound, and one instruction per segment that puts its upright picture at its place on the canvas.
+/// The video composition names `Compositor`, which draws every frame from those instructions.
 /// Throws `sourceMissing` when a file is not in the media folder and `cannotRead` when a file cannot be used.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avmutablecomposition
 /// https://developer.apple.com/documentation/avfoundation/avmutablecompositiontrack/inserttimerange(_:of:at:)
 /// https://developer.apple.com/documentation/avfoundation/avasset/loadtracks(withmediatype:)
 /// https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition
-/// https://developer.apple.com/documentation/avfoundation/avmutablevideocompositioninstruction
-/// https://developer.apple.com/documentation/avfoundation/avmutablevideocompositionlayerinstruction
+/// https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition/customvideocompositorclass
 func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: URL) async throws
     -> (composition: AVMutableComposition, videoComposition: AVMutableVideoComposition) {
     let composition = AVMutableComposition()
@@ -32,7 +32,7 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
         withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
     else { throw EngineError.cannotRead }
     var sound: AVMutableCompositionTrack?
-    var instructions: [AVMutableVideoCompositionInstruction] = []
+    var instructions: [PieceInstruction] = []
 
     for segment in plan.segments {
         guard let info = media[segment.media] else { throw EngineError.sourceMissing(segment.media) }
@@ -65,12 +65,12 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
             throw EngineError.cannotRead
         }
 
-        let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: picture)
-        layer.setTransform(transform(for: segment.placement, width: info.width, height: info.height), at: start)
-        let instruction = AVMutableVideoCompositionInstruction()
-        instruction.timeRange = CMTimeRange(start: start, duration: range.duration)
-        instruction.layerInstructions = [layer]
-        instructions.append(instruction)
+        // The transform counts both pictures from the top left, the compositor from the bottom left.
+        let placing = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(info.height))
+            .concatenating(transform(for: segment.placement, width: info.width, height: info.height))
+            .concatenating(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(plan.canvas.height)))
+        instructions.append(PieceInstruction(
+            timeRange: CMTimeRange(start: start, duration: range.duration), track: picture.trackID, placing: placing))
     }
 
     // Standard range colour properties, so a high dynamic range source is converted for preview and export alike.
@@ -79,6 +79,7 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
     videoComposition.renderSize = CGSize(width: plan.canvas.width, height: plan.canvas.height)
     videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(Project.framesPerSecond))
     videoComposition.instructions = instructions
+    videoComposition.customVideoCompositorClass = Compositor.self
     videoComposition.colorPrimaries = AVVideoColorPrimaries_ITU_R_709_2
     videoComposition.colorTransferFunction = AVVideoTransferFunction_ITU_R_709_2
     videoComposition.colorYCbCrMatrix = AVVideoYCbCrMatrix_ITU_R_709_2
