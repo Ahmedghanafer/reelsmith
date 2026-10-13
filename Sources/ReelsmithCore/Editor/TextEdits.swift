@@ -15,7 +15,6 @@ func reduceText(_ state: EditorState, _ action: TextAction) -> EditorState {
             TextItem(
                 id: id, string: "", span: .whole, x: Double(canvas.width) / 2, y: Double(canvas.height) / 2,
                 rotation: 0, style: .standard))
-        next.project.nextTextID += 1
         next.selectedText = id
         next.selection = nil
         next.isPlaying = false
