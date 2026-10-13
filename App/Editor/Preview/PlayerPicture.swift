@@ -127,20 +127,23 @@ final class PlayerPictureView: UIView {
             guard number == self.build else {
                 return
             }
-            self.item = item
-            self.player.replaceCurrentItem(with: item)
-            // The first playhead goes with the item, so the player gets ready on that frame and not on
-            // the first one. A seek with no completion handler may be sent before the item is ready.
-            let first: Time = self.store.state.playhead
-            self.target = first
-            self.player.seek(
-                to: CMTime(value: first.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
-            // A seek with a completion handler needs an item that is ready, so the player waits for it.
-            // The change can come on any thread.
-            self.statusObservation = item?.observe(\.status, options: [.initial, .new]) { [weak self] _, _ in
-                Task { @MainActor [weak self] in
-                    self?.itemStatusChanged(number)
-                }
+            self.install(item, build: number)
+        }
+    }
+
+    private func install(_ item: AVPlayerItem?, build number: Int) {
+        self.item = item
+        player.replaceCurrentItem(with: item)
+        // The first playhead goes with the item, so the player gets ready on that frame and not on
+        // the first one. A seek with no completion handler may be sent before the item is ready.
+        let first: Time = store.state.playhead
+        target = first
+        player.seek(to: CMTime(value: first.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        // A seek with a completion handler needs an item that is ready, so the player waits for it.
+        // The change can come on any thread.
+        statusObservation = item?.observe(\.status, options: [.initial, .new]) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                self?.itemStatusChanged(number)
             }
         }
     }
