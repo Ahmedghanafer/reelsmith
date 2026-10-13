@@ -53,6 +53,11 @@
 /* end slot: add-text */
 
 /* slot: text-look */
+"text.font.naskh" = "Naskh";
+"text.font.naskhBold" = "Naskh fet";
+"text.font.system" = "System";
+"text.colour" = "Färg %1$@";
+"text.size" = "Storlek";
 /* end slot: text-look */
 
 /* slot: text-more */

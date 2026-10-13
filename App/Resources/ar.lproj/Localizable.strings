@@ -53,6 +53,11 @@
 /* end slot: add-text */
 
 /* slot: text-look */
+"text.font.naskh" = "نسخ";
+"text.font.naskhBold" = "نسخ عريض";
+"text.font.system" = "خط النظام";
+"text.colour" = "اللون %1$@";
+"text.size" = "الحجم";
 /* end slot: text-look */
 
 /* slot: text-more */
