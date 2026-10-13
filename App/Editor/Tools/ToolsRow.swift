@@ -17,10 +17,18 @@ struct ToolsRow: View {
             Button("tools.split") { send(.split) }
                 .disabled(!state.canSplit)
                 .accessibilityIdentifier("editor.split")
-            Button("tools.delete") { send(.deleteSelected) }
+            // Trial, candidate "a turn later": the action is sent in a task of the main actor, after the
+            // release of the button has returned. https://developer.apple.com/documentation/swift/task
+            Button("tools.delete") { Task { @MainActor in send(.deleteSelected) } }
                 .disabled(!state.canDelete)
                 .accessibilityIdentifier("editor.delete")
-            Button("tools.text") { send(.text(.add)) }
+            // Trial, candidate "animations off at the change": the action is sent inside a transaction that
+            // disables animations. https://developer.apple.com/documentation/swiftui/withtransaction(_:_:)
+            Button("tools.text") {
+                var still = Transaction()
+                still.disablesAnimations = true
+                withTransaction(still) { send(.text(.add)) }
+            }
                 .disabled(!state.canAddText)
                 .accessibilityIdentifier("editor.addText")
         }

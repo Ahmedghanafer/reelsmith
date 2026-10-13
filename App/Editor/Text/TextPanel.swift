@@ -75,7 +75,32 @@ struct TextPanel: View {
 
     /// One part button. Its word key is its identifier, and the part that shows has the trait selected.
     private func tab(_ shown: Part, _ key: String) -> some View {
-        Button(LocalizedStringKey(key)) { part = shown }
+        Group {
+            if shown == .type {
+                // Trial, candidate "a still button": the button and its word take a transaction with no
+                // animation and with animations disabled.
+                // https://developer.apple.com/documentation/swiftui/view/transaction(_:)
+                Button { part = shown } label: {
+                    Text(LocalizedStringKey(key)).transaction { still in
+                        still.animation = nil
+                        still.disablesAnimations = true
+                    }
+                }
+                .transaction { still in
+                    still.animation = nil
+                    still.disablesAnimations = true
+                }
+            } else if shown == .look {
+                // Trial, candidate "no button": a plain word with a tap gesture and the trait of a button.
+                // https://developer.apple.com/documentation/swiftui/view/ontapgesture(count:perform:)
+                Text(LocalizedStringKey(key))
+                    .foregroundStyle(Color.accentColor)
+                    .onTapGesture { part = shown }
+                    .accessibilityAddTraits(.isButton)
+            } else {
+                Button(LocalizedStringKey(key)) { part = shown }
+            }
+        }
             .fontWeight(part == shown ? Font.Weight.bold : Font.Weight.regular)
             .accessibilityIdentifier(key)
             .accessibilityAddTraits(part == shown ? .isSelected : [])
