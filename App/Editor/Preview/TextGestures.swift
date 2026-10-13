@@ -73,7 +73,7 @@ private struct TextTap: UIGestureRecognizerRepresentable {
     /// With the playhead at the end of the project the last frame is asked, which is the one shown.
     func handleUIGestureRecognizerAction(_ recognizer: UITapGestureRecognizer, context: Context) {
         let state: EditorState = store.state
-        let canvas: Canvas = state.project.canvas
+        let canvas: ReelsmithCore.Canvas = state.project.canvas
         let place: CGPoint = context.converter.localLocation
         let time: Time = min(state.playhead, state.project.duration - Time.frame)
         let nearest: TextID? = state.project.text(
@@ -111,7 +111,7 @@ private struct TextDrag: UIGestureRecognizerRepresentable {
         else {
             return
         }
-        let canvas: Canvas = store.state.project.canvas
+        let canvas: ReelsmithCore.Canvas = store.state.project.canvas
         store.send(
             .text(
                 .move(

@@ -75,7 +75,7 @@ final class TextGesturesTests: XCTestCase {
         print("text-gestures: the picture is \(picture.frame.width) by \(picture.frame.height) points with the panel open")
 
         mark("text-gestures-01-drag")
-        drag(picture, fromX: 0.15, y: 0.15, byX: 60, y: 30)
+        drag(picture, from: CGVector(dx: 0.15, dy: 0.15), by: CGVector(dx: 60, dy: 30))
         waitUntil("a centre right of 960 and under 540 after the drag to the right and down") {
             self.centre(app).x > 960 && self.centre(app).y > 540
         }
@@ -83,7 +83,7 @@ final class TextGesturesTests: XCTestCase {
         print("text-gestures: field 6 after 60 points right and 30 down reads \(field(6, app))")
         XCTAssertGreaterThan(waitForWhite(in: picture, "after the first drag"), leastWhite, "white")
 
-        drag(picture, fromX: 0.85, y: 0.15, byX: -120, y: 0)
+        drag(picture, from: CGVector(dx: 0.85, dy: 0.15), by: CGVector(dx: -120, dy: 0))
         waitUntil("a centre left of the one before after the drag to the left") { self.centre(app).x < first.x }
         print("text-gestures: field 6 after 120 points left reads \(field(6, app))")
         XCTAssertGreaterThan(waitForWhite(in: picture, "after the second drag"), leastWhite, "white")
@@ -97,14 +97,14 @@ final class TextGesturesTests: XCTestCase {
         let height = Double(picture.frame.height)
 
         for _ in 0..<2 {
-            drag(picture, fromX: 0.03, y: 0.15, byX: 0.94 * width, y: 0)
+            drag(picture, from: CGVector(dx: 0.03, dy: 0.15), by: CGVector(dx: 0.94 * width, dy: 0))
             print("text-gestures: field 6 after a drag from the left edge to the right edge reads \(field(6, app))")
         }
         waitUntil("an x of 1920 after two drags from the left edge to the right edge") {
             self.centre(app).x == 1920
         }
         for _ in 0..<2 {
-            drag(picture, fromX: 0.15, y: 0.95, byX: 0, y: -0.9 * height)
+            drag(picture, from: CGVector(dx: 0.15, dy: 0.95), by: CGVector(dx: 0, dy: -0.9 * height))
             print("text-gestures: field 6 after a drag from the bottom to the top reads \(field(6, app))")
         }
         waitUntil("a y of 0 after two drags from the bottom to the top") { self.centre(app).y == 0 }
@@ -185,7 +185,7 @@ final class TextGesturesTests: XCTestCase {
         let app = startGestures(seed: "text-wide", language: "ar", playhead: 600)
         let picture = element(app, "editor.picture")
 
-        drag(picture, fromX: 0.15, y: 0.15, byX: 60, y: 30)
+        drag(picture, from: CGVector(dx: 0.15, dy: 0.15), by: CGVector(dx: 60, dy: 30))
         waitUntil("a centre right of 960 after the drag to the right in Arabic") { self.centre(app).x > 960 }
         print("text-gestures: field 6 after 60 points right and 30 down in Arabic reads \(field(6, app))")
         XCTAssertGreaterThan(waitForWhite(in: picture, "after the drag in Arabic"), leastWhite, "white")
@@ -217,7 +217,7 @@ final class TextGesturesTests: XCTestCase {
         let time = element(app, "editor.time").label
         XCTAssertEqual(textInfo(app), "none")
 
-        drag(picture, fromX: 0.15, y: 0.15, byX: 60, y: 30)
+        drag(picture, from: CGVector(dx: 0.15, dy: 0.15), by: CGVector(dx: 60, dy: 30))
         XCTAssertEqual(textInfo(app), "none", "after a drag")
         picture.pinch(withScale: 1.5, velocity: 1.5)
         XCTAssertEqual(textInfo(app), "none", "after a pinch")
@@ -274,9 +274,9 @@ final class TextGesturesTests: XCTestCase {
     }
 
     /// One finger, from a share of the picture, by points of the screen.
-    private func drag(_ picture: XCUIElement, fromX: Double, y fromY: Double, byX: Double, y byY: Double) {
-        let start = picture.coordinate(withNormalizedOffset: CGVector(dx: fromX, dy: fromY))
-        start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: byX, dy: byY)))
+    private func drag(_ picture: XCUIElement, from share: CGVector, by points: CGVector) {
+        let start = picture.coordinate(withNormalizedOffset: share)
+        start.press(forDuration: 0.1, thenDragTo: start.withOffset(points))
     }
 
     /// One scripted pinch, with field 3 printed before and after it.
