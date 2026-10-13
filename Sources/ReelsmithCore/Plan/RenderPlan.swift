@@ -116,7 +116,7 @@ public func renderPlan(for project: Project) throws -> RenderPlan {
     }
     var texts: [TextLayer] = []
     for text in project.texts {
-        guard !text.isBlank, let range = project.range(of: text.id) else {
+        guard !text.isBlank, let range = project.range(of: text.id) ?? ({ () -> TextRange? in if case .range(let stored) = text.span { return stored } else { return nil } })() else {
             continue
         }
         texts.append(TextLayer(
