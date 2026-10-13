@@ -131,18 +131,32 @@ jobs:
           # and with neither every UI test runs. A test is chosen with -only-testing of xcodebuild:
           # https://developer.apple.com/library/archive/technotes/tn2339/_index.html
           all=""
+          counts=""
           total=0
           for file in UITests/*.swift; do
             class=$(sed -n -E 's/.*class[[:space:]]+([A-Za-z0-9_]+)[[:space:]]*:[[:space:]]*XCTestCase.*/\1/p' "$file")
-            if [ -z "$class" ] && [ "$GROUP" != 0 ]; then
-              echo "No test class was found in $file, so it would be in no group." | tee "$RUNNER_TEMP/selection.txt"
+            count=$(grep -c -E '^[[:space:]]*func test' "$file" || true)
+            # A run that chooses tests needs one test class in each file, or a class is in no group.
+            set -- $class
+            if [ "$#" -ne 1 ] && { [ -n "$CLASSES" ] || [ "$GROUP" != 0 ]; }; then
+              echo "Not one test class in $file, so a class would be in no group. Found: $*" | tee "$RUNNER_TEMP/selection.txt"
               exit 1
             fi
-            all="$all $class"
-            total=$((total + $(grep -c -E '^[[:space:]]*func test' "$file" || true)))
+            all="$all $*"
+            counts="$counts $*=$count"
+            total=$((total + count))
           done
+          deeper=$(grep -r -l -E 'class[[:space:]]+[A-Za-z0-9_]+[[:space:]]*:[[:space:]]*XCTestCase' UITests/*/ || true)
+          if [ -n "$deeper" ] && { [ -n "$CLASSES" ] || [ "$GROUP" != 0 ]; }; then
+            echo "A test class in a folder under UITests would be in no group:" $deeper | tee "$RUNNER_TEMP/selection.txt"
+            exit 1
+          fi
           tests_of() {
-            grep -c -E '^[[:space:]]*func test' "$(grep -l -E "class[[:space:]]+$1[[:space:]]*:" UITests/*.swift)" || true
+            for pair in $counts; do
+              if [ "${pair%%=*}" = "$1" ]; then
+                echo "${pair#*=}"
+              fi
+            done
           }
           only=()
           chosen=""

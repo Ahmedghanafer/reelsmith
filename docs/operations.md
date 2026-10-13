@@ -66,7 +66,7 @@ The whole suite runs sooner as a split run, which waits for the slowest of three
 gh workflow run "macOS build" --ref dev -f split=true
 ```
 
-It starts three jobs, `build 1` to `build 3`, each with its own build, simulator, recording and artifacts. The test classes are read from the files of `UITests/` when the run starts, put in the order of their names, and dealt out one by one, so a new class is in a group without a change to the workflow. A file of `UITests/` in which no test class is found fails layer 4 of every group. The three groups together prove what the run on one machine proves. `classes` and `split` together fail layer 4. With `ipa=true` the first group makes the device build.
+It starts three jobs, `build 1` to `build 3`, each with its own build, simulator, recording and artifacts. The test classes are read from the files of `UITests/` when the run starts, put in the order of their names, and dealt out one by one, so a new class is in a group without a change to the workflow. A file of `UITests/` that does not hold exactly one test class, or a test class in a folder under `UITests/`, fails layer 4 of every group and of a part run, because that class would be in no group. The three groups together prove what the run on one machine proves. `classes` and `split` together fail layer 4. With `ipa=true` the first group makes the device build.
 
 Every run says what it ran in one line that starts with `UI tests of this run:`, in the log of layer 4 and in the Summary: the classes asked for or the classes of the group, and the count of tests selected. After the tests a line `UI tests executed:` gives the count the test run reported. A part run or a group whose two counts differ fails layer 4, so a selection that ran nothing is never green.
 
