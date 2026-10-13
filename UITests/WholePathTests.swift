@@ -24,8 +24,6 @@ import XCTest
 // https://developer.apple.com/documentation/xctest/xcuielementattributes/elementtype
 // https://developer.apple.com/documentation/xctest/xctestcase/set_up_and_tear_down_state_in_your_tests
 // https://developer.apple.com/documentation/xctest/xctest/name
-// https://developer.apple.com/documentation/xctest/xctexpectfailure(_:options:failingblock:)
-// https://developer.apple.com/documentation/xctest/xctexpectedfailure/options/isstrict
 // https://developer.apple.com/documentation/foundation/thread/sleep(fortimeinterval:)
 @MainActor
 final class WholePathTests: XCTestCase {
@@ -34,9 +32,7 @@ final class WholePathTests: XCTestCase {
     /// The whole tree of the picker is printed once for a test.
     private var treePrinted = false
 
-    /// In the first simulator run the walk ended inside the picker try and counted as passed. Why the
-    /// expected failure ended the test there is not known, so a walk that did not reach its last line
-    /// fails here, whatever ended it.
+    /// A walk that did not reach its last line fails here, whatever ended it.
     override func tearDown() async throws {
         if name.contains("testTheWholePathFromAColdStartToASavedVideo") && !walkFinished {
             XCTFail("The walk ended before its last line: it did not walk the whole path.")
@@ -52,7 +48,7 @@ final class WholePathTests: XCTestCase {
         screenshot("m1-12-whole-path-01-start")
 
         // Blue then red from the system picker. When the picker is not driven the walk goes on from the seed.
-        let stopped = tryThePicker(app, picture: "m1-12-whole-path-02-picker")
+        let stopped = drivePicker(app, picture: "m1-12-whole-path-02-picker")
         if let stopped {
             print("m1-12-whole-path: picker not driven: " + stopped)
             app = startApp(seed: "two-clips-wide")
@@ -168,7 +164,7 @@ final class WholePathTests: XCTestCase {
             print("m1-12-whole-path: the portrait start is skipped, the picker was not driven")
         } else {
             element(app, "start.portrait").tap()
-            if let stoppedAgain = tryThePicker(app, picture: nil) {
+            if let stoppedAgain = drivePicker(app, picture: nil) {
                 print("m1-12-whole-path: picker not driven at the portrait start: " + stoppedAgain)
             } else {
                 let tall = element(app, "editor.picture").frame
@@ -241,18 +237,11 @@ final class WholePathTests: XCTestCase {
     }
 
     /// One try at the system picker from the start screen. Nil when the editor opened with blue then red,
-    /// else the step that failed. The picker alone never fails the walk: a failure inside the try is expected.
-    /// In the first simulator run a read that raised inside the try ended the whole test as passed, and why
-    /// is not known. So the try raises as little as it can: what it reads, it reads from snapshots, and only
-    /// its taps and its waits are live. The guard in `tearDown` fails a walk that did not reach its last line.
-    private func tryThePicker(_ app: XCUIApplication, picture: String?) -> String? {
-        let options = XCTExpectedFailure.Options()
-        options.isStrict = false
-        return XCTExpectFailure("The picker alone never fails the walk.", options: options) {
-            drivePicker(app, picture: picture)
-        }
-    }
-
+    /// else the step that found nothing, and the walk then goes on from the seed. A read or a tap that
+    /// raises fails the test like any other. The try stood inside an expected failure before, and that is
+    /// gone: an expected failure, once raised inside its closure, also swallowed everything after it in
+    /// that test, the failure of `tearDown` included, so a walk that had not walked counted as passed.
+    ///
     /// Taps `start.newProject`, chooses blue then red and confirms. The picker runs outside the app, so its
     /// controls read as not hittable and are tapped by coordinate, in the middle of their frames. They carry
     /// no identifier of ours and are found by the system's own identifier, by kind and by place, never by a word.
