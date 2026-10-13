@@ -61,7 +61,7 @@ final class StartTests: XCTestCase {
 
     func testAfterAnEditorOnASeedARelaunchWithNoSeedShowsTheStartScreen() {
         var app = startApp(seed: "two-clips")
-        XCTAssertTrue(element(app, "editor.root").waitForExistence(timeout: 60))
+        waitForTheEditor(app)
         app.terminate()
 
         app = startApp(seed: nil)

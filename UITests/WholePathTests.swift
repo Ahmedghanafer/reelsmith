@@ -52,12 +52,12 @@ final class WholePathTests: XCTestCase {
         if let stopped {
             print("m1-12-whole-path: picker not driven: " + stopped)
             app = startApp(seed: "two-clips-wide")
+            waitForTheEditor(app)
         } else {
             print("m1-12-whole-path: picker driven")
         }
 
-        // The editor: blue 3 seconds and red 4 on the 16:9 canvas.
-        XCTAssertTrue(element(app, "editor.root").waitForExistence(timeout: 90))
+        // The editor: blue 3 seconds and red 4 on the 16:9 canvas. After the picker its own wait found it.
         XCTAssertEqual(element(app, "editor.clip.1").frame.width, 180, accuracy: 1)
         XCTAssertEqual(element(app, "editor.clip.2").frame.width, 240, accuracy: 1)
         XCTAssertFalse(element(app, "editor.clip.3").exists)
@@ -83,6 +83,9 @@ final class WholePathTests: XCTestCase {
 
         // The delete of the first block, which ends under the playhead, so its middle is on the screen.
         element(app, "editor.clip.1").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        waitUntil("the first block selected after the tap on it", expected: 1) {
+            element(app, "editor.clip.1").isSelected
+        }
         XCTAssertTrue(element(app, "editor.clip.1").isSelected)
         element(app, "editor.delete").tap()
         waitUntil("two blocks after the delete", expected: 1) { !element(app, "editor.clip.3").exists }
@@ -116,6 +119,7 @@ final class WholePathTests: XCTestCase {
         }
         // A quarter of its width from its left edge, away from the playhead line.
         red.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5)).tap()
+        waitUntil("the red block selected after the tap on it", expected: 1) { red.isSelected }
         let end = element(app, "editor.trim.end")
         XCTAssertTrue(end.waitForExistence(timeout: 3))
         let handle = end.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
@@ -203,10 +207,11 @@ final class WholePathTests: XCTestCase {
 
         // At 5 seconds the red block is from x 81 to 321, so both handles are on the screen.
         app = startApp(seed: "two-clips", language: language, playhead: 3000)
-        XCTAssertTrue(element(app, "editor.root").waitForExistence(timeout: 90))
+        waitForTheEditor(app)
         let blue = element(app, "editor.clip.1")
         let red = element(app, "editor.clip.2")
         red.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5)).tap()
+        waitUntil("the red block selected after the tap on it", expected: 1) { red.isSelected }
         XCTAssertTrue(red.isSelected)
         // Split is the leading button of the row.
         let split = element(app, "editor.split").frame.minX
@@ -395,9 +400,11 @@ final class WholePathTests: XCTestCase {
     /// the expected seconds: a hosted runner under load can hold the app for seconds.
     private func waitUntil(_ what: String, expected: Double, _ reached: () -> Bool) {
         let started = Date()
-        var waited: Double = 0
         var holds = reached()
-        while !holds && waited <= 3 * expected {
+        var waited = Date().timeIntervalSince(started)
+        // The limit counts from the end of the first read, so a slow first read still gets a second one.
+        let first = waited
+        while !holds && waited <= first + 3 * expected {
             Thread.sleep(forTimeInterval: 0.2)
             holds = reached()
             waited = Date().timeIntervalSince(started)

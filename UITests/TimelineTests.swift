@@ -80,6 +80,7 @@ final class TimelineTests: XCTestCase {
         XCTAssertFalse(green.isSelected)
 
         red.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        waitUntil("the red block selected after the tap on it") { red.isSelected }
         XCTAssertTrue(red.isSelected)
         XCTAssertFalse(blue.isSelected)
         XCTAssertFalse(green.isSelected)
@@ -87,6 +88,7 @@ final class TimelineTests: XCTestCase {
         screenshot("m1-8-timeline-03-selected")
 
         blue.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        waitUntil("the blue block selected after the tap on it") { blue.isSelected }
         XCTAssertTrue(blue.isSelected)
         XCTAssertFalse(red.isSelected)
         XCTAssertFalse(green.isSelected)
@@ -130,8 +132,25 @@ final class TimelineTests: XCTestCase {
     /// Starts the app and waits for the editor: the first seeded start in a fresh simulator writes the clips first.
     private func startTimeline(seed: String, language: String = "en", playhead: Int? = nil) -> XCUIApplication {
         let app = startApp(seed: seed, language: language, playhead: playhead)
-        XCTAssertTrue(element(app, "editor.root").waitForExistence(timeout: 60))
+        waitForTheEditor(app)
         return app
+    }
+
+    /// Reads until the condition holds, for the effect of a tap. It is expected within a second and fails
+    /// only above three: a hosted runner under load can hold the app for seconds.
+    private func waitUntil(_ what: String, _ reached: () -> Bool) {
+        let started = Date()
+        var holds = reached()
+        var waited = Date().timeIntervalSince(started)
+        // The limit counts from the end of the first read, so a slow first read still gets a second one.
+        let first = waited
+        while !holds && waited <= first + 3 {
+            Thread.sleep(forTimeInterval: 0.2)
+            holds = reached()
+            waited = Date().timeIntervalSince(started)
+        }
+        print("m1-8-timeline: waited \(waited) seconds for \(what), expected 1")
+        XCTAssertTrue(holds, what)
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
