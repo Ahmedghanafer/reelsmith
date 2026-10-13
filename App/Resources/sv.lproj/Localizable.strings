@@ -13,6 +13,8 @@
 /* end slot: m1-6b-new-project */
 
 /* slot: m1-7-preview */
+"preview.play" = "Spela upp";
+"preview.pause" = "Pausa";
 /* end slot: m1-7-preview */
 
 /* slot: m1-8-timeline */

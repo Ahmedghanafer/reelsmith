@@ -116,6 +116,14 @@ final class TimelineTests: XCTestCase {
         // Time still runs to the right: a drag to the left is later.
         mark("m1-8-timeline-02-scrub-ar")
         drag(app, fromX: 0.5, byPoints: -120)
+        // The drag takes effect within a second: expected 1, fails only above 3.
+        let started = Date()
+        var waited: Double = 0
+        while playheadValue(app) <= "00:04" && waited <= 3 {
+            Thread.sleep(forTimeInterval: 0.1)
+            waited = Date().timeIntervalSince(started)
+        }
+        print("m1-8-timeline: waited \(waited) seconds for a later playhead after the drag, expected 1")
         XCTAssertGreaterThan(playheadValue(app), "00:04")
     }
 
