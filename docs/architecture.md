@@ -157,6 +157,17 @@ How the preview follows a text, in `App/Editor/Preview/PlayerPicture.swift`. Eve
 - Which form is in use: a refresh alone. The view sets the new video composition and sends no seek and asks for no frame, and the paused player is expected to draw its frame again from the new video composition. The platform's page of `AVPlayerItem.videoComposition` does not say that it does, so the UI test of the typed letters holds it in the simulator run.
 - The count of builds: on a seeded start, and only then, the accessibility value of `editor.picture` is the count of the items the view began to build, a whole number written with the digits 0 to 9. It is "0" before the first build, a build raises it by one, and a refresh and an empty project do not change it. With no seed the area has no value.
 
+### Gestures on the picture
+
+`App/Editor/Preview/TextGestures.swift` holds the gestures on the picture area. `TextGestures` is a view modifier with `let store: EditorStore`, which `PreviewPane` puts on the picture itself, after its shape and before the space around it, inside the pane that is fixed left to right. It adds four recognizers of UIKit through `UIGestureRecognizerRepresentable` and no view, layer, shape or drawing: nothing is drawn above the picture, and a selected text has no frame and no handle. The gestures act on the selected text wherever the finger lies on the picture. They decide nothing and hold no limit: each sends text actions, Core holds the values inside its limits, and the preview shows the result because it follows every text action ("The preview and text" above).
+
+- A drag with one finger sends `text(.move)` with the centre of the text at the start of the drag plus `TextGeometry.canvasLength(ofPoints:pictureWidth:canvas:)` of the distance moved, for x and for y. The picture has the shape of the canvas, so its width gives both lengths. With two fingers on the picture nothing is moved.
+- A pinch sends `text(.setStyle)` with the style at the start of the pinch and its size times the scale of the pinch.
+- A twist sends `text(.turn)` with the rotation at the start of the twist plus the angle turned, in degrees, clockwise as she sees it. The sum can pass a whole turn: Core takes whole turns off.
+- Every report of a recognizer sends a whole value worked out from the text as it was when the gesture began, which `GestureStart`, the coordinator of the gesture, keeps. None sends a difference to add. When a gesture begins with a text selected it sends `pause` before its first value. When it begins with no text selected it sends nothing at all. A pinch and a twist are two recognizers that do not run together: two fingers do the one that is recognized first.
+- A tap sends `text(.select)` for `text(nearestToX:y:at:)` of the tapped place in canvas pixels at the playhead, and nothing when that is nil. With the playhead at the very end of the project it asks at the last frame, the length less one frame, since that frame is the one shown. A tap sends no `pause`.
+- The recognizers may sit on another view than the picture, so the file reads no view of a recognizer. The place of a tap and the distance of a drag come from the converter of the representable, in the space of the picture, and the width of the picture from its geometry (`onGeometryChange`), kept in `PictureWidth`.
+
 ### The timeline strip
 
 The timeline strip, in the folder `App/Editor/Timeline/`. It decides nothing: places and times come from `TimelineGeometry`, starts and positions from `Project`, and every change goes out as an `EditorAction`.
