@@ -4,8 +4,8 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test. That is 177 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 226 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test. That is 245 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 294 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 48 UI tests in nine classes.
 
 What comes back from the simulator run:
@@ -62,7 +62,7 @@ The files below are in `Tests/ReelsmithCoreTests` and run on Linux.
 
 ### The text model
 
-Four files hold the text model, with states built by hand. No test sends a text action, and no test reads what `reduceText`, `settleTexts` or `textPicture(for:)` returns.
+Four files hold the text model, with states built by hand. No test of these four files sends a text action or reads what `textPicture(for:)` returns. A `select` of a clip and a `clearSelection` pass through `settleTexts`, on a text that is not blank.
 
 - `Tests/ReelsmithCoreTests/TextModelTests.swift`: the three faces with their raw values and word keys, the three sides, the standard style, the eight colours of the palette, `isBlank`, a string stored scalar for scalar, a new project with no text, `text(_:)` and `position(of:)`, `range(of:)` (a whole text, a range cut at the project end, and the cases with no range), and `sameFootage(as:)`.
 - `Tests/ReelsmithCoreTests/TextStateTests.swift`: the eight cases of `TextAction` with their labels, through a switch with no default in the file, so a ninth case does not compile. A new state with no selected text, `canAddText` on the seeds `empty` and `two-clips`, a `select` of a clip and a `clearSelection` on a state with a selected text, and `textInfo` compared as whole strings: "none", the two text seeds, a text with no range, and a text whose numbers must be rounded.
@@ -75,6 +75,13 @@ Four files hold the text model, with states built by hand. No test sends a text 
 - `arabicLine()`, the same line as a `String`.
 - `textItem(_:_:_:)`, a text from an id as an `Int`, a string and a span, at 960, 540 with rotation 0 in `TextStyle.standard`.
 - `projectOfOneClip(ticks:)`, a portrait project with one clip of that length and `nextClipID` 2.
+
+### Text edits
+
+Two files hold the text edits, mostly from the seeds `two-clips-wide`, `text-wide` and `text-box-wide`. The first sends actions through `reduce`. The second calls `reduce` nowhere.
+
+- `Tests/ReelsmithCoreTests/TextEditsTests.swift`: what each of the eight text actions does, the blank rule, the delete of a selected text with `canDelete`, that no clip action changes a text, a text past a shortened project, every action on a text id that is not in the project, a size, a line spacing, a place and an angle that are not a number or are infinite, and that an action pauses when the value is the old one and that the delete of a text pauses. Every test sends its actions through one of the two helpers of the file, `send` and `sendText`, which check after each action that the state is valid. Each of these limits has a test of its own with a value just inside, one at the limit and one just past it: the sizes 16 and 400, the line spacings 0 and 2, the four edges of the canvas, the two ends of the rotation (with angles more than two turns out), the 3 degrees on each side of 0, `minimumText` for a trim of the start and of the end, and the start and the end of the project. One test holds `whole` for a result from zero to the project length, beside a result one frame short of it. The range shorter than `minimumText` has a seen range of 20 ticks for both trims, and a range of exactly `minimumText` has a trim of its end in both directions. A project is shortened in the file by a delete of the red clip and a trim of the blue one.
+- `Tests/ReelsmithCoreTests/TextGeometryTests.swift`: the four constants of `TextGeometry`, `canvasLength(ofPoints:pictureWidth:canvas:)` on both canvases, with a negative length and with a picture width of 0 and below, and `text(nearestToX:y:at:)`: one text, two texts side by side and one above the other, a tie, a blank text, a project with no text, and the times 580, 599, 600, 1480, 1499 and 1500 ticks at the borders of the text of `text-box-wide`.
 
 ### The guard of the edits
 
