@@ -24,5 +24,6 @@ struct ToolsRow: View {
                 .disabled(!state.canAddText)
                 .accessibilityIdentifier("editor.addText")
         }
+        .buttonStyle(RowButtonStyle())
     }
 }

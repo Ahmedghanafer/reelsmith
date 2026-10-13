@@ -59,9 +59,8 @@ struct EditorScreen: View {
             }
             .region("editor.exportRegion")
         }
-        // A tap that changes the height of the layout would carry the system's animation of the pressed
-        // button, and the button would leave its row and float to its new place. So nothing in the editor
-        // takes an animation from a transaction: the layout changes in one frame.
+        // Nothing in the editor takes an animation from a transaction, so the layout does not slide when a
+        // tap changes its height: it changes in one frame.
         // https://developer.apple.com/documentation/swiftui/view/transaction(_:)
         .transaction { $0.animation = nil }
         .accessibilityElement(children: .contain)

@@ -45,6 +45,7 @@ struct TextPanel: View {
                 Button("text.done") { store.send(.clearSelection) }
                     .accessibilityIdentifier("text.done")
             }
+            .buttonStyle(RowButtonStyle())
             .frame(minHeight: 44)
             if part == .type, let selected {
                 TextEditor(
