@@ -15,6 +15,7 @@ import SwiftUI
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityaddtraits(_:)
 /// https://developer.apple.com/documentation/swiftui/view/accessibilitylabel(_:)-5f0zj
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityidentifier(_:)
+/// https://developer.apple.com/documentation/swiftui/withtransaction(_:_:)
 struct TextPanel: View {
     let store: EditorStore
 
@@ -42,10 +43,9 @@ struct TextPanel: View {
                 tab(.look, "text.tab.look")
                 tab(.more, "text.tab.more")
                 Spacer()
-                Button("text.done") { store.send(.clearSelection) }
+                Button("text.done") { still { store.send(.clearSelection) } }
                     .accessibilityIdentifier("text.done")
             }
-            .buttonStyle(RowButtonStyle())
             .frame(minHeight: 44)
             if part == .type, let selected {
                 TextEditor(
@@ -75,9 +75,17 @@ struct TextPanel: View {
 
     /// One part button. Its word key is its identifier, and the part that shows has the trait selected.
     private func tab(_ shown: Part, _ key: String) -> some View {
-        Button(LocalizedStringKey(key)) { part = shown }
+        Button(LocalizedStringKey(key)) { still { part = shown } }
             .fontWeight(part == shown ? Font.Weight.bold : Font.Weight.regular)
             .accessibilityIdentifier(key)
             .accessibilityAddTraits(part == shown ? .isSelected : [])
+    }
+
+    /// Makes the change of a tap inside a transaction that disables animations, so a button whose tap
+    /// changes the height of the layout stands in its row at once.
+    private func still(_ change: () -> Void) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { change() }
     }
 }
