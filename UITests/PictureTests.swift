@@ -102,16 +102,27 @@ final class PictureTests: XCTestCase {
         screenshot("picture-06-after-delete")
 
         // A delete that changes the picture: the rest of green goes and the picture is the last
-        // frame of red, which fills the area as green did. Black is read here, and then red is
-        // waited for. The app lets go of the old picture 15 seconds after a new item at the latest,
-        // which is past the limit of the wait, so an old picture that only the limit took away fails.
+        // frame of red, which fills the area as green did. Nothing says when the new item goes into
+        // the player, so black and red are read in turn from the tap until red is there, expected
+        // within 3 seconds and given up above 9. The app lets go of the old picture 15 seconds after
+        // a new item at the latest, so an old picture that only that limit took away fails here.
         select(app.descendants(matching: .any)["editor.clip.3"])
         mark("picture-04-edit-delete-last")
         delete.tap()
-        shares = readForHalfASecond(black, "black", in: picture, after: "the delete of the last of green")
-        XCTAssertLessThan(shares.max() ?? 1, 0.1, "black after the delete of the last of green")
-        print("picture: the app lets go of the old picture 15 seconds after a new item at the latest")
-        XCTAssertGreaterThan(waitForTheShare(of: red, "red", in: picture, moreThan: 0.9), 0.9, "red")
+        let started = Date()
+        var blacks: [Double] = []
+        var found: Double = 0
+        var waited: Double = 0
+        repeat {
+            blacks.append(share(of: black, in: picture))
+            found = share(of: red, in: picture)
+            waited = Date().timeIntervalSince(started)
+        } while !(found > 0.9) && waited <= 3 * expectedFrame
+        print(
+            "picture: \(blacks.count) reads of black in \(waited) seconds from the delete of the last of green to red, the highest share of black \(blacks.max() ?? 1), red \(found), expected \(expectedFrame), the app lets go of the old picture after 15 seconds"
+        )
+        XCTAssertLessThan(blacks.max() ?? 1, 0.1, "black after the delete of the last of green")
+        XCTAssertGreaterThan(found, 0.9, "red")
         screenshot("picture-07-red-after-delete")
     }
 
