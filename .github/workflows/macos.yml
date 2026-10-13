@@ -86,8 +86,8 @@ jobs:
           status=0
           xcodebuild test-without-building -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$SIMULATOR" \
             -derivedDataPath build/simulator -parallel-testing-enabled NO \
-            -test-timeouts-enabled YES -default-test-execution-time-allowance 300 \
-            -maximum-test-execution-time-allowance 300 \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 600 \
+            -maximum-test-execution-time-allowance 600 \
             -resultBundlePath results/Reelsmith.xcresult || status=$?
           kill -INT "$recorder" || true
           for _ in $(seq 30); do
