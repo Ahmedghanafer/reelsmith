@@ -280,24 +280,24 @@ private func drawClip(_ draw: inout Draw, in state: EditorState) -> ClipID {
     return clips[draw.below(clips.count)].id
 }
 
-/// One time in four an id that no text has, else the id of a text of the project.
+/// One time in eight an id that no text has, else the id of a text of the project.
 private func drawText(_ draw: inout Draw, in state: EditorState) -> TextID {
     let texts = state.project.texts
-    if texts.isEmpty || draw.below(4) == 0 {
+    if texts.isEmpty || draw.below(8) == 0 {
         return TextID(state.project.nextTextID + draw.below(3))
     }
     return texts[draw.below(texts.count)].id
 }
 
 /// The amount of a trim, of a clip or of a text. Ten thousand ticks either way are past every limit, since
-/// no project of the runs is that long. One time in five the amount is at most 60 ticks either way.
+/// no project of the runs is that long. One time in three the amount is at most 60 ticks either way.
 private func drawAmount(_ draw: inout Draw) -> Time {
-    switch draw.below(5) {
+    switch draw.below(6) {
     case 0:
         return Time(ticks: 10_000 + Int64(draw.below(40)))
     case 1:
         return Time(ticks: -10_000 - Int64(draw.below(40)))
-    case 2:
+    case 2...3:
         return Time(ticks: Int64(draw.below(121)) - 60)
     default:
         return Time(ticks: Int64(draw.below(1601)) - 800)
@@ -377,26 +377,26 @@ private func drawAngle(_ draw: inout Draw) -> Double {
 
 private func drawTextAction(_ draw: inout Draw, in state: EditorState) -> TextAction {
     let canvas = state.project.canvas
-    switch draw.below(20) {
-    case 0...1:
+    switch draw.below(21) {
+    case 0...2:
         return .add
-    case 2...4:
+    case 3...4:
         return .select(drawText(&draw, in: state))
-    case 5...7:
+    case 5...6:
         let text = drawText(&draw, in: state)
         return .setString(text, strings[draw.below(strings.count)])
-    case 8...9:
+    case 7...8:
         let text = drawText(&draw, in: state)
         return .setStyle(text, drawStyle(&draw))
-    case 10...12:
+    case 9...10:
         let text = drawText(&draw, in: state)
         let x = drawPlace(&draw, length: canvas.width)
         let y = drawPlace(&draw, length: canvas.height)
         return .move(text, x: x, y: y)
-    case 13...14:
+    case 11...12:
         let text = drawText(&draw, in: state)
         return .turn(text, to: drawAngle(&draw))
-    case 15...16:
+    case 13...16:
         let text = drawText(&draw, in: state)
         let amount = drawAmount(&draw)
         return .trimStart(text, by: amount)
@@ -407,9 +407,9 @@ private func drawTextAction(_ draw: inout Draw, in state: EditorState) -> TextAc
     }
 }
 
-/// 21 times in 44 a clip action, else a text action.
+/// 22 times in 47 a clip action, else a text action.
 private func drawAction(_ draw: inout Draw, in state: EditorState) -> EditorAction {
-    switch draw.below(44) {
+    switch draw.below(47) {
     case 0:
         var given: [MediaInfo] = []
         let count = draw.below(3)
@@ -419,25 +419,25 @@ private func drawAction(_ draw: inout Draw, in state: EditorState) -> EditorActi
         return .addClips(given)
     case 1...2:
         return .split
-    case 3...4:
+    case 3...5:
         let clip = drawClip(&draw, in: state)
         let amount = drawAmount(&draw)
         return .trimStart(clip, by: amount)
-    case 5...6:
+    case 6...8:
         let clip = drawClip(&draw, in: state)
         let amount = drawAmount(&draw)
         return .trimEnd(clip, by: amount)
-    case 7...10:
+    case 9...11:
         return .deleteSelected
-    case 11...14:
+    case 12...15:
         return .select(drawClip(&draw, in: state))
-    case 15:
+    case 16:
         return .clearSelection
-    case 16...18:
+    case 17...19:
         return .movePlayhead(drawPlayhead(&draw, in: state))
-    case 19:
-        return .play
     case 20:
+        return .play
+    case 21:
         return .pause
     default:
         return .text(drawTextAction(&draw, in: state))
