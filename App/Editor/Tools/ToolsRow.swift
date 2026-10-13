@@ -8,30 +8,31 @@ import SwiftUI
 /// https://developer.apple.com/documentation/swiftui/hstack
 /// https://developer.apple.com/documentation/swiftui/view/disabled(_:)
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityidentifier(_:)
+/// https://developer.apple.com/documentation/swiftui/withtransaction(_:_:)
+/// https://developer.apple.com/documentation/swiftui/transaction/disablesanimations
 struct ToolsRow: View {
     let state: EditorState
     let send: @MainActor (EditorAction) -> Void
 
     var body: some View {
         HStack(spacing: 32) {
-            Button("tools.split") { send(.split) }
+            Button("tools.split") { sendStill(.split) }
                 .disabled(!state.canSplit)
                 .accessibilityIdentifier("editor.split")
-            // Trial, candidate "a turn later": the action is sent in a task of the main actor, after the
-            // release of the button has returned. https://developer.apple.com/documentation/swift/task
-            Button("tools.delete") { Task { @MainActor in send(.deleteSelected) } }
+            Button("tools.delete") { sendStill(.deleteSelected) }
                 .disabled(!state.canDelete)
                 .accessibilityIdentifier("editor.delete")
-            // Trial, candidate "animations off at the change": the action is sent inside a transaction that
-            // disables animations. https://developer.apple.com/documentation/swiftui/withtransaction(_:_:)
-            Button("tools.text") {
-                var still = Transaction()
-                still.disablesAnimations = true
-                withTransaction(still) { send(.text(.add)) }
-            }
+            Button("tools.text") { sendStill(.text(.add)) }
                 .disabled(!state.canAddText)
                 .accessibilityIdentifier("editor.addText")
         }
-        .buttonStyle(RowButtonStyle())
+    }
+
+    /// Sends the action of a tap inside a transaction that disables animations, so a button whose tap
+    /// changes the height of the layout stands in its row at once.
+    private func sendStill(_ action: EditorAction) {
+        var still = Transaction()
+        still.disablesAnimations = true
+        withTransaction(still) { send(action) }
     }
 }
