@@ -64,7 +64,8 @@ final class PlayerPictureView: UIView {
     private var statusObservation: NSKeyValueObservation?
     /// True from the moment the state turns to playing until the player is stopped.
     private var isPlaying = false
-    /// The playhead the player was last sent to. Nil when it stands somewhere else, as after playing.
+    /// The playhead of the last seek with a completion handler. Nil when the player is not known to
+    /// stand on a playhead of the state: a new item, a seek that did not finish, after playing.
     private var target: Time?
     /// True while one seek is in flight. A newer playhead waits in `target` until it lands.
     private var isSeeking = false
@@ -104,7 +105,8 @@ final class PlayerPictureView: UIView {
 
     /// Builds the item of the state's project and sends it to the playhead of that moment. Until it is
     /// ready the player follows nothing. Then it is brought to the state of that moment.
-    /// An empty project gets no item, and neither does a build that throws: the area is black.
+    /// An empty project gets no item and the one of the last build is let go. A build that throws
+    /// gets no item either: the area is black.
     private func rebuild(for state: EditorState) {
         build += 1
         let number = build
@@ -112,6 +114,7 @@ final class PlayerPictureView: UIView {
         statusObservation = nil
         stop()
         guard state.canPlay else {
+            item = nil
             player.replaceCurrentItem(with: nil)
             return
         }
@@ -136,8 +139,10 @@ final class PlayerPictureView: UIView {
         player.replaceCurrentItem(with: item)
         // The first playhead goes with the item, so the player gets ready on that frame and not on
         // the first one. A seek with no completion handler may be sent before the item is ready.
+        // Nothing says when it lands, so the player does not count as standing there: at ready it is
+        // sought to the playhead of that moment with a handler, and rests or starts when that landed.
         let first: Time = store.state.playhead
-        target = first
+        target = nil
         player.seek(to: CMTime(value: first.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
         // A seek with a completion handler needs an item that is ready, so the player waits for it.
         // The change can come on any thread.
@@ -160,7 +165,8 @@ final class PlayerPictureView: UIView {
     private func bring(to state: EditorState) {
         if state.isPlaying {
             if !isPlaying {
-                // The player starts when it stands on the playhead: at once, or when the seek has landed.
+                // The player starts when it stands on the playhead: at once when a seek to it has
+                // landed before, otherwise when the seek to it has landed.
                 isPlaying = true
                 if target != state.playhead {
                     seek(to: state.playhead)
