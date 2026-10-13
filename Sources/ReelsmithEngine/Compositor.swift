@@ -37,7 +37,43 @@ struct PieceText {
 func pieceTexts(
     of plan: RenderPlan, in range: CMTimeRange, kept: [PieceText]
 ) -> (texts: [PieceText], drawn: Int) {
-    return ([], 0)
+    var texts: [PieceText] = []
+    var drawn = 0
+    for layer in plan.texts {
+        let start = CMTime(value: layer.timelineStart.ticks, timescale: 600)
+        let end = CMTime(value: (layer.timelineStart + layer.duration).ticks, timescale: 600)
+        guard start < range.end, range.start < end else { continue }
+
+        let image: CIImage
+        let same = (kept + texts).first {
+            $0.string == layer.string && $0.style == layer.style && $0.lineWidth == layer.lineWidth
+        }
+        if let same {
+            image = same.image
+        } else {
+            drawn += 1
+            guard let picture = textPicture(for: layer) else { continue }
+            image = CIImage(cgImage: picture.image, options: [.colorSpace: NSNull()])
+        }
+
+        let width = Double(image.extent.width)
+        let height = Double(image.extent.height)
+        let canvasHeight = Double(plan.canvas.height)
+        let placing: CGAffineTransform
+        if layer.rotation == 0 {
+            let left = (layer.x - width / 2).rounded()
+            let top = (layer.y - height / 2).rounded()
+            placing = CGAffineTransform(translationX: CGFloat(left), y: CGFloat(canvasHeight - top - height))
+        } else {
+            placing = CGAffineTransform(translationX: CGFloat(-width / 2), y: CGFloat(-height / 2))
+                .concatenating(CGAffineTransform(rotationAngle: CGFloat(-layer.rotation * Double.pi / 180)))
+                .concatenating(CGAffineTransform(translationX: CGFloat(layer.x), y: CGFloat(canvasHeight - layer.y)))
+        }
+        texts.append(PieceText(
+            string: layer.string, style: layer.style, lineWidth: layer.lineWidth, image: image,
+            placed: image.transformed(by: placing), start: start, end: end))
+    }
+    return (texts, drawn)
 }
 
 /// One for each segment of the plan: the track that holds its picture, where that picture goes, and the texts
@@ -76,9 +112,10 @@ final class PieceInstruction: NSObject, AVVideoCompositionInstructionProtocol {
 }
 
 /// Draws every frame of the picture, for the player item and for the export alike: black, then the frame of
-/// the segment at its place. A time at which the track has no frame stays black. It changes no colour: Core
-/// Image takes the numbers of a source frame as they are and writes them as they are, with no colour space
-/// on the way in, in the middle or on the way out.
+/// the segment at its place, then each text of the instruction whose time holds the frame, the later one on
+/// top. A time at which the track has no frame stays black under the texts. It changes no colour: Core
+/// Image takes the numbers of a source frame and of a text picture as they are and writes them as they are,
+/// with no colour space on the way in, in the middle or on the way out.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avvideocompositing
 /// https://developer.apple.com/documentation/coreimage/cicontext/init(options:)
@@ -108,7 +145,9 @@ final class Compositor: NSObject, AVVideoCompositing {
 
     /// Answers every request before it returns: with a frame, or with `cannotRead` when the instruction is not
     /// ours or the render context gives no buffer. With no source frame the frame is the black canvas.
+    /// A text is put on as its instruction holds it: nothing is laid out, measured or drawn for text here.
     ///
+    /// https://developer.apple.com/documentation/avfoundation/avasynchronousvideocompositionrequest/compositiontime
     /// https://developer.apple.com/documentation/avfoundation/avvideocompositing/startrequest(_:)
     /// https://developer.apple.com/documentation/avfoundation/avasynchronousvideocompositionrequest
     /// https://developer.apple.com/documentation/avfoundation/avasynchronousvideocompositionrequest/sourceframe(bytrackid:)
@@ -131,6 +170,10 @@ final class Compositor: NSObject, AVVideoCompositing {
         if let buffer = request.sourceFrame(byTrackID: piece.track) {
             let source = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: NSNull()])
             picture = source.transformed(by: piece.placing).composited(over: picture)
+        }
+        let time = request.compositionTime
+        for text in piece.texts where text.start <= time && time < text.end {
+            picture = text.placed.composited(over: picture)
         }
         context.render(picture.cropped(to: canvas), to: frame, bounds: canvas, colorSpace: nil)
         request.finish(withComposedVideoFrame: frame)

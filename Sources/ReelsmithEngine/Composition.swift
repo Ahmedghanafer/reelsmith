@@ -26,6 +26,11 @@ public func makePlayerItem(plan: RenderPlan, media: [MediaID: MediaInfo], mediaF
 /// https://developer.apple.com/documentation/avfoundation/avvideocomposition/instructions
 @MainActor
 public func refreshPicture(of item: AVPlayerItem, plan: RenderPlan, media: [MediaID: MediaInfo]) throws {
+    guard let pieces = item.videoComposition?.instructions as? [PieceInstruction],
+          pieces.count == plan.segments.count
+    else { throw EngineError.cannotRead }
+    item.videoComposition = try videoComposition(
+        plan: plan, media: media, tracks: pieces.map { $0.track }, kept: pieces.flatMap { $0.texts })
 }
 
 /// The one builder for the player item and for the export. One picture track, one sound track when a segment
