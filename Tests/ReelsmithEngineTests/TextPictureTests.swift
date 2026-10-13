@@ -211,6 +211,24 @@ final class TextPictureTests: XCTestCase {
         }
     }
 
+    /// A wrapped line ends with the space it was broken at, which stands on the left of an Arabic line. Six
+    /// times one word gives lines of the same words, so each is as wide as the block and its ink reaches both
+    /// paddings. The upper half of the image holds only lines that were wrapped.
+    func testAWrappedArabicLineStandsBetweenThePaddingsWithEveryAlignment() throws {
+        let words = Array(repeating: "\u{0639}\u{0644}\u{064A}\u{0643}\u{0645}", count: 6).joined(separator: " ")
+        for align in TextAlign.allCases {
+            let pixels = try Pixels(XCTUnwrap(textPicture(for: layer(words, align: align, lineWidth: 400))).image)
+            let ink = try XCTUnwrap(pixels.ink(rows: 0..<pixels.height / 2))
+            let what = "\(align.rawValue): \(ink) in a width of \(pixels.width)"
+
+            XCTAssertLessThanOrEqual(pixels.width, 439, what)
+            XCTAssertGreaterThan(ink.left, 0, what)
+            XCTAssertLessThanOrEqual(ink.left, 27, what)
+            XCTAssertLessThan(ink.right, pixels.width - 1, what)
+            XCTAssertGreaterThanOrEqual(ink.right, pixels.width - 28, what)
+        }
+    }
+
     func testLineSpacingOfOneAddsTheSizeBetweenTwoLines() throws {
         let tight = try XCTUnwrap(textPicture(for: layer("ab\ncd")))
         let loose = try XCTUnwrap(textPicture(for: layer("ab\ncd", lineSpacing: 1)))
