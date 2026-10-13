@@ -33,22 +33,23 @@ final class PieceInstruction: NSObject, AVVideoCompositionInstructionProtocol {
 }
 
 /// Draws every frame of the picture, for the player item and for the export alike: black, then the frame of
-/// the segment at its place. It changes no colour: Core Image takes the numbers of a source frame as they are
-/// and writes them as they are, with no colour space on the way in, in the middle or on the way out.
+/// the segment at its place. A time at which the track has no frame stays black. It changes no colour: Core
+/// Image takes the numbers of a source frame as they are and writes them as they are, with no colour space
+/// on the way in, in the middle or on the way out.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avvideocompositing
 /// https://developer.apple.com/documentation/coreimage/cicontext/init(options:)
 /// https://developer.apple.com/documentation/coreimage/cicontextoption/workingcolorspace
 /// https://developer.apple.com/documentation/coreimage/cicontextoption/outputcolorspace
 final class Compositor: NSObject, AVVideoCompositing {
-    /// The source frames, as 32 bit BGRA in buffers the player layer of a simulator takes.
+    /// The source frames, as 32 bit BGRA with the IOSurface key. They reach this class and never a layer.
     /// https://developer.apple.com/documentation/avfoundation/avvideocompositing/sourcepixelbufferattributes
     let sourcePixelBufferAttributes: [String: any Sendable]? = [
         kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
         kCVPixelBufferIOSurfacePropertiesKey as String: [String: String](),
     ]
 
-    /// The buffers of the frames it hands out, the same kind.
+    /// The buffers of the frames it hands out, the same kind. The player layer of a simulator takes them.
     /// https://developer.apple.com/documentation/avfoundation/avvideocompositing/requiredpixelbufferattributesforrendercontext
     let requiredPixelBufferAttributesForRenderContext: [String: any Sendable] = [
         kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
@@ -62,8 +63,8 @@ final class Compositor: NSObject, AVVideoCompositing {
     func renderContextChanged(_ newRenderContext: AVVideoCompositionRenderContext) {
     }
 
-    /// Answers every request before it returns: with a frame, or with `cannotRead` when the source frame or
-    /// a buffer is missing.
+    /// Answers every request before it returns: with a frame, or with `cannotRead` when the instruction is not
+    /// ours or the render context gives no buffer. With no source frame the frame is the black canvas.
     ///
     /// https://developer.apple.com/documentation/avfoundation/avvideocompositing/startrequest(_:)
     /// https://developer.apple.com/documentation/avfoundation/avasynchronousvideocompositionrequest
@@ -77,16 +78,17 @@ final class Compositor: NSObject, AVVideoCompositing {
     /// https://developer.apple.com/documentation/coreimage/cicontext/render(_:to:bounds:colorspace:)
     func startRequest(_ request: AVAsynchronousVideoCompositionRequest) {
         guard let piece = request.videoCompositionInstruction as? PieceInstruction,
-              let buffer = request.sourceFrame(byTrackID: piece.track),
               let frame = request.renderContext.newPixelBuffer()
         else {
             request.finish(with: EngineError.cannotRead)
             return
         }
         let canvas = CGRect(origin: .zero, size: request.renderContext.size)
-        let source = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: NSNull()]).transformed(by: piece.placing)
         var picture = CIImage.black
-        picture = source.composited(over: picture)
+        if let buffer = request.sourceFrame(byTrackID: piece.track) {
+            let source = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: NSNull()])
+            picture = source.transformed(by: piece.placing).composited(over: picture)
+        }
         context.render(picture.cropped(to: canvas), to: frame, bounds: canvas, colorSpace: nil)
         request.finish(withComposedVideoFrame: frame)
     }

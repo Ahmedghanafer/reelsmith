@@ -130,11 +130,14 @@ final class CompositorTests: XCTestCase {
         let info = MediaInfo(
             id: MediaID("high-range"), fileName: "high-range.mov", width: 1920, height: 1080,
             duration: Time(ticks: 600), quarterTurns: 0, hasSound: false)
-        try await writeHighDynamicRangeClip(to: folder.appendingPathComponent(info.fileName))
+        let source = folder.appendingPathComponent(info.fileName)
+        try await writeHighDynamicRangeClip(to: source)
+        let written = try await colourProperties(of: source)
+        XCTAssertEqual(written.primaries, kCMFormatDescriptionColorPrimaries_ITU_R_2020 as String)
+        XCTAssertEqual(written.transfer, kCMFormatDescriptionTransferFunction_ITU_R_2100_HLG as String)
+        XCTAssertEqual(written.matrix, kCMFormatDescriptionYCbCrMatrix_ITU_R_2020 as String)
 
-        var project = Project(canvas: .landscape)
-        project.media[info.id] = info
-        project.clips = [Clip(id: ClipID(1), media: info.id, sourceStart: .zero, duration: info.duration)]
+        let project = landscapeProject(of: info)
         let file = folder.appendingPathComponent("high-range.out.mp4")
         try await export(
             plan: renderPlan(for: project), media: project.media, mediaFolder: folder, to: file) { _ in }
@@ -145,7 +148,62 @@ final class CompositorTests: XCTestCase {
         XCTAssertEqual(colour.matrix, kCMFormatDescriptionYCbCrMatrix_ITU_R_709_2 as String)
         let middle = try await pixel(of: file, at: Time(ticks: 300), x: 960, y: 540)
         print("compositor: high dynamic range source at half signal exports as \(middle.r), \(middle.g), \(middle.b)")
-        XCTAssertLessThanOrEqual(worst(middle, RGB(r: 128, g: 128, b: 128)), 24, "reads \(middle)")
+        // 109 is what the platform's own compositor gave for this clip, which converts such a source.
+        XCTAssertLessThanOrEqual(worst(middle, RGB(r: 109, g: 109, b: 109)), 12, "reads \(middle)")
+    }
+
+    /// Four quarters of four colours: a picture drawn upside down or mirrored reads wrong. Whole on the canvas
+    /// it fills, and with one quarter turn, where the stored left edge is the top of the upright picture.
+    @MainActor
+    func testAFrameIsDrawnTheRightWayUpAndNotMirroredWithAndWithoutAQuarterTurn() async throws {
+        let whole = try await writeQuarterClip(named: "quarters", firstFrame: .zero, to: ExportTests.folder)
+        var turned = whole
+        turned.quarterTurns = 1
+        // The turned picture is 607.5 wide and stands from 656.25 to 1263.75.
+        let cases: [(MediaInfo, String, [(Int, Int, RGB)])] = [
+            (whole, "quarters.out.mp4", [
+                (480, 270, QuarterClip.topLeft), (1440, 270, QuarterClip.topRight),
+                (480, 810, QuarterClip.bottomLeft), (1440, 810, QuarterClip.bottomRight),
+            ]),
+            (turned, "quarters-turned.out.mp4", [
+                (808, 270, QuarterClip.bottomLeft), (1112, 270, QuarterClip.topLeft),
+                (808, 810, QuarterClip.bottomRight), (1112, 810, QuarterClip.topRight),
+            ]),
+        ]
+        for (info, name, checks) in cases {
+            let project = landscapeProject(of: info)
+            let plan = try renderPlan(for: project)
+            let item = try await makePlayerItem(plan: plan, media: project.media, mediaFolder: ExportTests.folder)
+            let generator = AVAssetImageGenerator(asset: item.asset)
+            generator.videoComposition = item.videoComposition
+            generator.requestedTimeToleranceBefore = .zero
+            generator.requestedTimeToleranceAfter = .zero
+            let image = try await generator.image(at: ticks(300)).image
+            let file = ExportTests.folder.appendingPathComponent(name)
+            try await export(plan: plan, media: project.media, mediaFolder: ExportTests.folder, to: file) { _ in }
+
+            for (x, y, wanted) in checks {
+                let shown = try colour(in: image, x: x, y: y)
+                let saved = try await pixel(of: file, at: Time(ticks: 300), x: x, y: y)
+                XCTAssertLessThanOrEqual(worst(shown, wanted), 24, "\(name) item (\(x), \(y)) reads \(shown)")
+                XCTAssertLessThanOrEqual(worst(saved, wanted), 24, "\(name) export (\(x), \(y)) reads \(saved)")
+            }
+        }
+    }
+
+    /// A picture track whose first frame comes one second after the start of its file, as a screen recording
+    /// can have. The stretch before it has no source frame.
+    func testAClipWhoseFirstFrameComesLateExportsWithBlackBeforeIt() async throws {
+        let info = try await writeQuarterClip(named: "late-start", firstFrame: Time(ticks: 600), to: ExportTests.folder)
+        let project = landscapeProject(of: info)
+        let file = ExportTests.folder.appendingPathComponent("late-start.out.mp4")
+        try await export(
+            plan: renderPlan(for: project), media: project.media, mediaFolder: ExportTests.folder, to: file) { _ in }
+
+        let before = try await pixel(of: file, at: Time(ticks: 300), x: 480, y: 270)
+        let after = try await pixel(of: file, at: Time(ticks: 900), x: 480, y: 270)
+        XCTAssertLessThanOrEqual(worst(before, RGB(r: 0, g: 0, b: 0)), 24, "at 300 ticks reads \(before)")
+        XCTAssertLessThanOrEqual(worst(after, QuarterClip.topLeft), 24, "at 900 ticks reads \(after)")
     }
 
     private func ticks(_ value: Int64) -> CMTime {
@@ -163,13 +221,17 @@ final class CompositorTests: XCTestCase {
         return try XCTUnwrap(item.videoComposition)
     }
 
+    /// One clip, whole, alone on the landscape canvas.
+    private func landscapeProject(of info: MediaInfo) -> Project {
+        var project = Project(canvas: .landscape)
+        project.media[info.id] = info
+        project.clips = [Clip(id: ClipID(1), media: info.id, sourceStart: .zero, duration: info.duration)]
+        return project
+    }
+
     /// The mid tone clip alone and whole on the landscape canvas, which it fills with no scaling.
     private func midTonePlan() throws -> RenderPlan {
-        let clip = midToneClip()
-        var project = Project(canvas: .landscape)
-        project.media[clip.info.id] = clip.info
-        project.clips = [Clip(id: ClipID(1), media: clip.info.id, sourceStart: .zero, duration: clip.duration)]
-        return try renderPlan(for: project)
+        try renderPlan(for: landscapeProject(of: midToneClip().info))
     }
 
     /// The colour of one pixel of a picture, read as `pixel(of:at:x:y:)` reads a frame of a file.
