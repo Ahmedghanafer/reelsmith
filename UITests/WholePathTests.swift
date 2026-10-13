@@ -3,7 +3,7 @@ import XCTest
 // The whole path in one test: a cold start, two videos from the system picker, a split, a delete, a trim,
 // playback to the end, an export and a relaunch. Then the same three states in Arabic and in Swedish.
 // The screen is 402 points wide with the playhead at x 201, the scale is 60 points a second, and a trim
-// handle is 24 points wide outside its edge. No test reads a pixel: what the preview shows is judged on
+// handle is 24 points wide outside its edge. This test reads no pixel: what the preview shows is judged on
 // the screenshots and in the recording.
 //
 // https://developer.apple.com/documentation/xctest/xcuiapplication/terminate()
@@ -19,17 +19,31 @@ import XCTest
 // https://developer.apple.com/documentation/xctest/xcuielementattributes/isselected
 // https://developer.apple.com/documentation/xctest/xcuielementtypequeryprovider
 // https://developer.apple.com/documentation/xctest/xcuielementquery/matching(identifier:)
-// https://developer.apple.com/documentation/xctest/xcuielementquery/element(boundby:)
-// https://developer.apple.com/documentation/xctest/xcuielementquery/count
 // https://developer.apple.com/documentation/xctest/xcuielementsnapshotproviding/snapshot()
 // https://developer.apple.com/documentation/xctest/xcuielementsnapshot/children
 // https://developer.apple.com/documentation/xctest/xcuielementattributes/elementtype
-// https://developer.apple.com/documentation/xctest/xctestcase/continueafterfailure
+// https://developer.apple.com/documentation/xctest/xctestcase/set_up_and_tear_down_state_in_your_tests
+// https://developer.apple.com/documentation/xctest/xctest/name
 // https://developer.apple.com/documentation/xctest/xctexpectfailure(_:options:failingblock:)
 // https://developer.apple.com/documentation/xctest/xctexpectedfailure/options/isstrict
 // https://developer.apple.com/documentation/foundation/thread/sleep(fortimeinterval:)
 @MainActor
 final class WholePathTests: XCTestCase {
+    /// Set by the last statement of the walk. A walk that ended before it is failed in `tearDown`.
+    private var walkFinished = false
+    /// The whole tree of the picker is printed once for a test.
+    private var treePrinted = false
+
+    /// In the first simulator run the walk ended inside the picker try and counted as passed. Why the
+    /// expected failure ended the test there is not known, so a walk that did not reach its last line
+    /// fails here, whatever ended it.
+    override func tearDown() async throws {
+        if name.contains("testTheWholePathFromAColdStartToASavedVideo") && !walkFinished {
+            XCTFail("The walk ended before its last line: it did not walk the whole path.")
+        }
+        try await super.tearDown()
+    }
+
     func testTheWholePathFromAColdStartToASavedVideo() {
         mark("m1-12-whole-path-01-path")
         let began = Date()
@@ -57,7 +71,8 @@ final class WholePathTests: XCTestCase {
         pauseForThePicture()
         screenshot("m1-12-whole-path-03-editor")
 
-        // The split. Nothing is selected, so no handle lies on the strip. 84 points to the left is 1.4 seconds.
+        // The split. Nothing is selected, so no handle lies on the strip. The strip moves about 10 points
+        // less than the drag, so the cut is near 1.2 seconds.
         scrub(app, fromX: 0.5, byPoints: -84)
         waitUntil("the playhead at 00:01 or 00:02 after the drag", expected: 1) {
             ["00:01", "00:02"].contains(playheadValue(app))
@@ -93,8 +108,9 @@ final class WholePathTests: XCTestCase {
         waitUntil("the playhead back at 00:00", expected: 1) { playheadValue(app) == "00:00" }
         pauseForThePicture()
 
-        // The trim. Still nothing is selected: the strip is dragged until the end of the red block is
-        // 74 points left of the right edge, so its end handle is on the screen with 300 points of room.
+        // The trim. Still nothing is selected. The drag aims the end of the red block 74 points left of the
+        // right edge, and the strip moves about 10 points less, so the end stands about 64 points left of it:
+        // its end handle is on the screen with 300 points of room.
         let region = element(app, "editor.timelineRegion")
         let red = element(app, "editor.clip.2")
         scrub(app, fromX: 0.95, byPoints: Double(region.frame.maxX - 74 - red.frame.maxX))
@@ -166,6 +182,7 @@ final class WholePathTests: XCTestCase {
         let seconds = String(Int(Date().timeIntervalSince(began)))
         print("m1-12-whole-path: walk finished, " + (stopped == nil ? "driven" : "not driven") + ", " + seconds
             + " seconds")
+        walkFinished = true
     }
 
     func testInArabicTheThreeStatesMirrorWhereTheyShould() {
@@ -225,12 +242,10 @@ final class WholePathTests: XCTestCase {
 
     /// One try at the system picker from the start screen. Nil when the editor opened with blue then red,
     /// else the step that failed. The picker alone never fails the walk: a failure inside the try is expected.
-    /// An expected failure still ends a test that does not continue after a failure, so the test continues
-    /// after one for the length of the try, and the try reads nothing that can change under it.
+    /// In the first simulator run a read that raised inside the try ended the whole test as passed, and why
+    /// is not known. So the try raises as little as it can: what it reads, it reads from snapshots, and only
+    /// its taps and its waits are live. The guard in `tearDown` fails a walk that did not reach its last line.
     private func tryThePicker(_ app: XCUIApplication, picture: String?) -> String? {
-        let before = continueAfterFailure
-        continueAfterFailure = true
-        defer { continueAfterFailure = before }
         let options = XCTExpectedFailure.Options()
         options.isStrict = false
         return XCTExpectFailure("The picker alone never fails the walk.", options: options) {
@@ -257,17 +272,26 @@ final class WholePathTests: XCTestCase {
         }
         // The other cells come with the first one. This is a pause, never a limit.
         Thread.sleep(forTimeInterval: 2)
-        let count = cells.count
+        // The cells are read from one snapshot, in the order of the tree: of the scroll views, the one that
+        // holds the most of them.
+        guard let before = try? app.snapshot() else {
+            return "no snapshot of the picker's grid could be taken"
+        }
+        var grid: [any XCUIElementSnapshot] = []
+        for view in flattened(before) where view.elementType == .scrollView {
+            let found = flattened(view).filter { $0.elementType == .image && $0.identifier == "PXGGridLayout-Info" }
+            if found.count > grid.count {
+                grid = found
+            }
+        }
+        let count = grid.count
+        print("m1-12-whole-path: the picker's grid holds " + String(count) + " cells")
         guard count >= 2 else {
             return "the picker's grid held " + String(count) + " cell, two are needed"
         }
-        let red = cells.element(boundBy: count - 2)
-        let blue = cells.element(boundBy: count - 1)
-        let first = cells.element(boundBy: 0)
-        print("m1-12-whole-path: the picker's grid holds " + String(count) + " cells")
-        guard red.exists, blue.exists, first.exists else {
-            return "the last two cells of the picker's grid were gone when they were read"
-        }
+        let first = grid[0]
+        let red = grid[count - 2]
+        let blue = grid[count - 1]
         print("m1-12-whole-path: the cell before the last reads: " + red.label)
         print("m1-12-whole-path: the last cell reads: " + blue.label)
         let redFrame = red.frame
@@ -286,9 +310,12 @@ final class WholePathTests: XCTestCase {
             screenshot(picture)
         }
 
-        // The whole tree once, for the log of the run, and one snapshot of it for the search: the picker
-        // changes after a choice, and a snapshot cannot change under the search.
-        print(app.debugDescription)
+        // The whole tree once for a test, for the log of the run, and one snapshot of it for the search:
+        // the picker changes after a choice, and a snapshot cannot change under the search.
+        if !treePrinted {
+            print(app.debugDescription)
+            treePrinted = true
+        }
         guard let tree = try? app.snapshot() else {
             return "no snapshot of the picker could be taken"
         }
@@ -316,16 +343,16 @@ final class WholePathTests: XCTestCase {
         tap(app, theMiddleOf: confirm.frame)
 
         guard element(app, "editor.root").waitForExistence(timeout: 60) else {
-            print(app.debugDescription)
             return "the editor did not open within 60 seconds of the tap on the right of the picker's bar"
         }
         // A block ends with the length of its clip: blue is 3 seconds long and red 4.
-        let one = element(app, "editor.clip.1")
-        let two = element(app, "editor.clip.2")
-        guard two.waitForExistence(timeout: 10), one.exists else {
+        guard element(app, "editor.clip.2").waitForExistence(timeout: 10), let editor = try? app.snapshot() else {
             return "the editor opened with fewer than two blocks"
         }
-        let lengths = String(one.label.suffix(5)) + " then " + String(two.label.suffix(5))
+        let blocks = flattened(editor)
+        let one = blocks.first { $0.identifier == "editor.clip.1" }?.label ?? ""
+        let two = blocks.first { $0.identifier == "editor.clip.2" }?.label ?? ""
+        let lengths = String(one.suffix(5)) + " then " + String(two.suffix(5))
         guard lengths == "00:03 then 00:04" else {
             return "the editor opened with " + lengths + ", and blue then red is 00:03 then 00:04"
         }
