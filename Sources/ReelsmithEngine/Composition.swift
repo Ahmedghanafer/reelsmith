@@ -15,16 +15,37 @@ public func makePlayerItem(plan: RenderPlan, media: [MediaID: MediaInfo], mediaF
     return item
 }
 
+/// For an item that `makePlayerItem` made and a plan with the same segments: gives the item a new video
+/// composition built from the plan, so the texts of the plan are drawn from the next frame on. Loads no file
+/// and reads no asset: the picture track of each segment and the text pictures the plan uses again are taken
+/// from the instructions the item has. Throws `cannotRead` for an item it did not make, a plan with another
+/// number of segments or a segment whose time range is not that of its instruction, and `sourceMissing` as
+/// `makePlayerItem` does when the plan names media with no facts. After a throw the item has the video composition it had.
+///
+/// https://developer.apple.com/documentation/avfoundation/avplayeritem/videocomposition
+/// https://developer.apple.com/documentation/avfoundation/avvideocomposition/instructions
+@MainActor
+public func refreshPicture(of item: AVPlayerItem, plan: RenderPlan, media: [MediaID: MediaInfo]) throws {
+    guard let pieces = item.videoComposition?.instructions as? [PieceInstruction],
+          pieces.count == plan.segments.count
+    else { throw EngineError.cannotRead }
+    for (segment, piece) in zip(plan.segments, pieces) {
+        let range = CMTimeRange(
+            start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
+            duration: CMTime(value: segment.duration.ticks, timescale: 600))
+        guard range == piece.timeRange else { throw EngineError.cannotRead }
+    }
+    item.videoComposition = try videoComposition(
+        plan: plan, media: media, tracks: pieces.map { $0.track }, kept: pieces.flatMap { $0.texts })
+}
+
 /// The one builder for the player item and for the export. One picture track, one sound track when a segment
-/// has sound, and one instruction per segment that puts its upright picture at its place on the canvas.
-/// The video composition names `Compositor`, which draws every frame from those instructions.
+/// has sound, and the video composition of the plan.
 /// Throws `sourceMissing` when a file is not in the media folder and `cannotRead` when a file cannot be used.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avmutablecomposition
 /// https://developer.apple.com/documentation/avfoundation/avmutablecompositiontrack/inserttimerange(_:of:at:)
 /// https://developer.apple.com/documentation/avfoundation/avasset/loadtracks(withmediatype:)
-/// https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition
-/// https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition/customvideocompositorclass
 func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: URL) async throws
     -> (composition: AVMutableComposition, videoComposition: AVMutableVideoComposition) {
     let composition = AVMutableComposition()
@@ -32,7 +53,6 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
         withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
     else { throw EngineError.cannotRead }
     var sound: AVMutableCompositionTrack?
-    var instructions: [PieceInstruction] = []
 
     for segment in plan.segments {
         guard let info = media[segment.media] else { throw EngineError.sourceMissing(segment.media) }
@@ -64,13 +84,36 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
         } catch {
             throw EngineError.cannotRead
         }
+    }
+    let tracks = [CMPersistentTrackID](repeating: picture.trackID, count: plan.segments.count)
+    return (composition, try videoComposition(plan: plan, media: media, tracks: tracks, kept: []))
+}
 
+/// The video composition of a plan, for a new item, an export and a refresh alike: one instruction per segment
+/// that puts its upright picture at its place on the canvas and holds the texts whose time overlaps it. It names
+/// `Compositor`, which draws every frame from those instructions. `tracks` names the picture track of each
+/// segment. `kept` holds the texts of the video composition before it, whose pictures are used again.
+///
+/// https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition
+/// https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition/customvideocompositorclass
+private func videoComposition(
+    plan: RenderPlan, media: [MediaID: MediaInfo], tracks: [CMPersistentTrackID], kept: [PieceText]
+) throws -> AVMutableVideoComposition {
+    var kept = kept
+    var instructions: [PieceInstruction] = []
+    for (segment, track) in zip(plan.segments, tracks) {
+        guard let info = media[segment.media] else { throw EngineError.sourceMissing(segment.media) }
+        let range = CMTimeRange(
+            start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
+            duration: CMTime(value: segment.duration.ticks, timescale: 600))
         // The transform counts both pictures from the top left, the compositor from the bottom left.
         let placing = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(info.height))
             .concatenating(transform(for: segment.placement, width: info.width, height: info.height))
             .concatenating(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(plan.canvas.height)))
+        let made = pieceTexts(of: plan, in: range, kept: kept)
+        kept += made.texts
         instructions.append(PieceInstruction(
-            timeRange: CMTimeRange(start: start, duration: range.duration), track: picture.trackID, placing: placing))
+            timeRange: range, track: track, placing: placing, texts: made.texts, drawn: made.drawn))
     }
 
     // Standard range colour properties, so a high dynamic range source is converted for preview and export alike.
@@ -83,7 +126,7 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
     videoComposition.colorPrimaries = AVVideoColorPrimaries_ITU_R_709_2
     videoComposition.colorTransferFunction = AVVideoTransferFunction_ITU_R_709_2
     videoComposition.colorYCbCrMatrix = AVVideoYCbCrMatrix_ITU_R_709_2
-    return (composition, videoComposition)
+    return videoComposition
 }
 
 /// From the stored picture, with its origin at the top left, to its place on the canvas: the quarter turns of
