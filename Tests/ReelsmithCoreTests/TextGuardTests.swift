@@ -260,8 +260,10 @@ private func drawText(_ draw: inout Draw, in state: EditorState) -> TextID {
     return texts[draw.below(texts.count)].id
 }
 
-/// The amount of a trim, of a clip or of a text. Ten thousand ticks either way are past every limit, since
-/// no project of the runs is that long. One time in three the amount is at most 60 ticks either way.
+/// The amount of a trim, of a clip or of a text. Ten thousand ticks either way are past every limit of a
+/// project shorter than that, as each seed is. A project that addClips made longer can hold such an amount
+/// inside its limits, and the kind of the action is named from the state, not from the draw. One time in
+/// three the amount is at most 60 ticks either way.
 private func drawAmount(_ draw: inout Draw) -> Time {
     switch draw.below(6) {
     case 0:
