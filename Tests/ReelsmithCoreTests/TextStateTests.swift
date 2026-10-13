@@ -2,7 +2,7 @@ import ReelsmithCore
 import XCTest
 
 /// The name of a text action. The switch has no default, so a ninth case does not compile.
-private func name(of action: TextAction) -> String {
+private func caseName(of action: TextAction) -> String {
     switch action {
     case .add:
         return "add"
@@ -38,7 +38,7 @@ final class TextStateTests: XCTestCase {
         ]
 
         XCTAssertEqual(
-            actions.map { name(of: $0) },
+            actions.map { caseName(of: $0) },
             ["add", "select", "setString", "setStyle", "move", "turn", "trimStart", "trimEnd"])
         XCTAssertEqual(EditorAction.text(.add), EditorAction.text(.add))
         XCTAssertNotEqual(EditorAction.text(.add), EditorAction.text(.select(id)))
