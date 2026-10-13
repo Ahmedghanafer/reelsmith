@@ -20,6 +20,7 @@ import XCTest
 // https://developer.apple.com/documentation/xctest/xcuielementtypequeryprovider
 // https://developer.apple.com/documentation/xctest/xcuielementquery/matching(identifier:)
 // https://developer.apple.com/documentation/xctest/xcuielementquery/element(boundby:)
+// https://developer.apple.com/documentation/xctest/xcuielementquery/count
 // https://developer.apple.com/documentation/xctest/xcuielementquery/allelementsboundbyindex
 // https://developer.apple.com/documentation/xctest/xctexpectfailure(_:options:failingblock:)
 // https://developer.apple.com/documentation/xctest/xctexpectedfailure/options/isstrict
@@ -54,11 +55,11 @@ final class WholePathTests: XCTestCase {
 
         // The split. Nothing is selected, so no handle lies on the strip. 84 points to the left is 1.4 seconds.
         scrub(app, fromX: 0.5, byPoints: -84)
-        wait(for: "the playhead at 00:01 or 00:02 after the drag", expected: 1) {
+        waitUntil("the playhead at 00:01 or 00:02 after the drag", expected: 1) {
             ["00:01", "00:02"].contains(playheadValue(app))
         }
         element(app, "editor.split").tap()
-        wait(for: "three blocks after the split", expected: 1) { element(app, "editor.clip.3").exists }
+        waitUntil("three blocks after the split", expected: 1) { element(app, "editor.clip.3").exists }
         XCTAssertFalse(element(app, "editor.clip.4").exists)
         XCTAssertEqual(
             element(app, "editor.clip.1").frame.width + element(app, "editor.clip.2").frame.width, 180, accuracy: 1)
@@ -68,7 +69,7 @@ final class WholePathTests: XCTestCase {
         // The delete of the first block, which ends under the playhead, so its middle is on the screen.
         element(app, "editor.clip.1").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         element(app, "editor.delete").tap()
-        wait(for: "two blocks after the delete", expected: 1) { !element(app, "editor.clip.3").exists }
+        waitUntil("two blocks after the delete", expected: 1) { !element(app, "editor.clip.3").exists }
         XCTAssertTrue(element(app, "editor.clip.2").exists)
         let afterDelete = timeSides(app).last ?? ""
         XCTAssertTrue(["00:04", "00:05", "00:06"].contains(afterDelete), afterDelete)
@@ -79,12 +80,12 @@ final class WholePathTests: XCTestCase {
         for _ in 0..<2 {
             scrub(app, fromX: 0.9, byPoints: -320)
         }
-        wait(for: "the playhead at the end of the strip", expected: 1) { theTwoSidesAreTheSame(app) }
+        waitUntil("the playhead at the end of the strip", expected: 1) { theTwoSidesAreTheSame(app) }
         pauseForThePicture()
         for _ in 0..<2 {
             scrub(app, fromX: 0.1, byPoints: 320)
         }
-        wait(for: "the playhead back at 00:00", expected: 1) { playheadValue(app) == "00:00" }
+        waitUntil("the playhead back at 00:00", expected: 1) { playheadValue(app) == "00:00" }
         pauseForThePicture()
 
         // The trim. Still nothing is selected: the strip is dragged until the end of the red block is
@@ -100,7 +101,7 @@ final class WholePathTests: XCTestCase {
         // 234 points reach the shortest clip, so 300 is well past the limit.
         handle.press(forDuration: 0.1, thenDragTo: handle.withOffset(CGVector(dx: -300, dy: 0)))
         // The trim below the playhead moved the strip, so the frame is read again.
-        wait(for: "the red block at its shortest after the trim", expected: 1) { red.frame.width < 7.5 }
+        waitUntil("the red block at its shortest after the trim", expected: 1) { red.frame.width < 7.5 }
         XCTAssertEqual(red.frame.width, 6, accuracy: 1)
         let afterTrim = timeSides(app).last ?? ""
         XCTAssertTrue(["00:00", "00:01", "00:02"].contains(afterTrim), afterTrim)
@@ -111,10 +112,10 @@ final class WholePathTests: XCTestCase {
         for _ in 0..<2 {
             scrub(app, fromX: 0.1, byPoints: 320)
         }
-        wait(for: "the playhead back at 00:00 after the trim", expected: 1) { playheadValue(app) == "00:00" }
+        waitUntil("the playhead back at 00:00 after the trim", expected: 1) { playheadValue(app) == "00:00" }
         pauseForThePicture()
         element(app, "editor.play").tap()
-        wait(for: "the same time on both sides of the slash", expected: 3) { theTwoSidesAreTheSame(app) }
+        waitUntil("the same time on both sides of the slash", expected: 3) { theTwoSidesAreTheSame(app) }
         // The rest of the last second.
         Thread.sleep(forTimeInterval: 2)
         XCTAssertTrue(theTwoSidesAreTheSame(app), element(app, "editor.time").label)
@@ -122,7 +123,7 @@ final class WholePathTests: XCTestCase {
         // The export. The wave run grants the right to add to Photos, so no question is expected.
         element(app, "editor.export").tap()
         let done = element(app, "export.done")
-        wait(for: "export.done after the export", expected: 30) { done.exists }
+        waitUntil("export.done after the export", expected: 30) { done.exists }
         screenshot("m1-12-whole-path-07-saved")
         done.tap()
 
@@ -189,7 +190,7 @@ final class WholePathTests: XCTestCase {
         screenshot("m1-12-whole-path-10-editor-" + language)
 
         element(app, "editor.export").tap()
-        wait(for: "export.done after the export", expected: 30) { element(app, "export.done").exists }
+        waitUntil("export.done after the export", expected: 30) { element(app, "export.done").exists }
         screenshot("m1-12-whole-path-11-saved-" + language)
     }
 
@@ -224,18 +225,23 @@ final class WholePathTests: XCTestCase {
         newProject.tap()
 
         // The videos are the cells of the picker's grid, which the system names PXGGridLayout-Info.
-        // The grid lists red first and blue second.
+        // The grid lists the newest first. The wave run puts blue into the library and then red, and every
+        // video an export saved is newer, so blue is the last cell and red the one before it.
         let cells = app.scrollViews.images.matching(identifier: "PXGGridLayout-Info")
-        let red = cells.element(boundBy: 0)
-        let blue = cells.element(boundBy: 1)
-        guard red.waitForExistence(timeout: 40) else {
+        guard cells.firstMatch.waitForExistence(timeout: 40) else {
             return "no cell of the picker's grid came within 40 seconds"
         }
-        guard blue.waitForExistence(timeout: 10) else {
-            return "the picker's grid held one cell, two are needed"
+        // The other cells come with the first one. This is a pause, never a limit.
+        Thread.sleep(forTimeInterval: 2)
+        let count = cells.count
+        guard count >= 2 else {
+            return "the picker's grid held " + String(count) + " cell, two are needed"
         }
-        print("m1-12-whole-path: cell 1 of the picker reads: " + red.label)
-        print("m1-12-whole-path: cell 2 of the picker reads: " + blue.label)
+        let red = cells.element(boundBy: count - 2)
+        let blue = cells.element(boundBy: count - 1)
+        print("m1-12-whole-path: the picker's grid holds " + String(count) + " cells")
+        print("m1-12-whole-path: the cell before the last reads: " + red.label)
+        print("m1-12-whole-path: the last cell reads: " + blue.label)
         let redFrame = red.frame
         let blueFrame = blue.frame
         print("m1-12-whole-path: the cells are at \(redFrame) and \(blueFrame)")
@@ -251,7 +257,7 @@ final class WholePathTests: XCTestCase {
         }
 
         // The button that confirms: of the buttons above the grid, the one furthest to the right.
-        let top = min(redFrame.minY, blueFrame.minY)
+        let top = min(cells.element(boundBy: 0).frame.minY, redFrame.minY, blueFrame.minY)
         var confirm: XCUIElement?
         var edge: CGFloat = 0
         for button in app.buttons.allElementsBoundByIndex {
@@ -316,7 +322,7 @@ final class WholePathTests: XCTestCase {
 
     /// Reads until the condition holds. Prints the seconds it waited and fails only above three times
     /// the expected seconds: a hosted runner under load can hold the app for seconds.
-    private func wait(for what: String, expected: Double, _ reached: () -> Bool) {
+    private func waitUntil(_ what: String, expected: Double, _ reached: () -> Bool) {
         let started = Date()
         var waited: Double = 0
         var holds = reached()
