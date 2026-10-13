@@ -275,8 +275,8 @@ final class TextExportTests: XCTestCase {
         }
         let seconds = Date().timeIntervalSince(began)
         print("text in the frame: 60 refreshes of text-wide, each moved by one pixel, took \(seconds) seconds, "
-            + "expected 1, limit 3")
-        XCTAssertLessThanOrEqual(seconds, 3)
+            + "expected 0.1, limit 0.3")
+        XCTAssertLessThanOrEqual(seconds, 0.3)
         let moved = try instructions(of: item).map { $0.texts.count }
         XCTAssertEqual(moved, [1, 1])
     }
