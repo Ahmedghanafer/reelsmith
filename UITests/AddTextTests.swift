@@ -85,7 +85,10 @@ final class AddTextTests: XCTestCase {
         screenshot("add-text-04-panel")
 
         field.tap()
-        waitUntil("the keyboard after the tap on the field", expected: 2) { app.keyboards.firstMatch.exists }
+        // The keyboard is there and the panel has moved up above it.
+        waitUntil("the keyboard after the tap on the field, the field above it", expected: 2) {
+            app.keyboards.firstMatch.exists && field.frame.maxY <= app.keyboards.firstMatch.frame.minY
+        }
         XCTAssertTrue(field.isHittable)
         XCTAssertTrue(done.isHittable)
         screenshot("add-text-02-keyboard")
@@ -191,7 +194,13 @@ final class AddTextTests: XCTestCase {
         XCTAssertFalse(field.exists)
 
         element(app, "text.tab.type").tap()
-        waitUntil("the field after the tap on the part type") { field.exists }
+        // The picture is taken only when the tapped button stands in its row again, left of look.
+        let typeTab = element(app, "text.tab.type")
+        waitUntil("the field after the tap on the part type, the part button selected and in its row") {
+            field.exists && typeTab.isSelected
+                && inOneRow(app, ["text.tab.type", "text.tab.look", "text.tab.more", "text.done"])
+                && typeTab.frame.maxX <= element(app, "text.tab.look").frame.minX
+        }
         // The middle line of the seed, as scalars so no editor reorders it.
         let arabic =
             "\u{0627}\u{0644}\u{0633}\u{0651}\u{064E}\u{0644}\u{064E}\u{0627}\u{0645}\u{064F}\u{0020}"
@@ -258,10 +267,25 @@ final class AddTextTests: XCTestCase {
         String(textInfo(app).split(separator: " ").first ?? "")
     }
 
-    /// Taps the text button and waits for the text region.
+    /// Taps the text button and waits for the text region, with every button at its place: the text button
+    /// in the tools row and the three part buttons in the row of done, so no picture is taken in a movement.
     private func addAText(_ app: XCUIApplication) {
         element(app, "editor.addText").tap()
-        waitUntil("the text region after the tap on the text button") { element(app, "editor.textRegion").exists }
+        waitUntil("the text region after the tap on the text button, every button in its row") {
+            element(app, "editor.textRegion").exists
+                && inOneRow(app, ["editor.split", "editor.delete", "editor.addText"])
+                && inOneRow(app, ["text.tab.type", "text.tab.look", "text.tab.more", "text.done"])
+        }
+    }
+
+    /// True when all the controls are there and their middles lie at one height, within 4 points.
+    private func inOneRow(_ app: XCUIApplication, _ identifiers: [String]) -> Bool {
+        let controls = identifiers.map { element(app, $0) }
+        guard controls.allSatisfy({ $0.exists }) else {
+            return false
+        }
+        let heights = controls.map { Double($0.frame.midY) }
+        return (heights.max() ?? 0) - (heights.min() ?? 0) <= 4
     }
 
     /// Taps done and waits until the text region is gone.
