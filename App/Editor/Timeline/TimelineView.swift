@@ -134,13 +134,16 @@ final class TimelineStripView: UIView {
         }
     }
 
+    /// A tap on a block selects it. A tap anywhere else on this view, beside the row of blocks or in the
+    /// band above or below it, sends `clearSelection`. A tap on a trim handle never comes here.
     @objc private func tapped(_ tap: UITapGestureRecognizer) {
         let point = tap.location(in: strip)
-        guard strip.bounds.contains(point) else {
-            return
-        }
-        if let clip: Clip = state.project.clip(at: TimelineGeometry.time(atX: Double(point.x))) {
+        if strip.bounds.contains(point),
+            let clip: Clip = state.project.clip(at: TimelineGeometry.time(atX: Double(point.x)))
+        {
             send(.select(clip.id))
+        } else {
+            send(.clearSelection)
         }
     }
 }
