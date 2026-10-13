@@ -1,0 +1,100 @@
+# Operations
+
+Nothing is built on this PC. Tests and builds run on GitHub runners and are read with the `gh` command line.
+
+## Run the tests
+
+The `Tests` workflow runs `swift test` on a Linux runner for every pull request into `dev` and every push to `dev`. A branch gets a test run only once a pull request into `dev` is open. To read the result for a branch:
+
+```
+gh run list --workflow Tests --branch <branch>
+gh run watch <run id>
+gh run view <run id> --log
+```
+
+## Ask for a compile check
+
+The `Compile check` workflow compiles a pull request's Apple code on a macOS runner with Xcode 26.6. It generates the project, runs `swift test` for the package (the Engine tests run here, with no simulator), builds the app and the UI tests for a simulator with `xcodebuild build-for-testing`, and runs `plutil -lint` over the word files. Every part runs even when an earlier one failed, and the check is red if any part is. No simulator is booted and no UI test runs. It stops itself after 15 minutes.
+
+Put the label `compile` on the pull request to start it. A new commit does not start a run. To run it again after a fix, take the label off and put it back:
+
+```
+gh pr edit <number> --remove-label compile
+gh pr edit <number> --add-label compile
+```
+
+A pull request with a merge conflict gets no run at all: rebase it first.
+
+The result shows among the checks of the pull request, where `gh pr checks` prints it under the job name `compile`, and in the run list:
+
+```
+gh pr checks <number>
+gh run list --workflow "Compile check" --branch <branch>
+gh run view <run id> --log
+```
+
+The workflow starts on every label and skips its job for any label but `compile`. So another label put on the pull request afterwards starts a skipped run, and that skipped run takes the place of the result in `gh pr checks`. The result that counts is the newest run in `gh run list --workflow "Compile check" --branch <branch>` that was not skipped and whose head is the head of the pull request.
+
+Once the workflow file is on `dev` it can also be started by hand on any branch:
+
+```
+gh workflow run "Compile check" --ref <branch>
+```
+
+## Start a simulator run
+
+The `macOS build` workflow is the simulator run: one run on a macOS runner with Xcode 26.6 that builds everything, runs the Engine tests and the UI tests in an iPhone simulator, and brings back the pictures, one recording and the test results. The repository is public, so runner time is free and a simulator run is repeated after each fix until it is green. It starts by hand only. It is started on `dev` when a group of changes is merged, and again after a fix:
+
+```
+gh workflow run "macOS build" --ref dev
+gh workflow run "macOS build" --ref dev -f ipa=true
+```
+
+The second form also makes the unsigned build for the phone. To follow the run and read it:
+
+```
+gh run list --workflow "macOS build"
+gh run watch <run id>
+gh run view <run id> --log
+```
+
+The run creates one simulator, an iPhone 17 on the iOS 26.5 runtime, and works through seven layers in order:
+
+1. `swift test` builds the package and runs its tests on macOS, the Engine tests among them. `REELSMITH_CLIP_DIR` is set, so the clip maker test leaves `blue.mov` and `red.mov` there.
+2. The project is generated, and the app and the UI tests are built for testing.
+3. The simulator boots, the built app is installed, the right to add to Photos is granted to the app, the two clips are put into the photo library, and the count of videos in the library is printed.
+4. The clock second is written to `recording-start.txt`, one recording of the simulator starts, and the UI tests run without a rebuild into a result bundle.
+5. The screenshots and the mark files are exported from the result bundle under their attachment names, and each mark becomes one line of `recording-index.txt`. A name is made safe for the upload: each character the upload refuses (the double quote, colon, less than, greater than, vertical bar, asterisk, question mark, carriage return and line feed) becomes an underscore, and a name that is already taken gets a number before its ending, as in `<name>_2.txt`. The ending of a mark file is `.mark.txt` and that of any other name is what follows its last dot, so a taken name whose last dot is not an ending gets its number before that dot, as in `App UI hierarchy for com.ghanafer_2.reelsmith`.
+6. The count of videos in the library is printed again.
+7. Only with `ipa=true`: the device build without code signing, packed as `Reelsmith.ipa`.
+
+A layer is attempted whenever what it needs was built, also after an earlier layer failed. The last step, `Summary`, prints the result of every layer, the two counts and the seconds of each step, and the same text is on the run's page. A layer that reads `skipped` was not attempted. The run is red if any layer failed. A library that does not take the clips, or a count that cannot be read, is printed and does not make the run red. A UI test that runs longer than 600 seconds is ended and counts as failed. The run stops itself after 45 minutes. The export of the pictures taken until then is still attempted, and the uploads still happen.
+
+## Fetch the artifacts
+
+Every artifact is uploaded whether a layer failed or not, and is kept for 3 days. In PowerShell or Git Bash on this PC:
+
+```
+gh run download <run id> -n screens -D screens
+gh run download <run id> -n recording -D recording
+gh run download <run id> -n results -D results
+gh run download <run id> -n ipa -D ipa
+```
+
+- `screens` holds one picture per screenshot of the UI tests, named `<attachment name>.png`, and the mark files `<mark name>.mark.txt`. After a failed UI test it also holds a short `Screen Recording <date>.mp4` of that test, `Complete Issue Description.txt`, `App UI hierarchy for <bundle id>`, `UI Snapshot <date>`, and one debug description for each wait for an element that did not appear, all of which the test system adds by itself. A debug description is named ``Debug description for `"<identifier>" Any`.txt`` by the test system and is stored as ``Debug description for `_<identifier>_ Any`.txt``. Repeats of a name are numbered.
+- `recording` holds `recording.mp4`, `recording-start.txt` and `recording-index.txt`. A line of the index is a mark's name, a space, and the seconds from the start of the recording to the mark, so that stretch is found by seeking to that second.
+- `results` holds the result bundle `Reelsmith.xcresult` of the UI tests and `simulator-log.txt`, the lines the app wrote to the simulator's log during the tests (a seed clip that could not be written says why there). The bundle opens only in Xcode. On this PC the log of the run says which test failed and why.
+- `ipa` holds `Reelsmith.ipa`, the build for the phone, only when the run was started with `ipa=true`.
+
+## Install on the iPhone with Sideloadly
+
+This works: on 2026-10-12 an unsigned build of this project was installed with Sideloadly and a free Apple ID on an iPhone with iOS 26.6.2, and it opened. The steps:
+
+1. Remove the Microsoft Store version of iTunes if it is installed (it does not work). Install iTunes for Windows from Apple's website and check that Apple Mobile Device Support is installed with it: it comes in the same installer, and a silent install of iTunes can leave it out. iCloud is not needed. Then install Sideloadly from sideloadly.io.
+2. Connect the iPhone with a USB cable, unlock it and tap Trust.
+3. Open Sideloadly, pick the phone, drag `Reelsmith.ipa` into the window, type the free Apple ID and press Start. Enter the Apple ID password when asked.
+4. On the iPhone, open Settings, General, VPN & Device Management, tap the Apple ID and tap Trust.
+5. On the iPhone, switch on Developer Mode under Settings, Privacy & Security (the switch appears only after the install), then restart the phone when asked.
+6. Open Reelsmith. The start screen shows the name of the app, the two shapes and "New project".
+
+A free Apple ID install stops working after 7 days. Repeat step 3 with the same Apple ID to renew it. The app saves nothing yet, so a renewal has no saved data to keep.

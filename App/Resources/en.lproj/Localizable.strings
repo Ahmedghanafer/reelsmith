@@ -1,0 +1,59 @@
+/* slot: m1-2b-ui-harness */
+"editor.seedInfo" = "%1$@ clips, %2$@ files";
+/* end slot: m1-2b-ui-harness */
+
+/* slot: m1-6b-new-project */
+"start.title" = "Reelsmith";
+"start.newProject" = "New project";
+"start.landscape" = "Landscape 16:9";
+"start.portrait" = "Portrait 9:16";
+"start.copying" = "Copying videos";
+"start.noneReadable" = "None of the videos could be used.";
+"start.ok" = "OK";
+/* end slot: m1-6b-new-project */
+
+/* slot: m1-7-preview */
+"preview.play" = "Play";
+"preview.pause" = "Pause";
+/* end slot: m1-7-preview */
+
+/* slot: m1-8-timeline */
+/* end slot: m1-8-timeline */
+
+/* slot: m1-9a-split-delete */
+"tools.split" = "Split";
+"tools.delete" = "Delete";
+/* end slot: m1-9a-split-delete */
+
+/* slot: m1-9b-trim-handles */
+"trim.start" = "Trim start";
+"trim.end" = "Trim end";
+/* end slot: m1-9b-trim-handles */
+
+/* slot: m1-10-export */
+"export.button" = "Export";
+"export.exporting" = "Exporting";
+"export.saved" = "Saved to Photos";
+"export.done" = "Done";
+"export.failed" = "Export failed. Nothing was saved.";
+"export.notAllowed" = "Reelsmith is not allowed to save to Photos. Allow it in Settings, then export again.";
+"export.close" = "Close";
+/* end slot: m1-10-export */
+
+/* slot: m1-12-whole-path */
+/* end slot: m1-12-whole-path */
+
+/* slot: add-text */
+/* end slot: add-text */
+
+/* slot: text-look */
+/* end slot: text-look */
+
+/* slot: text-more */
+/* end slot: text-more */
+
+/* slot: text-row */
+/* end slot: text-row */
+
+/* slot: text-path */
+/* end slot: text-path */

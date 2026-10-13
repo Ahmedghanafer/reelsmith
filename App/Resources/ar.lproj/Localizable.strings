@@ -1,0 +1,59 @@
+/* slot: m1-2b-ui-harness */
+"editor.seedInfo" = "المقاطع: %1$@، الملفات: %2$@";
+/* end slot: m1-2b-ui-harness */
+
+/* slot: m1-6b-new-project */
+"start.title" = "Reelsmith";
+"start.newProject" = "مشروع جديد";
+"start.landscape" = "أفقي 16:9";
+"start.portrait" = "عمودي 9:16";
+"start.copying" = "جارٍ نسخ الفيديوهات";
+"start.noneReadable" = "تعذّر استخدام أي من الفيديوهات.";
+"start.ok" = "موافق";
+/* end slot: m1-6b-new-project */
+
+/* slot: m1-7-preview */
+"preview.play" = "تشغيل";
+"preview.pause" = "إيقاف مؤقت";
+/* end slot: m1-7-preview */
+
+/* slot: m1-8-timeline */
+/* end slot: m1-8-timeline */
+
+/* slot: m1-9a-split-delete */
+"tools.split" = "تقسيم";
+"tools.delete" = "حذف";
+/* end slot: m1-9a-split-delete */
+
+/* slot: m1-9b-trim-handles */
+"trim.start" = "قص البداية";
+"trim.end" = "قص النهاية";
+/* end slot: m1-9b-trim-handles */
+
+/* slot: m1-10-export */
+"export.button" = "تصدير";
+"export.exporting" = "جارٍ التصدير";
+"export.saved" = "تم الحفظ في الصور";
+"export.done" = "تم";
+"export.failed" = "فشل التصدير. لم يُحفظ أي شيء.";
+"export.notAllowed" = "غير مسموح لـ Reelsmith بالحفظ في الصور. يمكن السماح بذلك من الإعدادات ثم التصدير مرة أخرى.";
+"export.close" = "إغلاق";
+/* end slot: m1-10-export */
+
+/* slot: m1-12-whole-path */
+/* end slot: m1-12-whole-path */
+
+/* slot: add-text */
+/* end slot: add-text */
+
+/* slot: text-look */
+/* end slot: text-look */
+
+/* slot: text-more */
+/* end slot: text-more */
+
+/* slot: text-row */
+/* end slot: text-row */
+
+/* slot: text-path */
+/* end slot: text-path */

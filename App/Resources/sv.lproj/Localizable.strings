@@ -1,0 +1,59 @@
+/* slot: m1-2b-ui-harness */
+"editor.seedInfo" = "%1$@ klipp, %2$@ filer";
+/* end slot: m1-2b-ui-harness */
+
+/* slot: m1-6b-new-project */
+"start.title" = "Reelsmith";
+"start.newProject" = "Nytt projekt";
+"start.landscape" = "Liggande 16:9";
+"start.portrait" = "Stående 9:16";
+"start.copying" = "Kopierar videor";
+"start.noneReadable" = "Ingen av videorna kunde användas.";
+"start.ok" = "OK";
+/* end slot: m1-6b-new-project */
+
+/* slot: m1-7-preview */
+"preview.play" = "Spela upp";
+"preview.pause" = "Pausa";
+/* end slot: m1-7-preview */
+
+/* slot: m1-8-timeline */
+/* end slot: m1-8-timeline */
+
+/* slot: m1-9a-split-delete */
+"tools.split" = "Dela upp";
+"tools.delete" = "Radera";
+/* end slot: m1-9a-split-delete */
+
+/* slot: m1-9b-trim-handles */
+"trim.start" = "Trimma början";
+"trim.end" = "Trimma slutet";
+/* end slot: m1-9b-trim-handles */
+
+/* slot: m1-10-export */
+"export.button" = "Exportera";
+"export.exporting" = "Exporterar";
+"export.saved" = "Sparad i Bilder";
+"export.done" = "Klar";
+"export.failed" = "Exporten misslyckades. Inget sparades.";
+"export.notAllowed" = "Reelsmith får inte spara i Bilder. Tillåt det i Inställningar och exportera sedan igen.";
+"export.close" = "Stäng";
+/* end slot: m1-10-export */
+
+/* slot: m1-12-whole-path */
+/* end slot: m1-12-whole-path */
+
+/* slot: add-text */
+/* end slot: add-text */
+
+/* slot: text-look */
+/* end slot: text-look */
+
+/* slot: text-more */
+/* end slot: text-more */
+
+/* slot: text-row */
+/* end slot: text-row */
+
+/* slot: text-path */
+/* end slot: text-path */
