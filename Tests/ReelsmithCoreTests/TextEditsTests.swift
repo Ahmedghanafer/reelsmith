@@ -353,6 +353,8 @@ final class TextEditsTests: XCTestCase {
         XCTAssertEqual(angleAfter(181), -179)
         XCTAssertEqual(angleAfter(190), -170)
         XCTAssertEqual(angleAfter(540), 180)
+        XCTAssertEqual(angleAfter(725), 5)
+        XCTAssertEqual(angleAfter(900), 180)
     }
 
     func testATurnToMinus180OrBelowComesBackFromTheOtherSide() {
@@ -360,6 +362,8 @@ final class TextEditsTests: XCTestCase {
         XCTAssertEqual(angleAfter(-180), 180)
         XCTAssertEqual(angleAfter(-181), 179)
         XCTAssertEqual(angleAfter(-190), 170)
+        XCTAssertEqual(angleAfter(-725), -5)
+        XCTAssertEqual(angleAfter(-900), 180)
     }
 
     func testATurnAtMost3Above0Becomes0() {
@@ -469,7 +473,74 @@ final class TextEditsTests: XCTestCase {
         XCTAssertEqual(sendText(short, .trimEnd(one, by: Time(ticks: -20))), short)
     }
 
+    func testATrimOfTheEndWorksOnARangeOfExactlyTheMinimumText() {
+        let least = sendText(textBoxWide, .trimEnd(one, by: Time(ticks: 840)))
+
+        XCTAssertEqual(span(least), range(600, 60))
+        XCTAssertEqual(afterTrimEnd(least, by: -40), range(600, 100))
+        XCTAssertEqual(afterTrimEnd(least, by: 20), range(600, 60))
+    }
+
+    // Values that are not finite numbers
+
+    private let notFinite: [Double] = [Double.nan, Double.infinity, -Double.infinity]
+
+    func testASizeOrALineSpacingThatIsNotAFiniteNumberChangesNothing() {
+        let start = playing(textWide)
+
+        for value in notFinite {
+            var size = TextStyle.standard
+            size.size = value
+            var spacing = TextStyle.standard
+            spacing.lineSpacing = value
+
+            XCTAssertEqual(sendText(start, .setStyle(one, size)), start, "size \(value)")
+            XCTAssertEqual(sendText(start, .setStyle(one, spacing)), start, "line spacing \(value)")
+        }
+    }
+
+    func testAPlaceThatIsNotAFiniteNumberChangesNothing() {
+        let start = playing(textWide)
+
+        for value in notFinite {
+            XCTAssertEqual(sendText(start, .move(one, x: value, y: 200)), start, "x \(value)")
+            XCTAssertEqual(sendText(start, .move(one, x: 300, y: value)), start, "y \(value)")
+        }
+    }
+
+    func testAnAngleThatIsNotAFiniteNumberChangesNothing() {
+        let start = playing(textWide)
+
+        for value in notFinite {
+            XCTAssertEqual(sendText(start, .turn(one, to: value)), start, "angle \(value)")
+        }
+    }
+
+    // Pausing
+
+    func testAnActionOnAKnownTextPausesAlsoWhenTheValueIsTheOldOne() {
+        let start = playing(textWide)
+        let string = Seed.textWide.project.texts.first?.string ?? ""
+        let actions: [TextAction] = [
+            .setString(one, string), .setStyle(one, .standard), .move(one, x: 960, y: 540), .turn(one, to: 0),
+            .trimStart(one, by: .zero), .trimEnd(one, by: .zero),
+        ]
+
+        for action in actions {
+            let next = sendText(start, action)
+
+            XCTAssertEqual(next.project, start.project, "\(action)")
+            XCTAssertFalse(next.isPlaying, "\(action)")
+        }
+    }
+
     // Delete
+
+    func testTheDeleteOfASelectedTextPauses() {
+        let start = playing(sendText(textWide, .select(one)))
+
+        XCTAssertFalse(send(start, .deleteSelected).isPlaying)
+    }
 
     func testDeleteRemovesTheSelectedTextAndTouchesNoClip() {
         let start = sendText(textWide, .select(one))
