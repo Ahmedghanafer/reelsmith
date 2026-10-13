@@ -109,6 +109,7 @@ func deleteSelected(_ state: EditorState) -> EditorState {
     }
     var next = state
     next.project.clips.remove(at: index)
+    if !next.project.texts.isEmpty { next.project.texts.removeLast() }
     next.selection = nil
     next.playhead = min(next.playhead, next.project.duration)
     next.isPlaying = false
