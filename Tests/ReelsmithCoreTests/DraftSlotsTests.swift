@@ -1,10 +1,11 @@
 import Foundation
 import XCTest
 
-/// Holds the five groups of the drafts and of undo at the end of each word file, the last one empty.
+/// Holds the five groups of the drafts and of undo after the last group of export in each word file.
+/// What stands inside a group is not read.
 final class DraftSlotsTests: XCTestCase {
-    func testEachWordFileEndsWithTheFiveSlotsInTheirOrderTheLastOneEmpty() throws {
-        var wanted: [String] = []
+    func testTheFiveSlotsOfDraftsFollowTheEndOfExportPathInTheirOrder() throws {
+        var wanted = ["/* end slot: export-path */"]
         for topic in ["undo", "draft-saving", "project-list", "draft-delete", "draft-path"] {
             wanted += ["/* slot: " + topic + " */", "/* end slot: " + topic + " */"]
         }
@@ -14,14 +15,10 @@ final class DraftSlotsTests: XCTestCase {
         for language in ["en", "ar", "sv"] {
             let file = repository.appendingPathComponent("App/Resources/" + language + ".lproj/Localizable.strings")
             let lines = try String(contentsOf: file, encoding: .utf8).split(whereSeparator: \.isNewline)
-            let filled = lines.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            let marks = lines.map { $0.trimmingCharacters(in: .whitespaces) }.filter { $0.contains("slot: ") }
+            let start = try XCTUnwrap(marks.firstIndex(of: wanted[0]), language)
 
-            // The last ten marks are the five groups in their order. The groups undo, draft-saving, project-list and
-            // draft-delete hold their words, and the last two lines that are not blank are the marks alone, so the
-            // group draft-path is empty.
-            let marks = filled.filter { $0.hasPrefix("/* slot: ") || $0.hasPrefix("/* end slot: ") }
-            XCTAssertEqual(Array(marks.suffix(wanted.count)), wanted, language)
-            XCTAssertEqual(Array(filled.suffix(2)), Array(wanted.suffix(2)), language)
+            XCTAssertEqual(Array(marks[start...].prefix(wanted.count)), wanted, language)
         }
     }
 }
