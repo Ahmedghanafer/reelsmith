@@ -16,11 +16,11 @@ final class TimelineTests: XCTestCase {
         XCTAssertFalse(element(app, "editor.clip.4").exists)
         screenshot("m1-8-timeline-01-strip")
 
-        // The strip cannot be pinched: the blocks keep their widths.
+        // A pinch outward zooms the strip in: each block is wider.
         element(app, "editor.timelineRegion").pinch(withScale: 2, velocity: 1)
-        XCTAssertEqual(element(app, "editor.clip.1").frame.width, 180, accuracy: 1)
-        XCTAssertEqual(element(app, "editor.clip.2").frame.width, 240, accuracy: 1)
-        XCTAssertEqual(element(app, "editor.clip.3").frame.width, 120, accuracy: 1)
+        waitUntil("editor.clip.1 wider than 180 after a pinch") { element(app, "editor.clip.1").frame.width > 181 }
+        XCTAssertGreaterThan(element(app, "editor.clip.2").frame.width, 241)
+        XCTAssertGreaterThan(element(app, "editor.clip.3").frame.width, 121)
     }
 
     func testThePlayheadIsOneLineInTheMiddle() {
