@@ -105,6 +105,15 @@ A photo is a clip whose media has the kind `photo`, and every clip has a volume 
 - `Sources/ReelsmithCore/Editor/Edits.swift`: the bodies of `addClips`, `split`, `trimStart`, `trimEnd` and `deleteSelected`, which `reduce` calls, and of `canSplit` and `canDelete`. An edit that cannot be done returns the state unchanged. A trim past a limit stops at the limit. An edit that is done pauses, a media id that a clip still uses keeps its stored facts when it is added again, and a delete keeps the facts of the deleted clip's media. Every edit keeps a valid state valid: each clip inside its source, each length whole frames and at least `TimelineGeometry.minimumClip`, the playhead a whole frame inside the project, the selection a clip of the project or none. An edit never changes the canvas.
 - `Sources/ReelsmithCore/Editor/TimelineGeometry.swift`: `TimelineGeometry`, the fixed scale of the timeline strip (60 points a second), the shortest clip (60 ticks), and the pure functions between a time and a point and from a drag in points to a trim amount.
 
+### Moving and cutting a clip
+
+`Sources/ReelsmithCore/Editor/ClipEdits.swift` holds three clip edits, which `reduce` calls, and the values the clip panel and the strip read. Each edit that changes the project is one step of undo, as every action is.
+
+- `moveClip(id, to: position)` takes the clip to a position from 1, held between 1 and the count of clips. It keeps the playhead and the texts at their times, carries the clip with its range and its volume, selects the clip and pauses. An unknown id and the position the clip has return the state unchanged, the playing flag included.
+- `cutBefore` and `cutAfter` act on the selected clip at the playhead. `canCutBefore` and `canCutAfter` are true when the playhead is inside the selected clip with at least `minimumClip` on both sides, as `canSplit` asks. `cutBefore` takes away the part before the playhead and puts the playhead at the start of that clip. `cutAfter` takes away the part after it and leaves the playhead where it is. Both keep the selection and pause. While a cut cannot be done it returns the state unchanged. A photo is cut as any clip.
+- `showsClipPanel` is true while the selection names a clip of the project. `showsClipVolume` is true while it is, and the media of that clip has sound, so never for a photo.
+- `Project.dropPosition(of:at:)` is the position from 1 a clip takes when it is let go at a time: 1 plus the count of the other clips, in their order with the clip taken out, whose middle is before the time. Nil for an unknown id.
+
 ### Undo and redo
 
 - `Sources/ReelsmithCore/Editor/History.swift`: `Editing` holds the `EditorState`, an `UndoHistory` and the flag `unsaved`. `after(_:)` sends an action through `reduce`, which stays as it is, and `undone()` and `redone()` are functions of `Editing`, never actions. The history holds whole projects, never inverse actions: `past` and `future`, each project without its blank texts (`withoutBlankTexts`), at most `UndoHistory.depth` (50) steps, the oldest dropped.
