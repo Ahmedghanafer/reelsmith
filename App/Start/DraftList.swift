@@ -9,7 +9,7 @@ import UIKit
 /// disabled. So every row has one height whatever its cover. A tap on a readable row calls `open`.
 /// A swipe from the trailing edge, on an unreadable row too, shows the destructive button `drafts.delete`, never
 /// a delete by a full swipe alone. Its tap asks in a system alert, whose `drafts.deleteConfirm` calls `delete`
-/// and whose `drafts.deleteCancel` keeps the draft. The one state is the draft asked about.
+/// and whose `drafts.deleteCancel` keeps the draft. Its state is the draft asked about and whether the alert shows.
 ///
 /// https://developer.apple.com/documentation/swiftui/list
 /// https://developer.apple.com/documentation/swiftui/button

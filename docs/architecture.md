@@ -249,7 +249,7 @@ The way back from the editor to her projects, and the list of her drafts on the 
 A draft is deleted from the project list with a swipe, a tap and an answer to a question.
 
 - Each row of `DraftList`, an unreadable one too, has `.swipeActions(edge: .trailing, allowsFullSwipe: false)` with one destructive button, the identifier `drafts.delete` and the words of `drafts.delete`. So a full swipe alone deletes nothing, and in Arabic, where the row mirrors, the swipe goes to the right.
-- A tap on it keeps the id of that draft, the one state of `DraftList`, and shows a system alert with the title `drafts.deleteQuestion`, a destructive button `drafts.deleteConfirm` with the words of `drafts.delete`, which calls `delete` with that id, and a cancel button `drafts.deleteCancel`, which keeps the draft.
+- A tap on it keeps the id of that draft in the state of `DraftList` and shows a system alert with the title `drafts.deleteQuestion`, a destructive button `drafts.deleteConfirm` with the words of `drafts.delete`, which calls `delete` with that id, and a cancel button `drafts.deleteCancel`, which keeps the draft.
 - `StartScreen` deletes with `shelf.delete`, which removes the folder of the draft whole, and sets its one `summaries` from `shelf.list()` again, also when the delete throws, so the list and the line `start.draftsInfo` show one value. When the last draft goes the title and the list go with it.
 - Its three word keys stand in the slot `draft-delete` of the three word files: `drafts.delete`, `drafts.deleteQuestion` and `drafts.deleteCancel`.
 
