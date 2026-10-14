@@ -5,7 +5,7 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 ## What runs where
 
 - On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 340 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 435 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 451 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 109 UI tests in sixteen classes.
 
 What comes back from the simulator run:
@@ -224,6 +224,14 @@ No reference image is used: every test reads numbers.
 ### Reading a media file
 
 - `Tests/ReelsmithEngineTests/MediaProbeTests.swift` runs with `swift test` on macOS. It writes each of the five test clips with `writeTestClip` and holds that `readMediaInfo` returns exactly the clip's `info`, with the numbers of `turned.mov` (1920 by 1080, one quarter turn, 1200 ticks, no sound) and of `blue.mov` under another id written out. It holds the mapping of the four stored transforms of 0, 1, 2 and 3 quarter turns on the six numbers alone, because no test clip is stored with two or three turns, and the rounding of a length down to a tick on numbers (2999 over 3000 of a second gives 599 ticks), because every test clip is a whole number of ticks long. For those two internal functions the file imports the Engine with `@testable`. A text file named `note.mov` throws `cannotRead`, and a file name that is not in the folder throws `sourceMissing` with the id.
+
+### Tests of tones and music files
+
+Both files run with `swift test` on macOS, write every file into a folder of their own under the temporary folder, and read every level with `toneLevel(of:hertz:from:to:)`.
+
+- `Tests/ReelsmithEngineTests/TestToneMakerTests.swift` holds both tones to their table: a QuickTime file named after the tone with one sound track and no other, uncompressed 16 bit, 44100 samples a second, 1 channel, 6000 and 1200 ticks exactly. The long tone reads 880 Hz at 0.25 and 1320 Hz below 0.02 between 600 and 1200 ticks, and the other way round between 3600 and 4200. The short tone reads 660 Hz at 0.25 in each of its two seconds. The tone maker makes a missing folder, writes under another name first and leaves only the tone in it, and a second call keeps the file with its size and its date of change.
+- `Tests/ReelsmithEngineTests/MusicProbeTests.swift` holds `readMusicFile` on the long tone (the id, the file name and the title given, 6000 ticks), `sourceMissing` with the id for a file name that is not there, and `cannotRead` for `green.mov`, a video with no sound. It holds `importMusic`: a copy under a new UUID string with the extension of the source in a media folder it makes, the title from the name of the source or an Arabic title kept scalar for scalar, the source left where it was, and `blue.mov` accepted with 1800 ticks. A text file and a source that does not exist throw `cannotRead` and leave the media folder empty. `musicUse` is internal, so the file imports the Engine with `@testable`, and its sixteen rows are written out as a table: a protected file cannot be made for a test.
+- The try at two formats, in the same file, asserts nothing and prints what the hosted Mac does: an AAC tone in an MPEG-4 audio file (`.m4a`, stereo at 48000 samples a second, 880 Hz with a peak of 0.25, 1800 ticks) and an uncompressed tone in a WAVE file (mono at 44100, the same pitch, peak and length). Each is written, its tracks and its level at 880 Hz are printed, and it is read by `readMusicFile` and imported by `importMusic`, each answer printed. A format the Mac will not write is printed and the test is skipped. Search the log for "try ".
 
 ### The composition and the export
 
