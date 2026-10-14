@@ -4,8 +4,8 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 371 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 519 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 380 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 528 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 148 UI tests in twenty-four classes.
 
 What comes back from the simulator run:
@@ -154,6 +154,11 @@ Changing a weight, a range or one of the lists in the file changes every run, so
 - Two small tests hold single edits: that a trim of a clip before the playhead leaves the playhead at its time, and that a `trimEnd` that rounds to nothing still pauses.
 
 Changing a weight, a range or the media list in the file changes every run, so the count of each kind must be looked at again.
+
+### Tests of undo and redo
+
+- `Tests/ReelsmithCoreTests/UndoHistoryTests.swift` runs on Linux. Each test starts from `Editing(state:)` of a seed's project with the seed's selected text and sound panel. It holds a delete undone and redone on `two-clips-wide`, eight typed strings as one step that write only after the run ends, a drag, a pinch and a twist of text 1 of `text-wide` as one step each with a `pause` between, two toggles and a font as steps of their own, a text added and left blank as no step with the next id kept, what an undo and a redo keep of the selection, the playhead, playing and the sound panel, the limit of 50 steps, and `unsaved` against `written()`.
+- `Tests/ReelsmithCoreTests/UndoGuardTests.swift` runs on Linux. It walks every sequence of four actions from a menu of twelve written in the file, 20736 sequences from `text-wide`, and draws nothing at random. After each, undo until `canUndo` is false must give the start project without blank texts (compared with `nextTextID` left out, as one step compares), and redo until `canRedo` is false the project before the first undo. It prints the count of sequences and the seconds, and names the first five sequences that fail.
 
 ### The canvas
 
