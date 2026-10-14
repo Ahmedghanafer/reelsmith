@@ -3,8 +3,8 @@ import AVFoundation
 import Foundation
 import ReelsmithCore
 
-/// Writes an MPEG-4 file, whatever the name of the output place, with H.264 and AAC
-/// at the size of the plan's canvas (1920 by 1080 or 1080 by 1920) and 30 frames.
+/// Writes an MPEG-4 file, whatever the name of the output place, at the size and the rate of the plan, with AAC
+/// and with H.264, or with HEVC when the short side of the plan's size is 2160.
 /// Replaces a file at the output place. The sound ends where the last clip with sound ends or where the music ends,
 /// whichever is later, no silence is added after it. Progress goes from 0 to 1 and never goes back.
 ///
@@ -15,6 +15,7 @@ import ReelsmithCore
 ///
 /// https://developer.apple.com/documentation/avfoundation/avassetexportsession
 /// https://developer.apple.com/documentation/avfoundation/avassetexportpresethighestquality
+/// https://developer.apple.com/documentation/avfoundation/avassetexportpresethevchighestquality
 /// https://developer.apple.com/documentation/avfoundation/avassetexportsession/exportasynchronously(completionhandler:)
 /// https://developer.apple.com/documentation/avfoundation/avassetexportsession/progress
 /// https://developer.apple.com/documentation/avfoundation/avassetexportsession/audiomix
@@ -25,7 +26,9 @@ public func export(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: U
     guard FileManager.default.isWritableFile(atPath: folder.path) else { throw EngineError.cannotWrite }
 
     let built = try await buildComposition(plan: plan, media: media, mediaFolder: mediaFolder)
-    guard let session = AVAssetExportSession(asset: built.composition, presetName: AVAssetExportPresetHighestQuality)
+    let preset = plan.settings.size.shortSide == 2160
+        ? AVAssetExportPresetHEVCHighestQuality : AVAssetExportPresetHighestQuality
+    guard let session = AVAssetExportSession(asset: built.composition, presetName: preset)
     else { throw EngineError.cannotWrite }
     let temporary = folder.appendingPathComponent(UUID().uuidString + ".tmp.mp4")
     session.videoComposition = built.videoComposition

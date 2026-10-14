@@ -58,7 +58,7 @@ func pieceTexts(
 
         let width = Double(image.extent.width)
         let height = Double(image.extent.height)
-        let canvasHeight = Double(plan.canvas.height)
+        let canvasHeight = Double(plan.height)
         let placing: CGAffineTransform
         if layer.rotation == 0 {
             let left = (layer.x - width / 2).rounded()
