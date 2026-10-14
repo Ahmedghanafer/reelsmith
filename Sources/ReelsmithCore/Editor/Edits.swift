@@ -109,7 +109,6 @@ func deleteSelected(_ state: EditorState) -> EditorState {
     }
     var next = state
     next.project.clips.remove(at: index)
-    next.project.music = nil
     next.selection = nil
     next.playhead = min(next.playhead, next.project.duration)
     next.isPlaying = false
