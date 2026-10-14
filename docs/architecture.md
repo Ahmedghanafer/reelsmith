@@ -464,7 +464,7 @@ She chooses the size and the rate of the export beside the export button, before
 
 The choice of size and rate belongs to the draft it was made on and comes back with it.
 
-- `App/Editor/EditorStore.swift`: `exportSettings` is the store's, set from the draft's `exportSettings` when a store opens on a draft, and `ExportSettings.startChoice` for a new project and for every seed. `choose(_:)` sets it and then calls `write()`, never `writeNow()`: a choice is no part of the undo history and leaves `unsaved` false, so `writeNow()` would write nothing. With no draft, as on a seeded start without `-drafts`, nothing is written. A write that throws leaves the label as chosen, is logged, and is tried again at the next write.
+- `App/Editor/EditorStore.swift`: `exportSettings` is the store's, given by its initialiser, so a store opened on a stored draft can start from the draft's `exportSettings`. A new project and every seed start at `ExportSettings.startChoice`. `choose(_:)` sets it and then calls `write()`, never `writeNow()`: a choice is no part of the undo history and leaves `unsaved` false, so `writeNow()` would write nothing. With no draft, as on a seeded start without `-drafts`, nothing is written. A write that throws leaves the label as chosen, is logged, and is tried again at the next write.
 - `App/Editor/Export/ExportButton.swift`: the label reads `store.exportSettings`, the sheet is given it, its `choose` calls `store.choose`, and the export runs at `store.exportSettings` as it is at the tap. An undo or a redo leaves the choice as it is.
 
 ## The word files
