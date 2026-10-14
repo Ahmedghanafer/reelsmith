@@ -182,8 +182,9 @@ final class DraftShelfTests: XCTestCase {
 
         let opened = try shelf.open(open.id)
 
-        XCTAssertEqual(opened, made)
         XCTAssertEqual(opened.history, edited.history)
+        XCTAssertEqual(opened.project, made.project.keepingFiles(["blue.mov", "red.mov"]))
+        XCTAssertEqual(opened.project.clips, made.project.clips)
         XCTAssertEqual(try names(in: open.mediaFolder), ["blue.mov", "red.mov"])
     }
 
@@ -199,7 +200,8 @@ final class DraftShelfTests: XCTestCase {
         let opened = try shelf.open(open.id)
 
         XCTAssertNil(opened.history)
-        XCTAssertEqual(opened.project, edited.state.project)
+        XCTAssertEqual(opened.project, edited.state.project.keepingFiles(["blue.mov"]))
+        XCTAssertEqual(opened.project.clips, edited.state.project.clips)
         XCTAssertEqual(try names(in: open.mediaFolder), ["blue.mov"])
     }
 

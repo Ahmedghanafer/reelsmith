@@ -90,7 +90,7 @@ public struct DraftShelf: Equatable, Sendable {
 
     /// Decodes draft.json and keeps `project.keepingFiles` of the names in `<id>/Media`. Removes from `<id>/Media`
     /// every file that neither that project nor a project of the stored undo history names. Gives the draft with
-    /// `history` nil when the project lost anything or when a project of the history names a file that is not
+    /// `history` nil when the project lost a clip or its music, or when a project of the history names a file that is not
     /// there. Logs each clip, music and file it takes out, and a history it drops.
     public func open(_ id: DraftID) throws -> Draft {
         guard let data = try? Data(contentsOf: draftFile(of: id)) else {
@@ -125,7 +125,8 @@ public struct DraftShelf: Equatable, Sendable {
             }
         }
 
-        if draft.history != nil, kept != draft.project || !named.isSubset(of: present) {
+        let lost = kept.clips != draft.project.clips || kept.music != draft.project.music
+        if draft.history != nil, lost || !named.isSubset(of: present) {
             NSLog("%@", "drafts: the undo history of \(id.raw) dropped, it cannot be kept whole")
             draft.history = nil
         }
