@@ -95,6 +95,19 @@ final class PreviewTextTests: XCTestCase {
         screenshot("preview-text-03-over-red")
     }
 
+    /// The playhead value is past the length, so the editor starts at the very end, 7 of 7 seconds. The
+    /// picture there is the last frame, red between black bars, and the text of the seed is in it.
+    func testAtTheVeryEndOfTheProjectTheTextIsInThePicture() {
+        let app = startText(seed: "text-wide", playhead: 7000)
+        let picture = element(app, "editor.picture")
+        XCTAssertEqual(element(app, "editor.time").label, "00:07 / 00:07")
+        XCTAssertGreaterThan(waitForTheShare(of: red, "red", in: picture, moreThan: 0.2), 0.2, "red")
+        XCTAssertGreaterThan(
+            waitForTheShare(of: white, "white at the end", in: picture, moreThan: leastWhite), leastWhite,
+            "white at the end")
+        screenshot("preview-text-05-at-the-end")
+    }
+
     func testInArabicThePictureWithTextDoesNotMirror() {
         let app = startText(seed: "text-wide", language: "ar", playhead: 600)
         let picture = element(app, "editor.picture")
