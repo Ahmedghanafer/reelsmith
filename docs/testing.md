@@ -4,8 +4,8 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 380 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 528 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 396 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 544 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 148 UI tests in twenty-four classes.
 
 What comes back from the simulator run:
@@ -169,7 +169,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 - `Tests/ReelsmithCoreTests/ExportSettingsTests.swift` runs on Linux. It holds the cases of `ExportSize` and `ExportRate` in order with their short sides and rates, their word keys and `allWords`, that `standard` and `startChoice` are 1080p at 30, the six sizes on the two canvases at both rates, and the rates of each size with both `choosing` functions.
 - `Tests/ReelsmithCoreTests/ExportPlanTests.swift` runs on Linux and compares every number with no tolerance. It holds that `renderPlan(for:)` of every seed is the plan at `standard`, with the width and height of the canvas and 30 frames a second, and that a plan built with no settings has `standard`. It places `two-clips-wide` at 720p and at 4K, scales the text of `text-box-wide` to 4K and to 720p, and holds the times, the media, the turns, the sound and the look of `two-clips-wide`, `text-box-wide` and `music-wide` at every size and rate as at `standard`. It holds a portrait seed at 4K, the empty project at 720p, and a text at x 3.857142857142857 copied exactly at `standard`.
-- `Tests/ReelsmithCoreTests/ExportSlotsTests.swift` runs on Linux: each of the three word files ends with the groups `export-settings` and `export-path`, in that order, after `sound-path`. It reads the comment lines alone.
+- `Tests/ReelsmithCoreTests/ExportSlotsTests.swift` runs on Linux: in each of the three word files the groups `export-settings` and `export-path` follow the end of `sound-path`, in that order. It reads the comment lines alone.
 
 ### The launch values
 
