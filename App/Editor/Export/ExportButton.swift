@@ -31,15 +31,19 @@ struct ExportButton: View {
         }
     }
 
-    /// The words of the chosen size and rate, side by side. A tap shows the sheet of the choice.
+    /// The words of the chosen size and rate, side by side from the leading end, so Arabic reads the size first.
+    /// A tap shows the sheet of the choice.
     private var choice: some View {
         Button {
             choosing = true
         } label: {
-            Text(text(settings.size.words) + " " + text(settings.rate.words))
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(Rectangle())
+            HStack(spacing: 6) {
+                Text(text(settings.size.words))
+                Text(text(settings.rate.words))
+            }
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .accessibilityIdentifier("editor.exportSettings")
         .sheet(isPresented: $choosing) {
