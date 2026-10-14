@@ -173,7 +173,14 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 ### The launch values
 
-- `Tests/ReelsmithCoreTests/LaunchOptionsTests.swift` holds the three launch values: each one read, all three among other arguments, an empty list, an unknown seed name, a missing value, and that no other argument changes anything.
+- `Tests/ReelsmithCoreTests/LaunchOptionsTests.swift` holds the launch values `-seed`, `-playhead` and `-export-fails`: each one read, all three among other arguments, an empty list, an unknown seed name, a missing value, and that no other argument changes anything. `-drafts` is held under "Tests of drafts".
+
+### Tests of drafts
+
+- `Tests/ReelsmithCoreTests/DraftTests.swift` runs on Linux and compares every value with no tolerance. A draft of each of the seven seeds at `startChoice` comes back equal through `encodeDraft` and `decodeDraft`, at version 1, with the Arabic line and the line breaks of `text-wide` scalar by scalar. A text at x 3.857142857142857 with size 64.1 comes back exact, and so do 4K at 60 and the date. "not json", `{"a":1}` and the draft of `two-clips-wide` at version 2 throw `unreadable`. It holds `fileNames` of three seeds and of `music-wide` after red is deleted through `reduce`, `keepingFiles` with three sets of names, the summary of `text-wide` and of an unreadable draft, `dateText` in UTC, and `draftsInfo` of none, of the example of its comment and of an unreadable draft.
+- `Tests/ReelsmithCoreTests/DraftVersionOneTests.swift` holds a JSON text of version 1 written in the test, the draft of `music-wide` at 4K and 60 on 2026-10-14 at 21:05:09 in UTC as `encodeDraft` wrote it, and that it decodes to that draft. The text is never changed: a change to a stored type keeps this test green.
+- `Tests/ReelsmithCoreTests/LaunchDraftsTests.swift`: `-drafts` with `fresh`, `kept`, another value and no value, `showsInfo` with a seed, with drafts, with both and with neither, and both places of `draftsFolder`.
+- `Tests/ReelsmithCoreTests/DraftSlotsTests.swift`: in each word file the last eight lines that are not blank are the marks of the groups `undo`, `project-list`, `draft-delete` and `draft-path`, in that order, so each group is empty. `ExportSlotsTests.swift` holds that the two groups of export follow the end of `sound-path`.
 
 ### The start state and the export state
 

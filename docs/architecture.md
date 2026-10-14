@@ -122,7 +122,16 @@ The sound actions keep a valid state valid: the volume of the clips and of the m
 
 ### The launch values
 
-- `Sources/ReelsmithCore/Launch/LaunchOptions.swift`: `LaunchOptions`, the three launch values `-seed <name>`, `-playhead <ticks>` and `-export-fails`. It always parses what it is given. An unknown seed name, a missing value or a playhead that is no number gives nil.
+- `Sources/ReelsmithCore/Launch/LaunchOptions.swift`: `LaunchOptions`, the four launch values `-seed <name>`, `-playhead <ticks>`, `-export-fails` and `-drafts <fresh or kept>`, the last described under "Drafts". It always parses what it is given. An unknown seed name, a missing value or a playhead that is no number gives nil.
+
+### Drafts
+
+- `Sources/ReelsmithCore/Drafts/Draft.swift`: `Draft`, the stored form of a project: `version`, the project, its `exportSettings` and `changed`, the time of the write. A new draft has `Draft.version`, 1. The model types, `RGB` and the three types of the export settings are `Codable` as Swift writes it, in the file of each type, so a draft has no coding of its own. `encodeDraft` writes it as JSON with sorted keys and the standard coding of a date. `decodeDraft` reads it back and throws `DraftError.unreadable` for bytes that are not the JSON of a draft and for a version above `Draft.version`. `DraftID` is the name of the folder of a draft, a UUID string.
+- The media facts of a project are a dictionary whose key is no string, so they are stored as one array of key and value in the order of the dictionary, which can differ from one process to the next. Drafts are compared as values, never as bytes.
+- `Project.fileNames` is the file name of every media a clip uses and of the music, each once, sorted. A media fact that no clip uses names no file. `keepingFiles(_:)` takes out every clip whose media has no facts or whose file name is not among the names given, every media fact that no kept clip uses, and the music when its file name is not there. It keeps the canvas, the texts, the ids, the volume and the mute.
+- `DraftSummary` is what the list shows of one draft: its id, `changed`, the length, the count of clips and of texts, the export choice and whether it has a cover. `DraftSummary.unreadable` has no date, a length of zero, no clip, no text and `standard`, and its `isReadable` is false. `dateText(_:in:)` writes a date in a zone as "2026-10-14 21:05": the Gregorian calendar, 24 hours, the digits 0 to 9 in every language. `draftsInfo(_:)` is the line a UI test reads: the count, then one field for each summary in its order, one space between them. A readable one is `<clips>+<length in ticks>+<texts>+<short side>x<frames a second>+<c or .>`, c when it has a cover, an unreadable one is `x`, and none gives `0`.
+- `LaunchOptions.drafts` is `fresh` or `kept` for `-drafts fresh` or `-drafts kept`, and nil for none and for another value. `showsInfo` is true with a seed or with drafts. `draftsFolder(applicationSupport:caches:)` is `<caches>/TestDrafts` with drafts set and `<applicationSupport>/Drafts` without.
+- The three word files end with four empty groups after `export-path`: `undo`, `project-list`, `draft-delete` and `draft-path`.
 
 ## The Engine
 
