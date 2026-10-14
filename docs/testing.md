@@ -4,8 +4,8 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 290 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 385 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 340 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 435 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 109 UI tests in sixteen classes.
 
 What comes back from the simulator run:
@@ -121,6 +121,13 @@ Five files hold the sound model, with projects and states built by hand from the
 - `Tests/ReelsmithCoreTests/SoundSlotsTests.swift`: each of the three word files ends with the six groups of sound after `text-path`, in their order. It reads the comment lines alone, so it stays green when a group gets its keys.
 
 `SoundModelTests.swift` gives every Core test the helper `musicFile(ticks:)` at file level, a music file of that length, for a length no test tone has.
+
+### Tests of sound edits
+
+Two files hold the sound edits and the state of an import. The first sends every action through `reduce`, mostly from the seeds `music-wide` and `two-clips-wide`. The second calls `reduce` nowhere.
+
+- `Tests/ReelsmithCoreTests/SoundEditsTests.swift`: what each of the nine sound actions does, the one of three, that no clip action and no text action changes sound, and the delete with the panel open and nothing selected. Every test sends its actions through one of the two helpers of the file, `send` and `sendSound`, which check after each action that the state is valid. Each limit has a test with a value inside it, at it and past it: 1.7 and minus 0.3 for the volume of the clips, 2 and minus 1 for the volume of the music, 600, 619, minus 50 and 9000 ticks for the start, with the largest start of `long-tone`, `short-tone` and a file of 500 ticks, and 300, 310, minus 5 and 9000 ticks for each fade. The one of three is held on each of its paths: a `select` of a clip, a `select` of a text, an `add` of a text, `clearSelection`, and a project with no clip, which only a state made by hand reaches with the panel open. An action that changes nothing is compared with the whole state before it, playing, so the playing flag is held too: a value the state already has, a volume that is not a finite number, a file of no length and an action on the music with no music. The state `changed` of the file has every value of sound away from the one of `music-wide`.
+- `Tests/ReelsmithCoreTests/MusicImportTests.swift`: the five moves of `MusicImport`, every other pair of a case and an event, which leaves the case unchanged, a new pick after a refusal, the key of each case and `allWords`. No test reads a word file: the keys are held against the English file by a later test of the music part.
 
 ### The guard of the edits
 
