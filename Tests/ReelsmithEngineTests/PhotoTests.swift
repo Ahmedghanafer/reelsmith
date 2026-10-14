@@ -157,7 +157,8 @@ final class PhotoTests: XCTestCase {
         project.nextClipID = 2
         let item = try await makePlayerItem(
             plan: renderPlan(for: project), media: project.media, mediaFolder: ExportTests.folder)
-        XCTAssertEqual(ticks(try await item.asset.load(.duration)), 1800)
+        let length = try await item.asset.load(.duration)
+        XCTAssertEqual(ticks(length), 1800)
         for time: Int64 in [0, 900, 1780] {
             let shown = try await frame(of: item.asset, composition: item.videoComposition, at: time)
             XCTAssertGreaterThan(try share(of: magenta, in: shown, photoPlace), 0.9, "at \(time) ticks")
