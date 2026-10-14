@@ -148,6 +148,10 @@ Music is a file she picked herself, copied into the media folder of the project.
 - `importMusic(from:title:to:)` in the same file copies a picked file to `<media folder>/<a new UUID string>.<its extension>`, or with no extension when the source has none, then reads it with `readMusicFile` under that UUID string as its id. It makes the media folder when missing. It holds the right to read the source only while it copies: it starts the security scoped access, tries the copy whatever that start answered (a file that needs no right answers false), and ends the access when the start said yes. The title is the one given, kept exactly, or the name of the source without its extension. The source stays where it was.
 - The refusals, as `EngineError`: `cannotRead` for a file that cannot be opened, one with no sound track, one whose first sound track has no length, and a copy that fails. `protectedFile`, the case this adds to the error, for a file that is protected, or one with sound that cannot go into a composition or an export. `sourceMissing` with the id from `readMusicFile` for a file name that is not in the folder. After any throw of `importMusic` no copy is left in the media folder. A video with sound is accepted: its sound is the music.
 
+### Facts of a video file
+
+`Sources/ReelsmithEngine/VideoFacts.swift`, whole inside `#if canImport(AVFoundation)`, reads what a written video holds. `readVideoFacts(of:)` loads the first picture track of the file and returns a `VideoFacts`: `width` and `height` of the picture as stored (`naturalSize`), and `framesPerSecond`, the nominal rate of the track rounded to a whole number. `infoText` writes the three numbers with a space between them, as "1280 720 60", in the digits 0 to 9. It throws `cannotRead` for a file that cannot be opened or has no picture track, as a tone file.
+
 ### Text in the frame
 
 The compositor draws the texts of the render plan into every frame, for the player item and the export alike. Nothing but the plan tells it what to draw.
