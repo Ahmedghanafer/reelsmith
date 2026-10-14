@@ -37,7 +37,7 @@ func reduceSound(_ state: EditorState, _ action: SoundAction) -> EditorState {
         guard let music = state.project.music else {
             return state
         }
-        next.project.music?.start = held(start, upTo: music.largestStart)
+        next.project.music?.start = held(start, upTo: music.file.duration)
     case .setFadeIn(let fade):
         guard state.project.music != nil else {
             return state
