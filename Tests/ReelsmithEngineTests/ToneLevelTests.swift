@@ -62,6 +62,48 @@ final class ToneLevelTests: XCTestCase {
         XCTAssertLessThan(early, later, "880 Hz in the first tenth of a second and in the fifth")
     }
 
+    /// The merged product: blue for 1800 ticks, then red for 2400, both sounding at 440 Hz with a peak of 0.5.
+    func testTheExportOfTwoClipsReads440HertzInsideBothClipsAndNo880() async throws {
+        let plan = try renderPlan(for: Seed.twoClips.project)
+        let file = try await ExportTests.exported(
+            plan, clips: Seed.twoClips.testClips, name: "two-clips-level.out").file
+        let windows: [(Time, Time, String)] = [
+            (Time(ticks: 600), Time(ticks: 1200), "inside blue"), (Time(ticks: 2400), Time(ticks: 3000), "inside red"),
+        ]
+        for (start, end, what) in windows {
+            let own = try await toneLevel(of: file, hertz: 440, from: start, to: end)
+            let other = try await toneLevel(of: file, hertz: 880, from: start, to: end)
+            assertLevel(own, near: 0.5, "440 Hz " + what)
+            XCTAssertLessThan(other, 0.02, "880 Hz " + what)
+        }
+    }
+
+    func testASineWithAPeakOfHalfReadsHalfAtItsOwnPitchAndNothingAtAnother() async throws {
+        let file = try await writeTone("tone-440", hertz: 440, peak: 0.5, rate: 44100)
+        let own = try await toneLevel(of: file, hertz: 440, from: Time(ticks: 600), to: Time(ticks: 1200))
+        let other = try await toneLevel(of: file, hertz: 880, from: Time(ticks: 600), to: Time(ticks: 1200))
+        assertLevel(own, near: 0.5, "440 Hz in a tone of 440 Hz")
+        XCTAssertLessThan(other, 0.02, "880 Hz in a tone of 440 Hz")
+    }
+
+    func testAToneAt48000SamplesASecondReadsTheSameAsOneAt44100() async throws {
+        let slow = try await writeTone("tone-440", hertz: 440, peak: 0.5, rate: 44100)
+        let fast = try await writeTone("tone-440-at-48000", hertz: 440, peak: 0.5, rate: 48000)
+        let rate = try await tracks(of: fast).first?.sampleRate
+        XCTAssertEqual(rate, 48000)
+        let atSlow = try await toneLevel(of: slow, hertz: 440, from: Time(ticks: 600), to: Time(ticks: 1200))
+        let atFast = try await toneLevel(of: fast, hertz: 440, from: Time(ticks: 600), to: Time(ticks: 1200))
+        assertLevel(atFast, near: atSlow, "440 Hz at 48000 samples a second against 44100")
+    }
+
+    func testATrackOfSilenceReadsBelowTheFloorAtEveryPitchTried() async throws {
+        let file = try await writeTone("silence", hertz: 440, peak: 0, rate: 44100)
+        for hertz in [440, 880, 1320] {
+            let level = try await toneLevel(of: file, hertz: hertz, from: Time(ticks: 600), to: Time(ticks: 1200))
+            XCTAssertLessThan(level, 0.02, "\(hertz) Hz in silence")
+        }
+    }
+
     /// The picture of `blue` for 1800 ticks as the product builds it, with two sound tracks of 1800 ticks: 440 Hz
     /// with a peak of 0.5 held at 1, and 880 Hz with a peak of 0.25 that rises from 0 to 0.5 over its first 600 ticks.
     ///
