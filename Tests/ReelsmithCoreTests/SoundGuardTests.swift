@@ -148,6 +148,9 @@ private func actionCase(of action: EditorAction) -> ActionCase? {
         }
     case .sound:
         return nil
+    case .moveClip: return nil
+    case .cutBefore: return nil
+    case .cutAfter: return nil
     }
 }
 
