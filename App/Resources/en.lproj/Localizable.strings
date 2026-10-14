@@ -61,6 +61,13 @@
 /* end slot: text-look */
 
 /* slot: text-more */
+"text.align.left" = "Left";
+"text.align.centre" = "Centre";
+"text.align.right" = "Right";
+"text.spacing" = "Line spacing";
+"text.outline" = "Outline";
+"text.shadow" = "Shadow";
+"text.box" = "Box";
 /* end slot: text-more */
 
 /* slot: text-row */

@@ -61,6 +61,13 @@
 /* end slot: text-look */
 
 /* slot: text-more */
+"text.align.left" = "يسار";
+"text.align.centre" = "وسط";
+"text.align.right" = "يمين";
+"text.spacing" = "تباعد الأسطر";
+"text.outline" = "حدود";
+"text.shadow" = "ظل";
+"text.box" = "خلفية";
 /* end slot: text-more */
 
 /* slot: text-row */

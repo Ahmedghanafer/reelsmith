@@ -41,4 +41,18 @@ extension AVPlayer {
         }
     }
 }
+
+/// The item in `Time`, for an item that is in no player yet.
+///
+/// https://developer.apple.com/documentation/avfoundation/avplayeritem/seek(to:tolerancebefore:toleranceafter:completionhandler:)
+extension AVPlayerItem {
+    /// Tolerance zero before and after, with no completion handler: nothing is reported, so nothing is
+    /// waited for. Sent before the item goes into a player it gives the item its starting time. The
+    /// platform's page says nothing of an item that is in no player or not ready.
+    @MainActor public func seekExactly(to time: Time) {
+        seek(
+            to: CMTime(value: time.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero,
+            completionHandler: nil)
+    }
+}
 #endif
