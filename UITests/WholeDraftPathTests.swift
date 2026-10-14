@@ -137,7 +137,8 @@ final class WholeDraftPathTests: XCTestCase {
         waitUntil("no text in editor.textInfo after the tap on editor.undo") {
             app.staticTexts["editor.textInfo"].label == "none" && !bar.exists
         }
-        XCTAssertEqual(app.staticTexts["editor.seedInfo"].label, "1 clips, 1 files")
+        XCTAssertTrue(element(app, "editor.clip.1").exists)
+        XCTAssertFalse(element(app, "editor.clip.2").exists)
         stepDone("the reopen and the undo")
 
         // The export at the kept choice.
