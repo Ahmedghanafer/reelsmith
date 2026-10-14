@@ -118,6 +118,31 @@ jobs:
           count=$(sqlite3 -readonly "$library" "select count(*) from ZASSET where ZKIND = 1 and ZTRASHEDSTATE = 0") || count="could not be read"
           echo "Videos in the library before the UI tests: $count" | tee -a "$RUNNER_TEMP/library.txt"
 
+      - name: Write a tone file into the Files app of the simulator
+        if: ${{ !cancelled() && steps.layer3.outcome == 'success' }}
+        run: |
+          # The storage of the Files app is the app group whose metadata names the local storage of the file
+          # provider. A tone of 3 seconds at 440 Hz, mono, 16 bit at 44100 samples a second, goes into its folder.
+          data="$HOME/Library/Developer/CoreSimulator/Devices/$SIMULATOR/data"
+          metadata=$(grep -l -r --include=.com.apple.mobile_container_manager.metadata.plist \
+            "group.com.apple.FileProvider.LocalStorage" "$data/Containers/Shared/AppGroup" | head -n 1 || true)
+          if [ -z "$metadata" ]; then
+            echo "No storage of the Files app was found under $data/Containers/Shared/AppGroup."
+            exit 0
+          fi
+          folder="$(dirname "$metadata")/File Provider Storage"
+          mkdir -p "$folder"
+          python3 - "$folder/tone.wav" <<'EOF'
+          import math, struct, sys, wave
+          rate = 44100
+          with wave.open(sys.argv[1], "wb") as out:
+              out.setnchannels(1)
+              out.setsampwidth(2)
+              out.setframerate(rate)
+              out.writeframes(b"".join(struct.pack("<h", int(16383 * math.sin(2 * math.pi * 440 * n / rate))) for n in range(3 * rate)))
+          EOF
+          ls -la "$folder"
+
       - name: "Layer 4: record the simulator and run the UI tests"
         id: layer4
         if: ${{ !cancelled() && steps.layer2.outcome == 'success' }}
