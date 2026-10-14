@@ -34,6 +34,9 @@ final class ToneLevelTests: XCTestCase {
     @MainActor
     func testAStereoToneAt48000OverAMonoToneAt44100ExportsAsOneTrackAtTheLevelsOfTheMix() async throws {
         let made = try await twoTonesUnderAMix(stereoMusic: true)
+        let music = try await tracks(of: Self.folder.appendingPathComponent("tone-880-stereo-at-48000.mov")).first
+        XCTAssertEqual(music?.sampleRate, 48000)
+        XCTAssertEqual(music?.channels, 2)
         let out = try await exported(made, name: "stereo-over-mono.mp4")
         XCTAssertEqual(out.soundTracks, 1, "sound tracks in the file")
 
