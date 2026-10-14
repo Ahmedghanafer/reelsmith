@@ -128,6 +128,22 @@ final class DraftShelfTests: XCTestCase {
         }
     }
 
+    func testAMediaFolderThatCannotBeListedDoesNotOpenAndLosesNoFile() throws {
+        let shelf = makeShelf()
+        let open = try shelf.create(draft(.musicWide))
+        try FileManager.default.removeItem(at: open.mediaFolder)
+        try Data([4, 5, 6]).write(to: open.mediaFolder)
+        let json = folder(of: open.id, in: shelf).appendingPathComponent("draft.json", isDirectory: false)
+        let before = try Data(contentsOf: json)
+
+        XCTAssertThrowsError(try shelf.open(open.id)) { error in
+            XCTAssertEqual(error as? DraftError, .unreadable)
+        }
+        XCTAssertEqual(try Data(contentsOf: json), before)
+        XCTAssertEqual(try Data(contentsOf: open.mediaFolder), Data([4, 5, 6]))
+        XCTAssertEqual(try names(in: folder(of: open.id, in: shelf)), ["Media", "draft.json"])
+    }
+
     func testTheSecondOfTwoWritesStaysAndNothingElseChanges() throws {
         let shelf = makeShelf()
         let open = try shelf.create(draft(.twoClipsWide))
