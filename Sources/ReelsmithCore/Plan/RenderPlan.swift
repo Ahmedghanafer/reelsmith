@@ -156,8 +156,13 @@ public func renderPlan(for project: Project) throws -> RenderPlan {
 
 /// An empty project gives an empty plan with the settings and no error.
 public func renderPlan(for project: Project, settings: ExportSettings) throws -> RenderPlan {
-    let canvasWidth = Double(project.canvas.width)
-    let canvasHeight = Double(project.canvas.height)
+    let pictureWidth = Double(settings.width(on: project.canvas))
+    let pictureHeight = Double(settings.height(on: project.canvas))
+    let shortSide = settings.size.shortSide
+    // Canvas pixels to pixels of the picture. At a short side of 1080 they are copied, so the standard plan is exact.
+    func scaled(_ value: Double) -> Double {
+        shortSide == 1080 ? value : value * Double(shortSide) / 1080
+    }
     var segments: [Segment] = []
     var start = Time.zero
     for clip in project.clips {
@@ -168,16 +173,16 @@ public func renderPlan(for project: Project, settings: ExportSettings) throws ->
         let turned = info.quarterTurns % 2 != 0
         let uprightWidth = Double(turned ? info.height : info.width)
         let uprightHeight = Double(turned ? info.width : info.height)
-        // The side that limits the fit takes the canvas value itself, so it is exact.
-        var width = canvasWidth
-        var height = canvasHeight
-        if uprightWidth * canvasHeight > uprightHeight * canvasWidth {
-            height = uprightHeight * canvasWidth / uprightWidth
+        // The side that limits the fit takes the plan's width or height itself, so it is exact.
+        var width = pictureWidth
+        var height = pictureHeight
+        if uprightWidth * pictureHeight > uprightHeight * pictureWidth {
+            height = uprightHeight * pictureWidth / uprightWidth
         } else {
-            width = uprightWidth * canvasHeight / uprightHeight
+            width = uprightWidth * pictureHeight / uprightHeight
         }
         let placement = Placement(
-            quarterTurns: info.quarterTurns, x: (canvasWidth - width) / 2, y: (canvasHeight - height) / 2,
+            quarterTurns: info.quarterTurns, x: (pictureWidth - width) / 2, y: (pictureHeight - height) / 2,
             width: width, height: height)
         segments.append(Segment(
             clip: clip.id, media: clip.media, sourceStart: clip.sourceStart, timelineStart: start,
@@ -189,9 +194,12 @@ public func renderPlan(for project: Project, settings: ExportSettings) throws ->
         guard !text.isBlank, let range = project.range(of: text.id) else {
             continue
         }
+        var style = text.style
+        style.size = scaled(style.size)
         texts.append(TextLayer(
-            text: text.id, string: text.string, timelineStart: range.start, duration: range.duration, x: text.x,
-            y: text.y, rotation: text.rotation, style: text.style, lineWidth: canvasWidth * TextGeometry.wrapShare))
+            text: text.id, string: text.string, timelineStart: range.start, duration: range.duration,
+            x: scaled(text.x), y: scaled(text.y), rotation: text.rotation, style: style,
+            lineWidth: pictureWidth * TextGeometry.wrapShare))
     }
     var music: MusicLayer?
     if let stored = project.music, let heard = project.heardMusic {
