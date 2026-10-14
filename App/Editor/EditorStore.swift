@@ -77,5 +77,11 @@ final class EditorStore {
     // end slot: leave
 
     // slot: export-choice
+    /// Sets the export choice and writes the draft with it. The choice is no part of the history, so nothing
+    /// is left unsaved and `writeNow` would write nothing.
+    func choose(_ settings: ExportSettings) {
+        exportSettings = settings
+        write()
+    }
     // end slot: export-choice
 }
