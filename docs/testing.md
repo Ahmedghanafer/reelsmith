@@ -4,8 +4,8 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 411 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 559 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift` and `CoverTests.swift`, which sit inside `#if canImport(CoreText)`. That is 411 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 567 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 154 UI tests in twenty-five classes.
 
 What comes back from the simulator run:
@@ -321,6 +321,14 @@ Both files run with `swift test` on macOS, write every file into a folder of the
 - One second of `blue` at 4K and 60: `3840 2160 60`, 60 frames, coding `hvc1`, blue at (1920, 1080), (100, 100) and (3740, 2060), and the seconds fail only above 30, the larger of 30 and three times what the trial printed. On the portrait canvas: `2160 3840 60` and 60 frames.
 - The text of `text-box-wide` for the whole of one second of `blue` at 4K and 30: `3840 2160 30`, the box corner found from the layer of the 4K plan reads 0, 0, 102 at 300 ticks, 20 pixels left of the box reads blue, and the text picture of the 4K layer is within 4 pixels of twice the width of the picture at `standard`.
 - The player item of `two-clips-wide` has a video composition of 1920 by 1080 with a frame duration of one thirtieth, and a blue middle at 1.0 second.
+
+### Tests of the cover
+
+- `Tests/ReelsmithEngineTests/CoverTests.swift` runs on the hosted Mac with the other Engine tests, 8 tests, in the folder of `ExportTests`, and sits inside `#if canImport(CoreText)`. Every plan is `renderPlan(for:)` of a seed's project, its clips written by `writeTestClip`. A cover is read back with Core Image and a place is counted from its top left. A colour matches within 24 of 255 per channel. Nobody judges how a cover looks.
+- The first two covers of the process are both of `two-clips-wide` into one file, made once for the tests that read them, and every test of the class waits for them before its own cover. The cover of `two-clips-wide` is 360 wide and 202 or 203 high with a blue middle. The second call replaces the file, which reads the same size and middle after it.
+- `two-clips` gives 202 or 203 by 360, a blue middle and black in the middle of its width 10 rows from the top. `text-box-wide` with its text for the whole video gives a middle that differs from blue by more than 24: the box or a letter.
+- `empty` throws `nothingToExport`, a media folder without the clips throws `sourceMissing` of `blue`, and a file in a folder that is not there throws `cannotWrite`. In each case no file is at the place asked.
+- E16: one test prints the seconds of the first and of the second cover, in a line that starts with `cover: two-clips-wide`, and fails only above 30 seconds.
 
 ### The player time
 
