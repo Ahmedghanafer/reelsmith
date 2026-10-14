@@ -19,12 +19,15 @@ public struct Draft: Equatable, Codable, Sendable {
     public var exportSettings: ExportSettings
     /// The time of the write.
     public var changed: Date
+    /// The undo history kept with the draft. Nil reads as an empty history, and a file without it reads as nil.
+    public var history: UndoHistory?
 
-    public init(project: Project, exportSettings: ExportSettings, changed: Date) {
+    public init(project: Project, exportSettings: ExportSettings, changed: Date, history: UndoHistory? = nil) {
         version = Draft.version
         self.project = project
         self.exportSettings = exportSettings
         self.changed = changed
+        self.history = history
     }
 }
 

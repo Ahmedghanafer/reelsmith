@@ -10,7 +10,7 @@ extension Project {
 }
 
 /// A row of actions on one text of one kind, which together are one step.
-public enum EditRun: Equatable, Sendable {
+public enum EditRun: Equatable, Codable, Sendable {
     case typing(TextID)
     case shaping(TextID)
 
@@ -40,7 +40,7 @@ public enum EditRun: Equatable, Sendable {
     }
 }
 
-public struct UndoHistory: Equatable, Sendable {
+public struct UndoHistory: Equatable, Codable, Sendable {
     public static let depth: Int = 50
     /// Without blank texts, the oldest first.
     public private(set) var past: [Project]
