@@ -10,9 +10,10 @@ import XCTest
 @MainActor
 extension XCTestCase {
     /// Starts the app. `seed` is the name of a seed such as "two-clips", or nil for a start with no seed.
-    /// `language` is "en", "ar" or "sv". `playhead` is in ticks, 600 a second.
+    /// `language` is "en", "ar" or "sv". `playhead` is in ticks, 600 a second. `drafts` is "fresh" or "kept".
     func startApp(
-        seed: String?, language: String = "en", playhead: Int? = nil, exportFails: Bool = false
+        seed: String?, language: String = "en", playhead: Int? = nil, exportFails: Bool = false,
+        drafts: String? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
         var arguments = ["-AppleLanguages", "(" + language + ")", "-AppleLocale", language]
@@ -24,6 +25,9 @@ extension XCTestCase {
         }
         if exportFails {
             arguments.append("-export-fails")
+        }
+        if let drafts {
+            arguments += ["-drafts", drafts]
         }
         app.launchArguments = arguments
         app.launch()
