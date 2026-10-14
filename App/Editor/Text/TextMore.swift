@@ -60,28 +60,40 @@ struct TextMore: View {
                     }
                     .accessibilityIdentifier("text.spacing")
                 }
-                HStack(spacing: 0) {
-                    mark("text.outline", selected.style.outline, of: selected) { $0.outline = $1 }
-                    mark("text.shadow", selected.style.shadow, of: selected) { $0.shadow = $1 }
-                    mark("text.box", selected.style.box, of: selected) { $0.box = $1 }
+                // Each toggle reads its mark at the call, as the slider does, so two quick taps turn it twice.
+                HStack(spacing: 8) {
+                    mark(
+                        "text.outline", selected.style.outline,
+                        Binding(
+                            get: { store.state.project.text(selected.id)?.style.outline ?? selected.style.outline },
+                            set: { isOn in change(selected.id) { $0.outline = isOn } }
+                        ))
+                    mark(
+                        "text.shadow", selected.style.shadow,
+                        Binding(
+                            get: { store.state.project.text(selected.id)?.style.shadow ?? selected.style.shadow },
+                            set: { isOn in change(selected.id) { $0.shadow = isOn } }
+                        ))
+                    mark(
+                        "text.box", selected.style.box,
+                        Binding(
+                            get: { store.state.project.text(selected.id)?.style.box ?? selected.style.box },
+                            set: { isOn in change(selected.id) { $0.box = isOn } }
+                        ))
                 }
+                .frame(minHeight: 44)
             }
         }
     }
 
-    /// One toggle drawn as a button, which a tap anywhere on it turns. Its word key is its identifier.
-    private func mark(
-        _ key: String, _ isOn: Bool, of selected: TextItem, _ set: @escaping (inout TextStyle, Bool) -> Void
-    ) -> some View {
-        Toggle(
-            LocalizedStringKey(key),
-            isOn: Binding(
-                get: { isOn },
-                set: { turned in change(selected.id) { set(&$0, turned) } }
-            )
-        )
+    /// One toggle drawn as a button as wide as its third of the row, which a tap anywhere on it turns.
+    /// Its word key is its identifier.
+    private func mark(_ key: String, _ isOn: Bool, _ turned: Binding<Bool>) -> some View {
+        Toggle(isOn: turned) {
+            Text(LocalizedStringKey(key))
+                .frame(maxWidth: .infinity)
+        }
         .toggleStyle(.button)
-        .frame(maxWidth: .infinity, minHeight: 44)
         .accessibilityIdentifier(key)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
