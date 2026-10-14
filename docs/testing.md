@@ -5,7 +5,7 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 ## What runs where
 
 - On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 259 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 346 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 354 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 109 UI tests in sixteen classes.
 
 What comes back from the simulator run:
@@ -172,6 +172,17 @@ Two more files of `Tests/ReelsmithEngineTests/Support` make clips that are no te
 
 - `Tests/ReelsmithEngineTests/TestClipMakerTests.swift` holds the five test clips to the table: stored size, H.264, the exact frame count, the exact length of the picture track, the two colours at half the length, the sound track of blue and red with its peak, the 709 colour properties, the stored transform of `turned.mov` and the identity transform of the other four, the write under a temporary name and the kept file.
 - When `REELSMITH_CLIP_DIR` is set, `testLeavesBlueAndRedInTheClipFolder` leaves `blue.mov` and `red.mov` in that folder. When it is not set the test is skipped.
+
+### The level of a pitch
+
+Sound is proven by numbers. `Tests/ReelsmithEngineTests/Support/SoundReading.swift` holds the two readers every sound test uses, and no test writes another.
+
+- `toneLevel(of:hertz:from:to:)` reads a file: the first channel of its first sound track, as 16 bit samples at the rate of the track. `mixedToneLevel(of:mix:hertz:from:to:)` reads all sound tracks of an asset mixed with an audio mix, with no export.
+- A level is the size of the part of the sound that swings at one pitch, from 0 to 1 of full scale: a sine with a peak of 0.5 reads 0.5 at its own pitch and nothing at another. Each read is printed.
+- A window is given in ticks and is a whole number of tenths of a second, so of 60 ticks. Another window fails the test that asked for it, and so does a window the sound does not fill, a file with no sound track, named in the error, and an asset with none. Pitches are multiples of 10 Hz, so a window holds whole periods at 44100 and at 48000 samples a second.
+- A level is asserted within 15 percent of its expected value, or as above or below a number. Silence reads below 0.02.
+- Inside a ramp of the mix, `mixedToneLevel` reads lower than the exported file does. A held volume may be asserted through it. The size of a fade is asserted on an exported file.
+- `Tests/ReelsmithEngineTests/ToneLevelTests.swift` holds the readers and the ground the mix stands on: a tone at two sample rates and silence, the export of the seed `two-clips` at 440 Hz inside both clips, and two sound tracks under a mix that come out of an export as one track at the levels of the mix, the second also as stereo at 48000 over a mono first at 44100. Its tones are written by the test into a temporary folder.
 
 ### Tests of faces and text pictures
 
