@@ -85,15 +85,16 @@ final class PlayerPictureView: UIView {
     private var statusObservation: NSKeyValueObservation?
     /// True from the moment the state turns to playing until the player is stopped.
     private var isPlaying = false
-    /// The playhead of the last seek with a completion handler, or the end when the item has played
-    /// to it. While one seek is in flight it can be a newer playhead, whose seek is sent when the one
-    /// in flight has ended. Nil when the player is not known to stand on a playhead of the state: a
-    /// new item, a seek that did not finish, from a start on.
+    /// The playhead of the last seek with a completion handler. While one seek is in flight it can
+    /// be a newer playhead, whose seek is sent when the one in flight has ended. Nil when the player
+    /// is not known to stand on a playhead of the state: a new item, a seek that did not finish,
+    /// from a start on.
     private var target: Time?
-    /// The playhead that went into the player with the newest item, by the seek with no completion
-    /// handler. Nil from the first seek with a handler on. While the state rests on it no second
-    /// seek goes out: the player answers a seek to the time it is already sent to at once, with no
-    /// frame of its own, and ends the first one as cancelled, after which it can keep a wrong frame.
+    /// The time the player was sent to with the newest item, by the seek with no completion handler.
+    /// Nil from the first seek with a handler on. While the state rests on a playhead that is sought
+    /// as this time no second seek goes out: the player answers a seek to the time it is already
+    /// sent to at once, with no frame of its own, and ends the first one as cancelled, after which
+    /// it can keep a wrong frame.
     private var sent: Time?
     /// True while one seek is in flight. A newer playhead waits in `target` until it lands.
     private var isSeeking = false
@@ -242,7 +243,7 @@ final class PlayerPictureView: UIView {
         // this playhead at ready sends no second seek, so nothing cancels this one.
         let first: Time = store.state.playhead
         target = nil
-        sent = first
+        sent = frameTime(of: first)
         player.seekExactly(to: frameTime(of: first))
         // A seek with a completion handler needs an item that is ready, so the player waits for it.
         // The change can come on any thread.
@@ -350,7 +351,7 @@ final class PlayerPictureView: UIView {
             if isPlaying {
                 stop()
             }
-            if target != state.playhead, sent != state.playhead {
+            if target != state.playhead, sent != frameTime(of: state.playhead) {
                 seek(to: state.playhead)
             }
         }
@@ -378,13 +379,13 @@ final class PlayerPictureView: UIView {
     }
 
     /// The time the player is sent to for a playhead: at the very end of the project the last frame,
-    /// the length less one frame. A text is drawn in a frame before its end. Sent to the time of the
-    /// end itself the player shows that same last frame with no text in it.
+    /// the one that holds the last tick before the end. A text is drawn in a frame before its end.
+    /// Sent to the time of the end itself the player shows that same last frame with no text in it.
     private func frameTime(of playhead: Time) -> Time {
         guard let length: Time = project?.duration, playhead >= length else {
             return playhead
         }
-        return length - Time.frame
+        return (length - Time(ticks: 1)).roundedDownToFrame
     }
 
     private func seekEnded(_ sought: Time, finished: Bool, build number: Int) {
@@ -444,7 +445,7 @@ final class PlayerPictureView: UIView {
         stop()
         store.send(.movePlayhead(store.state.project.duration))
         store.send(.pause)
-        // The player stands on its last frame, which is the picture of the end. No seek goes there.
-        target = store.state.playhead
+        // The player stands on the time of the end, where a frame drawn again has no text. It counts
+        // as standing on no playhead, so the paused state seeks to the last frame.
     }
 }
