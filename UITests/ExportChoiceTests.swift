@@ -195,11 +195,14 @@ final class ExportChoiceTests: XCTestCase {
     private func waitUntil(_ what: String, expected: Double = 1, _ reached: () -> Bool) -> Bool {
         let started = Date()
         var holds = reached()
-        while !holds && Date().timeIntervalSince(started) <= 3 * expected {
+        var waited = Date().timeIntervalSince(started)
+        // The limit counts from the end of the first read, so a slow first read still gets a second one.
+        let first = waited
+        while !holds && waited <= first + 3 * expected {
             Thread.sleep(forTimeInterval: 0.2)
             holds = reached()
+            waited = Date().timeIntervalSince(started)
         }
-        let waited = Date().timeIntervalSince(started)
         print("export-choice: waited \(waited) seconds for \(what), expected \(expected), limit \(3 * expected)")
         XCTAssertTrue(holds, what)
         return holds
