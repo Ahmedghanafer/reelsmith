@@ -110,6 +110,14 @@ public struct Editing: Equatable, Sendable {
         unsaved = false
     }
 
+    /// The state as given, that history with its run ended, unsaved false.
+    public init(state: EditorState, history: UndoHistory) {
+        self.state = state
+        self.history = history
+        self.history.endRun()
+        unsaved = false
+    }
+
     public func after(_ action: EditorAction) -> Editing {
         var next = self
         next.state = reduce(state, action)
