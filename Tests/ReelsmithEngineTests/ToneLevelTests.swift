@@ -15,7 +15,7 @@ final class ToneLevelTests: XCTestCase {
     /// product's own video composition, the preset and the file type of `export`.
     @MainActor
     func testTwoSoundTracksUnderAMixExportAsOneTrackAtTheLevelsOfTheMix() async throws {
-        let made = try await twoTonesUnderAMix(breaking: 1)
+        let made = try await twoTonesUnderAMix()
         let file = Self.folder.appendingPathComponent("two-tones.mp4")
         let session = try XCTUnwrap(
             AVAssetExportSession(asset: made.composition, presetName: AVAssetExportPresetHighestQuality))
@@ -48,7 +48,7 @@ final class ToneLevelTests: XCTestCase {
     /// The same composition and the same mix, read with no export.
     @MainActor
     func testTheSameLevelsComeThroughTheMixWithNoExport() async throws {
-        let made = try await twoTonesUnderAMix(breaking: 3)
+        let made = try await twoTonesUnderAMix()
         let asset = made.composition
         let first = try await mixedToneLevel(
             of: asset, mix: made.mix, hertz: 440, from: Time(ticks: 1200), to: Time(ticks: 1800))
@@ -99,7 +99,7 @@ final class ToneLevelTests: XCTestCase {
     func testATrackOfSilenceReadsBelowTheFloorAtEveryPitchTried() async throws {
         let file = try await writeTone("silence", hertz: 440, peak: 0, rate: 44100)
         for hertz in [440, 880, 1320] {
-            let level = try await toneLevel(of: file, hertz: hertz, from: .zero, to: Time(ticks: 90))
+            let level = try await toneLevel(of: file, hertz: hertz, from: Time(ticks: 600), to: Time(ticks: 1200))
             XCTAssertLessThan(level, 0.02, "\(hertz) Hz in silence")
         }
     }
@@ -111,7 +111,7 @@ final class ToneLevelTests: XCTestCase {
     /// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolume(_:at:)
     /// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolumeramp(fromstartvolume:toendvolume:timerange:)
     @MainActor
-    private func twoTonesUnderAMix(breaking: Int) async throws
+    private func twoTonesUnderAMix() async throws
         -> (composition: AVMutableComposition, videoComposition: AVVideoComposition, mix: AVAudioMix) {
         let clip = TestClip.blue
         _ = try await writeTestClip(clip, to: Self.folder)
@@ -132,7 +132,7 @@ final class ToneLevelTests: XCTestCase {
         var soundTracks: [AVMutableCompositionTrack] = []
         let low = try await writeTone("tone-440", hertz: 440, peak: 0.5, rate: 44100)
         let high = try await writeTone("tone-880", hertz: 880, peak: 0.25, rate: 44100)
-        for tone in (breaking == 3 ? [low] : [low, high]) {
+        for tone in [low, high] {
             let asset = AVURLAsset(url: tone)
             let source = try await asset.loadTracks(withMediaType: .audio)
             let sourceSound = try XCTUnwrap(source.first)
@@ -146,20 +146,13 @@ final class ToneLevelTests: XCTestCase {
         let held = AVMutableAudioMixInputParameters()
         held.trackID = soundTracks[0].trackID
         held.setVolume(1, at: .zero)
+        let rising = AVMutableAudioMixInputParameters()
+        rising.trackID = soundTracks[1].trackID
+        rising.setVolumeRamp(
+            fromStartVolume: 0, toEndVolume: 0.5,
+            timeRange: CMTimeRange(start: .zero, duration: CMTime(value: 600, timescale: 600)))
         let mix = AVMutableAudioMix()
-        mix.inputParameters = [held]
-        if breaking != 3 {
-            let rising = AVMutableAudioMixInputParameters()
-            rising.trackID = soundTracks[1].trackID
-            if breaking == 2 {
-                rising.setVolume(0.5, at: .zero)
-            } else {
-                rising.setVolumeRamp(
-                    fromStartVolume: 0, toEndVolume: breaking == 1 ? 1 : 0.5,
-                    timeRange: CMTimeRange(start: .zero, duration: CMTime(value: 600, timescale: 600)))
-            }
-            mix.inputParameters = [held, rising]
-        }
+        mix.inputParameters = [held, rising]
         return (composition, videoComposition, mix)
     }
 
