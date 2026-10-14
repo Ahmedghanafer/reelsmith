@@ -133,6 +133,8 @@
 /* end slot: export-path */
 
 /* slot: undo */
+"editor.undo" = "Undo";
+"editor.redo" = "Redo";
 /* end slot: undo */
 
 /* slot: project-list */

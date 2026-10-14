@@ -133,6 +133,8 @@
 /* end slot: export-path */
 
 /* slot: undo */
+"editor.undo" = "Ångra";
+"editor.redo" = "Gör om";
 /* end slot: undo */
 
 /* slot: project-list */
