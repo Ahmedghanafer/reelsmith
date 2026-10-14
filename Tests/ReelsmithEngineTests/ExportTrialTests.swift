@@ -84,7 +84,7 @@ final class ExportTrialTests: XCTestCase {
         XCTAssertEqual(made.facts.infoText, "1920 1080 30")
         XCTAssertEqual(made.frames, 30)
         for n in 0..<6 {
-            let colour = try await pixel(of: made.file, at: Time(ticks: 20 * Int64(n) + 5), x: 960, y: 540)
+            let colour = try await pixelInside(of: made.file, at: Time(ticks: 20 * Int64(n) + 5), x: 960, y: 540)
             assertNear(colour, BlinkClip.even, "(960, 540) in the middle of frame \(n) of 30")
         }
     }
@@ -150,7 +150,7 @@ final class ExportTrialTests: XCTestCase {
         var read: [String] = []
         do {
             for n in 0..<6 {
-                let colour = try await pixel(of: file, at: Time(ticks: 10 * Int64(n) + 5), x: x, y: y)
+                let colour = try await pixelInside(of: file, at: Time(ticks: 10 * Int64(n) + 5), x: x, y: y)
                 read.append("\(colour.r) \(colour.g) \(colour.b)")
             }
             print("export-trial: \(file.lastPathComponent) at (\(x), \(y)), at 5, 15, 25, 35, 45 and 55 ticks: "
@@ -227,12 +227,32 @@ final class ExportTrialTests: XCTestCase {
         return Trial(file: output, facts: facts, frames: frames)
     }
 
+    /// `pixel(of:at:x:y:)`, but a place outside the stored picture throws and is never read, so a file written at
+    /// another size fails the test instead of ending the run.
+    private func pixelInside(of file: URL, at time: Time, x: Int, y: Int) async throws -> RGB {
+        let size = try await storedSize(of: file)
+        guard x >= 0, y >= 0, x < size.width, y < size.height else {
+            throw OutsidePicture(x: x, y: y, width: size.width, height: size.height)
+        }
+        return try await pixel(of: file, at: time, x: x, y: y)
+    }
+
+    struct OutsidePicture: Error, CustomStringConvertible {
+        var x: Int
+        var y: Int
+        var width: Int
+        var height: Int
+        var description: String {
+            "(\(x), \(y)) lies outside the stored picture of \(width) by \(height)"
+        }
+    }
+
     /// Red, blue, red, blue, red, blue at the middle of frames 0 to 5.
     private func assertBlinks(
         _ file: URL, frameTicks: Int64, x: Int, y: Int, line: UInt = #line
     ) async throws {
         for n in 0..<6 {
-            let colour = try await pixel(of: file, at: Time(ticks: frameTicks * Int64(n) + 5), x: x, y: y)
+            let colour = try await pixelInside(of: file, at: Time(ticks: frameTicks * Int64(n) + 5), x: x, y: y)
             let wanted = n % 2 == 0 ? BlinkClip.even : BlinkClip.odd
             assertNear(colour, wanted, "(\(x), \(y)) in the middle of frame \(n)", line: line)
         }
