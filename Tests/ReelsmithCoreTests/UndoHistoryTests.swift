@@ -62,6 +62,19 @@ final class UndoHistoryTests: XCTestCase {
         XCTAssertEqual(editing.history.past.count, 1)
     }
 
+    func testAWordTypedWhileTheVideoPlaysIsOneStep() {
+        let seedString = Seed.textWide.project.text(TextID(1))!.string
+        var editing = start(.textWide).after(.play)
+        XCTAssertTrue(editing.state.isPlaying)
+        for count in 1...8 {
+            editing = editing.after(.text(.setString(TextID(1), String("Hello wo".prefix(count)))))
+            editing = editing.after(.movePlayhead(Time(ticks: 33 * Int64(count))))
+        }
+        XCTAssertEqual(editing.state.project.text(TextID(1))?.string, "Hello wo")
+        XCTAssertEqual(editing.history.past.count, 1)
+        XCTAssertEqual(editing.undone().state.project.text(TextID(1))?.string, seedString)
+    }
+
     func testEachGestureIsOneStep() {
         var editing = start(.textWide)
         editing = editing.after(.pause)
