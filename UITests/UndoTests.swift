@@ -202,8 +202,8 @@ final class UndoTests: XCTestCase {
         let save = region.descendants(matching: .any)["editor.save"]
         XCTAssertGreaterThanOrEqual(save.frame.minX, found[3].frame.maxX - 1, "save right of redo")
         XCTAssertEqual(save.frame.maxX, region.frame.maxX, accuracy: 1, "save at the trailing end")
-        // Undo stands beside redo, the 16 points of the row between them.
-        XCTAssertEqual(found[3].frame.minX - found[2].frame.maxX, 16, accuracy: 1, "undo beside redo")
+        // Undo stands beside redo, the 8 points of the row between them.
+        XCTAssertEqual(found[3].frame.minX - found[2].frame.maxX, 8, accuracy: 1, "undo beside redo")
         for place in [0, 2, 3] {
             XCTAssertEqual(found[place].frame.width, 44, accuracy: 1, row[place])
             XCTAssertEqual(found[place].frame.height, 44, accuracy: 1, row[place])
