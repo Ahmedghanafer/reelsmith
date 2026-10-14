@@ -3,7 +3,8 @@ import ReelsmithEngine
 import SwiftUI
 
 /// The editor shell: four regions from top to bottom, each with the slot of the story that fills it,
-/// and between the tools and the export a fifth, the text region, only while a text is selected.
+/// and between the tools and the export the text region, only while a text is selected, or the sound
+/// region, only while the sound panel shows. Core keeps the two from showing together.
 /// The root and the regions are accessibility containers, so a region is found while it is empty
 /// and a control inside it keeps its own identifier.
 ///
@@ -24,6 +25,9 @@ struct EditorScreen: View {
                 Text(verbatim: faceName(of: .naskh) + " " + faceName(of: .naskhBold))
                     .font(.footnote)
                     .accessibilityIdentifier("editor.faceInfo")
+                Text(verbatim: store.state.soundInfo)
+                    .font(.footnote)
+                    .accessibilityIdentifier("editor.soundInfo")
             }
             ZStack {
                 // slot: preview
@@ -52,6 +56,11 @@ struct EditorScreen: View {
                     .id(selected)
                     .region("editor.textRegion")
             }
+            if store.state.showsSound {
+                // Made anew every time the panel shows, so it starts on the part music.
+                SoundPanel(store: store)
+                    .region("editor.soundRegion")
+            }
             ZStack {
                 // slot: export
                 ExportButton(store: store)
@@ -67,11 +76,16 @@ struct EditorScreen: View {
         .accessibilityIdentifier("editor.root")
     }
 
-    /// Shown on a seed start only: the clips of the project, and how many of its media files are in the media folder.
-    /// A half written file under another name does not count.
+    /// Shown on a seed start only: the clips of the project, and how many of its media files are in the media folder,
+    /// the file of its music among them. A half written file under another name does not count.
     private var seedInfo: Words {
-        let files = store.state.project.media.values.filter {
-            FileManager.default.fileExists(atPath: store.mediaFolder.appendingPathComponent($0.fileName).path)
+        let project: Project = store.state.project
+        var names: [String] = project.media.values.map { $0.fileName }
+        if let music: Music = project.music {
+            names.append(music.file.fileName)
+        }
+        let files = names.filter {
+            FileManager.default.fileExists(atPath: store.mediaFolder.appendingPathComponent($0).path)
         }
         return Words("editor.seedInfo", [String(store.state.project.clips.count), String(files.count)])
     }

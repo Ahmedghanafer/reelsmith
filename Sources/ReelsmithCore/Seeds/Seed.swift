@@ -7,12 +7,14 @@ public enum Seed: String, CaseIterable, Sendable {
     case textWide = "text-wide"
     /// One boxed word for a part of the first clip.
     case textBoxWide = "text-box-wide"
+    /// The clips of two-clips-wide under the long test tone.
+    case musicWide = "music-wide"
 
     public var canvas: Canvas {
         switch self {
         case .empty, .twoClips, .threeClips:
             return .portrait
-        case .twoClipsWide, .textWide, .textBoxWide:
+        case .twoClipsWide, .textWide, .textBoxWide, .musicWide:
             return .landscape
         }
     }
@@ -21,7 +23,7 @@ public enum Seed: String, CaseIterable, Sendable {
         switch self {
         case .empty:
             return []
-        case .twoClips, .twoClipsWide, .textWide, .textBoxWide:
+        case .twoClips, .twoClipsWide, .textWide, .textBoxWide, .musicWide:
             return [.blue, .red]
         case .threeClips:
             return [.blue, .red, .green]
@@ -31,14 +33,25 @@ public enum Seed: String, CaseIterable, Sendable {
     /// The text a start on the seed has selected.
     public var selectedText: TextID? {
         switch self {
-        case .empty, .twoClips, .threeClips, .twoClipsWide:
+        case .empty, .twoClips, .threeClips, .twoClipsWide, .musicWide:
             return nil
         case .textWide, .textBoxWide:
             return TextID(1)
         }
     }
 
+    /// The tone files a start on the seed needs.
+    public var testTones: [TestTone] {
+        self == .musicWide ? [.long] : []
+    }
+
+    /// A start on the seed has the sound panel open.
+    public var showsSound: Bool {
+        self == .musicWide
+    }
+
     /// Each clip whole, from its first frame, on the seed's canvas. A text seed has one text, id 1.
+    /// The music seed has the long tone as its music.
     public var project: Project {
         var project = Project(canvas: canvas)
         for testClip in testClips {
@@ -51,6 +64,8 @@ public enum Seed: String, CaseIterable, Sendable {
         switch self {
         case .empty, .twoClips, .threeClips, .twoClipsWide:
             break
+        case .musicWide:
+            project.music = Music(file: TestTone.long.file)
         case .textWide:
             // The middle line is Arabic with every vowel mark, written as scalars so no editor reorders it.
             let arabic =

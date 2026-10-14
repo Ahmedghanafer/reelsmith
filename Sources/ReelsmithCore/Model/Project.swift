@@ -35,6 +35,11 @@ public struct Project: Equatable, Sendable {
     public var texts: [TextItem]
     /// Starts at 1, each new text takes it and adds 1.
     public var nextTextID: Int
+    /// The sound of every clip, 0 to 1.
+    public var clipVolume: Double
+    public var clipsMuted: Bool
+    /// At most one music, which begins at the start of the video.
+    public var music: Music?
 
     public init(canvas: Canvas = .portrait) {
         self.canvas = canvas
@@ -43,6 +48,9 @@ public struct Project: Equatable, Sendable {
         nextClipID = 1
         texts = []
         nextTextID = 1
+        clipVolume = 1
+        clipsMuted = false
+        music = nil
     }
 
     /// The sum of the clip lengths.
@@ -116,8 +124,18 @@ public struct Project: Equatable, Sendable {
         }
     }
 
-    /// Canvas, clips and media are equal. The texts may differ.
+    /// The smaller of what is left of the file after the start of the music and the project length.
+    /// Nil with no music and for an empty project.
+    public var heardMusic: Time? {
+        guard let music, !clips.isEmpty else {
+            return nil
+        }
+        return min(music.file.duration - music.start, duration)
+    }
+
+    /// Canvas, clips, media, clipVolume, clipsMuted and music are equal. The texts may differ.
     public func sameFootage(as other: Project) -> Bool {
         canvas == other.canvas && clips == other.clips && media == other.media
+            && clipVolume == other.clipVolume && clipsMuted == other.clipsMuted && music == other.music
     }
 }

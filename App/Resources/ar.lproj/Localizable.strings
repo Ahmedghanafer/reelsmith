@@ -78,3 +78,41 @@
 
 /* slot: text-path */
 /* end slot: text-path */
+
+/* slot: sound-panel */
+"tools.sound" = "الصوت";
+"sound.tab.music" = "الموسيقى";
+"sound.tab.levels" = "المستويات";
+"sound.tab.clips" = "المقاطع";
+"sound.done" = "تم";
+/* end slot: sound-panel */
+
+/* slot: sound-clips */
+"sound.clipVolume" = "صوت المقاطع";
+"sound.clipsMuted" = "كتم صوت المقاطع";
+/* end slot: sound-clips */
+
+/* slot: add-music */
+"music.add" = "إضافة موسيقى من الملفات";
+"music.replace" = "اختيار ملف آخر";
+"music.remove" = "إزالة الموسيقى";
+"music.copying" = "تتم إضافة الموسيقى";
+"music.notReadable" = "لا يمكن استخدام هذا الملف كموسيقى.";
+"music.protected" = "هذا الملف محمي ولا يمكن وضعه في فيديو يتم تصديره. تعمل الموسيقى غير المحمية.";
+"music.ok" = "حسنا";
+/* end slot: add-music */
+
+/* slot: music-levels */
+"music.volume" = "مستوى صوت الموسيقى";
+"music.start" = "تبدأ عند";
+"music.fadeIn" = "ارتفاع تدريجي";
+"music.fadeOut" = "انخفاض تدريجي";
+"music.none" = "لا توجد موسيقى بعد";
+/* end slot: music-levels */
+
+/* slot: music-video */
+"music.fromVideo" = "استخدام صوت فيديو";
+/* end slot: music-video */
+
+/* slot: sound-path */
+/* end slot: sound-path */

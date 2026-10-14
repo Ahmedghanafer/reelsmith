@@ -17,4 +17,5 @@ public enum EditorAction: Equatable, Sendable {
     case play
     case pause
     case text(TextAction)
+    case sound(SoundAction)
 }

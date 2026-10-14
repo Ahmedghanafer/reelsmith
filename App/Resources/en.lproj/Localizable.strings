@@ -78,3 +78,41 @@
 
 /* slot: text-path */
 /* end slot: text-path */
+
+/* slot: sound-panel */
+"tools.sound" = "Sound";
+"sound.tab.music" = "Music";
+"sound.tab.levels" = "Levels";
+"sound.tab.clips" = "Clips";
+"sound.done" = "Done";
+/* end slot: sound-panel */
+
+/* slot: sound-clips */
+"sound.clipVolume" = "Clip sound";
+"sound.clipsMuted" = "Mute the clips";
+/* end slot: sound-clips */
+
+/* slot: add-music */
+"music.add" = "Add music from Files";
+"music.replace" = "Choose another file";
+"music.remove" = "Remove the music";
+"music.copying" = "Adding the music";
+"music.notReadable" = "This file cannot be used as music.";
+"music.protected" = "This file is protected and cannot go into an exported video. Music without protection works.";
+"music.ok" = "OK";
+/* end slot: add-music */
+
+/* slot: music-levels */
+"music.volume" = "Music volume";
+"music.start" = "Starts at";
+"music.fadeIn" = "Fade in";
+"music.fadeOut" = "Fade out";
+"music.none" = "No music yet";
+/* end slot: music-levels */
+
+/* slot: music-video */
+"music.fromVideo" = "Use the sound of a video";
+/* end slot: music-video */
+
+/* slot: sound-path */
+/* end slot: sound-path */

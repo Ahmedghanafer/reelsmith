@@ -29,8 +29,6 @@ import XCTest
 final class WholePathTests: XCTestCase {
     /// Set by the last statement of the walk. A walk that ended before it is failed in `tearDown`.
     private var walkFinished = false
-    /// The whole tree of the picker is printed once for a test.
-    private var treePrinted = false
 
     /// A walk that did not reach its last line fails here, whatever ended it.
     override func tearDown() async throws {
@@ -247,9 +245,7 @@ final class WholePathTests: XCTestCase {
     /// gone: an expected failure, once raised inside its closure, also swallowed everything after it in
     /// that test, the failure of `tearDown` included, so a walk that had not walked counted as passed.
     ///
-    /// Taps `start.newProject`, chooses blue then red and confirms. The picker runs outside the app, so its
-    /// controls read as not hittable and are tapped by coordinate, in the middle of their frames. They carry
-    /// no identifier of ours and are found by the system's own identifier, by kind and by place, never by a word.
+    /// Taps `start.newProject`, then the shared driver of the picker chooses blue then red and confirms.
     private func drivePicker(_ app: XCUIApplication, picture: String?) -> String? {
         let newProject = element(app, "start.newProject")
         guard newProject.exists else {
@@ -257,84 +253,9 @@ final class WholePathTests: XCTestCase {
         }
         newProject.tap()
 
-        // The videos are the cells of the picker's grid, which the system names PXGGridLayout-Info.
-        // The grid lists the newest first. The wave run puts blue into the library and then red, and every
-        // video an export saved is newer, so blue is the last cell and red the one before it.
-        let cells = app.scrollViews.images.matching(identifier: "PXGGridLayout-Info")
-        guard cells.firstMatch.waitForExistence(timeout: 40) else {
-            return "no cell of the picker's grid came within 40 seconds"
+        if let stopped = chooseInThePhotoPicker(app, fromTheEnd: [1, 2], confirms: true, picture: picture) {
+            return stopped
         }
-        // The other cells come with the first one. This is a pause, never a limit.
-        Thread.sleep(forTimeInterval: 2)
-        // The cells are read from one snapshot, in the order of the tree: of the scroll views, the one that
-        // holds the most of them.
-        guard let before = try? app.snapshot() else {
-            return "no snapshot of the picker's grid could be taken"
-        }
-        var grid: [any XCUIElementSnapshot] = []
-        for view in flattened(before) where view.elementType == .scrollView {
-            let found = flattened(view).filter { $0.elementType == .image && $0.identifier == "PXGGridLayout-Info" }
-            if found.count > grid.count {
-                grid = found
-            }
-        }
-        let count = grid.count
-        print("m1-12-whole-path: the picker's grid holds " + String(count) + " cells")
-        guard count >= 2 else {
-            return "the picker's grid held " + String(count) + " cell, two are needed"
-        }
-        let first = grid[0]
-        let red = grid[count - 2]
-        let blue = grid[count - 1]
-        print("m1-12-whole-path: the cell before the last reads: " + red.label)
-        print("m1-12-whole-path: the last cell reads: " + blue.label)
-        let redFrame = red.frame
-        let blueFrame = blue.frame
-        print("m1-12-whole-path: the cells are at \(redFrame) and \(blueFrame)")
-        guard redFrame.width > 1, redFrame.height > 1, blueFrame.width > 1, blueFrame.height > 1 else {
-            return "a cell of the picker's grid had no frame to tap"
-        }
-        let top = min(first.frame.minY, redFrame.minY, blueFrame.minY)
-        // A tap may change the grid, so every later tap goes to a place read before the first one.
-        tap(app, theMiddleOf: blueFrame)
-        Thread.sleep(forTimeInterval: 1)
-        tap(app, theMiddleOf: redFrame)
-        Thread.sleep(forTimeInterval: 2)
-        if let picture {
-            screenshot(picture)
-        }
-
-        // The whole tree once for a test, for the log of the run, and one snapshot of it for the search:
-        // the picker changes after a choice, and a snapshot cannot change under the search.
-        if !treePrinted {
-            print(app.debugDescription)
-            treePrinted = true
-        }
-        guard let tree = try? app.snapshot() else {
-            return "no snapshot of the picker could be taken"
-        }
-        let all = flattened(tree).filter { !$0.identifier.hasPrefix("start.") && $0.frame.width > 1 }
-        // The bar of the picker is the row of its topmost button.
-        let bar = all.filter { $0.elementType == .button && $0.frame.midY < top }
-            .min { $0.frame.minY < $1.frame.minY }
-        guard let bar else {
-            return "no button above the picker's grid was found"
-        }
-        // The control that confirms is found by place and by no word: of the small elements of any kind
-        // in the row of the bar, the one furthest to the right, when it lies in the right third of the screen.
-        let row = all.filter { abs($0.frame.midY - bar.frame.midY) <= 24 && $0.frame.width <= 120 }
-        for one in row {
-            print("m1-12-whole-path: in the bar of the picker, kind \(one.elementType.rawValue) at \(one.frame): "
-                + one.label)
-        }
-        let confirm = row.filter { $0.frame.midX > tree.frame.width * 2 / 3 }
-            .max { $0.frame.maxX < $1.frame.maxX }
-        guard let confirm else {
-            return "no element was found on the right of the picker's bar"
-        }
-        print("m1-12-whole-path: tapped to confirm, kind \(confirm.elementType.rawValue) at \(confirm.frame): "
-            + confirm.label)
-        tap(app, theMiddleOf: confirm.frame)
 
         guard element(app, "editor.root").waitForExistence(timeout: 60) else {
             return "the editor did not open within 60 seconds of the tap on the right of the picker's bar"
@@ -351,23 +272,6 @@ final class WholePathTests: XCTestCase {
             return "the editor opened with " + lengths + ", and blue then red is 00:03 then 00:04"
         }
         return nil
-    }
-
-    /// Every element of a snapshot, the element itself first.
-    private func flattened(_ node: any XCUIElementSnapshot) -> [any XCUIElementSnapshot] {
-        var all: [any XCUIElementSnapshot] = [node]
-        for child in node.children {
-            all += flattened(child)
-        }
-        return all
-    }
-
-    /// Taps the screen in the middle of a frame that was read from an element. The app fills the screen,
-    /// so its top left corner is the zero point of the frames.
-    private func tap(_ app: XCUIApplication, theMiddleOf frame: CGRect) {
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
-            .withOffset(CGVector(dx: frame.midX, dy: frame.midY))
-            .tap()
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {

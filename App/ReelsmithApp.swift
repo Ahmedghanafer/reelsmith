@@ -1,8 +1,21 @@
+import AVFoundation
 import ReelsmithCore
 import SwiftUI
 
 @main
 struct ReelsmithApp: App {
+    // The sound plays with the ring switch on silent and stops other sound of the phone. A failure is logged,
+    // and the app goes on with the category it has.
+    // https://developer.apple.com/documentation/avfaudio/avaudiosession/setcategory(_:)
+    // https://developer.apple.com/documentation/avfaudio/avaudiosession/category-swift.struct/playback
+    init() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback)
+        } catch {
+            NSLog("%@", "audio session: the category playback was not set: \(error)")
+        }
+    }
+
     // The debug guard of the launch values: only a debug build reads the process arguments.
     #if DEBUG
     private let options = LaunchOptions(arguments: ProcessInfo.processInfo.arguments)
