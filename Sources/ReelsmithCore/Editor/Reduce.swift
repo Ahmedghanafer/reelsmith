@@ -1,6 +1,6 @@
 /// An action that cannot be done returns the state unchanged.
 public func reduce(_ state: EditorState, _ action: EditorAction) -> EditorState {
-    settleTexts(from: state, to: step(state, action))
+    settleSound(settleTexts(from: state, to: step(state, action)))
 }
 
 private func step(_ state: EditorState, _ action: EditorAction) -> EditorState {
@@ -24,6 +24,7 @@ private func step(_ state: EditorState, _ action: EditorAction) -> EditorState {
     case .clearSelection:
         next.selection = nil
         next.selectedText = nil
+        next.showsSound = false
     case .movePlayhead(let time):
         next.playhead = min(max(time, .zero), state.project.duration).roundedDownToFrame
     case .play:
@@ -37,6 +38,8 @@ private func step(_ state: EditorState, _ action: EditorAction) -> EditorState {
         next.isPlaying = false
     case .text(let textAction):
         return reduceText(state, textAction)
+    case .sound(let soundAction):
+        return reduceSound(state, soundAction)
     }
     return next
 }

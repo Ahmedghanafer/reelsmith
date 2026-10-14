@@ -64,6 +64,47 @@ public struct TextLayer: Equatable, Sendable {
     }
 }
 
+public struct MusicLayer: Equatable, Sendable {
+    /// The id of the music file.
+    public var media: MediaID
+    /// Inside the media folder.
+    public var fileName: String
+    /// The start in the file.
+    public var sourceStart: Time
+    /// The music sounds on the timeline from zero for this long.
+    public var duration: Time
+    public var volume: Double
+    /// As stored, cut to half of duration, rounded down to a tick. The fade in runs over the first of the layer.
+    public var fadeIn: Time
+    /// As stored, cut to half of duration, rounded down to a tick. The fade out runs over the last of the layer.
+    public var fadeOut: Time
+
+    public init(media: MediaID, fileName: String, sourceStart: Time, duration: Time, volume: Double, fadeIn: Time, fadeOut: Time) {
+        self.media = media
+        self.fileName = fileName
+        self.sourceStart = sourceStart
+        self.duration = duration
+        self.volume = volume
+        self.fadeIn = fadeIn
+        self.fadeOut = fadeOut
+    }
+}
+
+public struct SoundPlan: Equatable, Sendable {
+    /// The volume of the clips as heard: 0 when they are muted.
+    public var clipVolume: Double
+    /// Nil with no music and when nothing of it is heard.
+    public var music: MusicLayer?
+
+    public init(clipVolume: Double, music: MusicLayer?) {
+        self.clipVolume = clipVolume
+        self.music = music
+    }
+
+    /// 1, and no music.
+    public static let plain: SoundPlan = SoundPlan(clipVolume: 1, music: nil)
+}
+
 public struct RenderPlan: Equatable, Sendable {
     public var segments: [Segment]
     public var duration: Time
@@ -71,12 +112,15 @@ public struct RenderPlan: Equatable, Sendable {
     public var canvas: Canvas
     /// In drawing order. Blank texts and texts with no range are left out.
     public var texts: [TextLayer]
+    /// The volume of the clips and the music, as they are heard.
+    public var sound: SoundPlan
 
-    public init(segments: [Segment], duration: Time, canvas: Canvas = .portrait, texts: [TextLayer] = []) {
+    public init(segments: [Segment], duration: Time, canvas: Canvas = .portrait, texts: [TextLayer] = [], sound: SoundPlan = .plain) {
         self.segments = segments
         self.duration = duration
         self.canvas = canvas
         self.texts = texts
+        self.sound = sound
     }
 }
 
@@ -123,5 +167,13 @@ public func renderPlan(for project: Project) throws -> RenderPlan {
             text: text.id, string: text.string, timelineStart: range.start, duration: range.duration, x: text.x,
             y: text.y, rotation: text.rotation, style: text.style, lineWidth: canvasWidth * TextGeometry.wrapShare))
     }
-    return RenderPlan(segments: segments, duration: start, canvas: project.canvas, texts: texts)
+    var music: MusicLayer?
+    if let stored = project.music, let heard = project.heardMusic {
+        let half = Time(ticks: heard.ticks / 2)
+        music = MusicLayer(
+            media: stored.file.id, fileName: stored.file.fileName, sourceStart: stored.start, duration: heard,
+            volume: stored.volume, fadeIn: min(stored.fadeIn, half), fadeOut: min(stored.fadeOut, half))
+    }
+    let sound = SoundPlan(clipVolume: project.clipsMuted ? 0 : project.clipVolume, music: music)
+    return RenderPlan(segments: segments, duration: start, canvas: project.canvas, texts: texts, sound: sound)
 }
