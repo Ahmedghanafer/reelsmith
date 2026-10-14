@@ -80,6 +80,11 @@
 /* end slot: text-path */
 
 /* slot: sound-panel */
+"tools.sound" = "Sound";
+"sound.tab.music" = "Music";
+"sound.tab.levels" = "Levels";
+"sound.tab.clips" = "Clips";
+"sound.done" = "Done";
 /* end slot: sound-panel */
 
 /* slot: sound-clips */
