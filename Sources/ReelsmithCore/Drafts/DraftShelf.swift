@@ -86,8 +86,9 @@ public struct DraftShelf: Equatable, Sendable {
 
     /// Decodes draft.json and keeps `project.keepingFiles` of the names in `<id>/Media`. Removes from `<id>/Media`
     /// every file that neither that project nor a project of the stored undo history names. Gives the draft with
-    /// `history` nil when the project lost a clip or its music, or when a project of the history names a file that is not
-    /// there. Logs each clip, music and file it takes out, and a history it drops.
+    /// `history` nil when the project lost a clip or its music, or when a project of the history names a file that
+    /// is not there. Logs each clip, music and file it takes out, and a history it drops. A Media that is not there
+    /// reads as empty, and one that is there but cannot be listed throws unreadable and touches no file.
     public func open(_ id: DraftID) throws -> Draft {
         guard let data = try? Data(contentsOf: draftFile(of: id)) else {
             throw DraftError.unreadable
@@ -95,7 +96,15 @@ public struct DraftShelf: Equatable, Sendable {
         var draft = try decodeDraft(data)
         let manager = FileManager.default
         let media = mediaFolder(of: id)
-        let present = Set((try? manager.contentsOfDirectory(atPath: media.path)) ?? [])
+        var present = Set<String>()
+        if manager.fileExists(atPath: media.path) {
+            do {
+                present = Set(try manager.contentsOfDirectory(atPath: media.path))
+            } catch {
+                NSLog("%@", "drafts: the media of \(id.raw) was not read, the draft is not opened: \(error)")
+                throw DraftError.unreadable
+            }
+        }
 
         let kept = draft.project.keepingFiles(present)
         for clip in draft.project.clips where !kept.clips.contains(clip) {
