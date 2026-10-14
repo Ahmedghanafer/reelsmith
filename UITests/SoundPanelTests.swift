@@ -29,7 +29,7 @@ final class SoundPanelTests: XCTestCase {
     private let tabs = ["sound.tab.music", "sound.tab.levels", "sound.tab.clips"]
     /// The part buttons whose slot is still empty, so nothing shows under the row while their part shows.
     /// A story that fills a slot takes its button out of this list.
-    private let emptyParts = ["sound.tab.levels", "sound.tab.clips"]
+    private let emptyParts = ["sound.tab.levels"]
     private let tools = ["editor.split", "editor.delete", "editor.addText", "editor.sound"]
     private let withMusic = "100 . 0+4200 100 0 0"
 
@@ -78,6 +78,7 @@ final class SoundPanelTests: XCTestCase {
     func testEachPartButtonSelectsItsPartAndNothingShowsUnderTheRow() {
         let app = startSound(seed: "music-wide")
         waitForThePanel(app, "the sound region at the start on music-wide")
+        let row = element(app, "sound.tab.music").frame
 
         for tab in [tabs[1], tabs[2], tabs[0]] {
             element(app, tab).tap()
@@ -85,6 +86,10 @@ final class SoundPanelTests: XCTestCase {
                 selectedTabs(app) == [tab] && inOneRow(app, tabs + ["sound.done"])
             }
             XCTAssertEqual(selectedTabs(app), [tab])
+            // The area under the row has one height, so no part moves the row. Only the height is read: a bold
+            // word is wider.
+            let now = element(app, "sound.tab.music").frame
+            XCTAssertEqual([now.minY, now.maxY], [row.minY, row.maxY], tab)
             if emptyParts.contains(tab) {
                 assertNothingUnderTheRow(app, tab)
             }

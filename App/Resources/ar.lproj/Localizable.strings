@@ -88,6 +88,8 @@
 /* end slot: sound-panel */
 
 /* slot: sound-clips */
+"sound.clipVolume" = "صوت المقاطع";
+"sound.clipsMuted" = "كتم صوت المقاطع";
 /* end slot: sound-clips */
 
 /* slot: add-music */

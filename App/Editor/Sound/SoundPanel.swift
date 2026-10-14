@@ -7,6 +7,7 @@ import SwiftUI
 /// clears the selection, which closes the panel. The row lays out from leading to trailing, so Arabic mirrors it.
 ///
 /// https://developer.apple.com/documentation/swiftui/state
+/// https://developer.apple.com/documentation/swiftui/view/frame(minwidth:idealwidth:maxwidth:minheight:idealheight:maxheight:alignment:)
 /// https://developer.apple.com/documentation/swiftui/view/fontweight(_:)
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityaddtraits(_:)
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityidentifier(_:)
@@ -23,6 +24,9 @@ struct SoundPanel: View {
 
     @State private var part: Part = .music
 
+    /// The least height under the row: what levels will need, a label and four sound sliders of 31 points, 8 apart.
+    private let partHeight: CGFloat = 176
+
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 24) {
@@ -34,6 +38,7 @@ struct SoundPanel: View {
                     .accessibilityIdentifier("sound.done")
             }
             .frame(minHeight: 44)
+            VStack(spacing: 0) {
             if part == .music {
                 // slot: music
                 MusicPart(store: store)
@@ -45,8 +50,11 @@ struct SoundPanel: View {
             }
             if part == .clips {
                 // slot: clips
+                SoundClips(store: store)
                 // end slot: clips
             }
+            }
+            .frame(maxWidth: .infinity, minHeight: partHeight, alignment: .top)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
