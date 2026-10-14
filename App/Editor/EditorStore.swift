@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import ReelsmithCore
+import ReelsmithEngine
 
 /// The one object screens draw from and send actions to. It holds the `Editing` of Core: the state every
 /// screen reads, and the history that undo and redo step through. With an open draft it writes the project
@@ -74,6 +75,44 @@ final class EditorStore {
     }
 
     // slot: leave
+    /// True when made. The root shows the start screen once it is false.
+    private(set) var isOpen = true
+    private var closing = false
+
+    /// Writes the cover of the project's plan to the draft's cover file when the project has a clip, else
+    /// removes that file. With no draft it does nothing. A throw is logged and leaves the file as it was.
+    ///
+    /// https://developer.apple.com/documentation/foundation/filemanager/fileexists(atpath:)
+    /// https://developer.apple.com/documentation/foundation/filemanager/removeitem(at:)
+    func makeCover() async {
+        guard let draft else { return }
+        let project: Project = editing.state.project
+        guard !project.clips.isEmpty else {
+            if FileManager.default.fileExists(atPath: draft.coverFile.path) {
+                do {
+                    try FileManager.default.removeItem(at: draft.coverFile)
+                } catch {
+                    NSLog("%@", "editor: the cover was not removed: \(error)")
+                }
+            }
+            return
+        }
+        do {
+            let plan = try renderPlan(for: project)
+            try await writeCover(plan: plan, media: project.media, mediaFolder: mediaFolder, to: draft.coverFile)
+        } catch {
+            NSLog("%@", "editor: the cover was not written: \(error)")
+        }
+    }
+
+    /// Writes what is not written yet, makes the cover, then closes. A second call while one runs does nothing.
+    func close() async {
+        guard !closing else { return }
+        closing = true
+        writeNow()
+        await makeCover()
+        isOpen = false
+    }
     // end slot: leave
 
     // slot: export-choice

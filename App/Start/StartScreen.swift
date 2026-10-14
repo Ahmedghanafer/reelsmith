@@ -6,6 +6,8 @@ import SwiftUI
 /// It draws a `StartState`, which only `StartState.after(_:)` moves. Its own state is the chosen shape and the
 /// summaries of the drafts on the shelf, read when it appears. `open` gets the store the editor opens with.
 /// A new project is a new draft: made first, the videos copied into its media folder, then written.
+/// Under New project, while there are drafts, the title `drafts.title` and the list of them, where a tap on a row
+/// opens that draft again.
 ///
 /// https://developer.apple.com/documentation/swiftui/view/sheet(ispresented:ondismiss:content:)
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityaddtraits(_:)
@@ -68,6 +70,11 @@ struct StartScreen: View {
                 }
                 .accessibilityIdentifier("start.ok")
             }
+            if !summaries.isEmpty {
+                Text("drafts.title")
+                    .font(.headline)
+                DraftList(summaries: summaries, shelf: shelf, open: { openDraft($0) })
+            }
             if options.drafts != nil {
                 Text(verbatim: draftsInfo(summaries))
                     .font(.footnote)
@@ -83,6 +90,24 @@ struct StartScreen: View {
             VideoPicker(closed: pickerClosed)
                 .ignoresSafeArea()
         }
+    }
+
+    /// Opens the draft of a row with the history it was written with. A draft that cannot be opened is logged,
+    /// and the list is read again, where it shows as unreadable.
+    private func openDraft(_ id: DraftID) {
+        let draft: Draft
+        do {
+            draft = try shelf.open(id)
+        } catch {
+            NSLog("%@", "start: the draft was not opened: \(error)")
+            summaries = shelf.list()
+            return
+        }
+        let opened = OpenDraft(shelf: shelf, id: id)
+        open(
+            EditorStore(
+                state: EditorState(project: draft.project), mediaFolder: opened.mediaFolder, options: options,
+                draft: opened, exportSettings: draft.exportSettings, history: draft.history))
     }
 
     /// The picker closed with these videos, none when she cancelled.

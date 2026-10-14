@@ -39,14 +39,15 @@ struct ReelsmithApp: App {
     private let options: LaunchOptions
     private let shelf: DraftShelf
 
-    // The editor is opened by setting this store, by the seed start and by the start screen alike.
+    // The editor is opened by setting this store, by the seed start and by the start screen alike, and the
+    // start screen shows again once the store is closed.
     @State private var store: EditorStore?
 
     var body: some Scene {
         WindowGroup {
             // A stack and no Group: a Group would hand the task to each branch and so run the seed start twice.
             ZStack {
-                if let store {
+                if let store, store.isOpen {
                     EditorScreen(store: store)
                 } else {
                     // slot: start

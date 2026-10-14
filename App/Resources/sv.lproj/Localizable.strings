@@ -142,6 +142,10 @@
 /* end slot: draft-saving */
 
 /* slot: project-list */
+"editor.projects" = "Projekt";
+"drafts.title" = "Projekt";
+"drafts.row" = "Projekt från %1$@, %2$@ långt";
+"drafts.unreadable" = "Det här projektet kan inte öppnas";
 /* end slot: project-list */
 
 /* slot: draft-delete */
