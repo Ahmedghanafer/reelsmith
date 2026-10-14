@@ -51,7 +51,19 @@ enum TextBars {
             )
             let lines = item.string.split(omittingEmptySubsequences: false, whereSeparator: { $0.isNewline })
             let line: String = item.isBlank ? "" : String(lines.first ?? "")
-            bar.text = line
+            let writing = TimelineGeometry.writing(
+                barX: Double(bar.frame.minX),
+                barWidth: Double(bar.frame.width),
+                shownX: Double(view.bounds.minX),
+                shownWidth: Double(view.bounds.width)
+            )
+            bar.writing.frame = CGRect(
+                x: CGFloat(writing.x) - bar.frame.minX,
+                y: 0,
+                width: CGFloat(writing.width),
+                height: row.height
+            )
+            bar.writing.text = line
             bar.accessibilityIdentifier = "editor.text." + String(position)
             bar.accessibilityLabel = text(Words("textRow.bar", [String(position)]))
             bar.accessibilityValue = line
@@ -80,12 +92,15 @@ enum TextBars {
 }
 
 /// One bar of the text row of the strip: a text that has a range, drawn from its start for its length.
-/// It shows the first line of the string, which is content and no word of the app. A tap selects its text.
-/// It decides nothing: the place and the width come from `TimelineGeometry`, the range and the position
-/// from `Project`. Never mirrored: its frame is set by hand from the left.
+/// It shows the first line of the string, which is content and no word of the app, in the label `writing`,
+/// on the part of the bar that is on the screen. A tap selects its text. It decides nothing: the place and
+/// the width of the bar and of its writing come from `TimelineGeometry`, the range and the position from
+/// `Project`. Never mirrored: its frame is set by hand from the left, and the writing lies against the left.
 ///
 /// https://developer.apple.com/documentation/uikit/uilabel
 /// https://developer.apple.com/documentation/uikit/uilabel/linebreakmode
+/// https://developer.apple.com/documentation/uikit/uilabel/textalignment
+/// https://developer.apple.com/documentation/uikit/uiview/addsubview(_:)
 /// https://developer.apple.com/documentation/uikit/uitapgesturerecognizer
 /// https://developer.apple.com/documentation/uikit/uigesturerecognizerdelegate/gesturerecognizer(_:shouldberequiredtofailby:)
 /// https://developer.apple.com/documentation/uikit/uiview/insertsubview(_:belowsubview:)
@@ -94,18 +109,22 @@ enum TextBars {
 /// https://developer.apple.com/documentation/objectivec/nsobject/accessibilityvalue
 /// https://developer.apple.com/documentation/objectivec/nsobject/accessibilitytraits
 /// https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier
-final class TextBar: UILabel, UIGestureRecognizerDelegate {
+final class TextBar: UIView, UIGestureRecognizerDelegate {
     /// The text this bar stands for, set on every layout.
     fileprivate var shown: TextID?
+    /// The first line of the string. Its frame inside the bar is set on every layout.
+    fileprivate let writing = UILabel()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         semanticContentAttribute = .forceLeftToRight
-        numberOfLines = 1
-        lineBreakMode = .byTruncatingTail
-        textAlignment = .center
-        font = UIFont.systemFont(ofSize: 12, weight: .medium)
-        textColor = UIColor.label
+        writing.semanticContentAttribute = .forceLeftToRight
+        writing.numberOfLines = 1
+        writing.lineBreakMode = .byTruncatingTail
+        writing.textAlignment = .left
+        writing.font = UIFont.systemFont(ofSize: 12, weight: .medium)
+        writing.textColor = UIColor.label
+        addSubview(writing)
         backgroundColor = UIColor.systemGray4
         isUserInteractionEnabled = true
         isAccessibilityElement = true

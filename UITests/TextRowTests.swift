@@ -80,6 +80,52 @@ final class TextRowTests: XCTestCase {
         XCTAssertLessThan(bar.frame.width, 420)
     }
 
+    func testTheWritingOfAWholeTextBeginsAtTheLeftEndOfItsBarAtTheStartOfTheVideo() {
+        // At the start the bar is from x 201 to 621, so the part of it on the screen is from x 201 to 402
+        // and the writing begins at x 207. Where the writing lies is seen in the picture: no element gives it.
+        let app = startRow(seed: "text-wide")
+        let blue = element(app, "editor.clip.1")
+        let bar = element(app, "editor.text.1")
+        XCTAssertTrue(bar.exists)
+        guard bar.exists else {
+            return
+        }
+
+        XCTAssertEqual(bar.frame.minX, blue.frame.minX, accuracy: 1)
+        XCTAssertEqual(bar.frame.width, 420, accuracy: 1)
+        XCTAssertEqual(shown(on: bar), "Peace")
+        screenshot("text-row-04-writing-start")
+    }
+
+    func testTheWritingOfAWholeTextFollowsAScrubToTheEndOfTheVideo() {
+        // At 5 seconds the bar is from x -99 to 321, so the part of it on the screen is from x 0 to 321
+        // and the writing begins at x 6.
+        let app = startRow(seed: "text-wide", playhead: 3000)
+        let blue = element(app, "editor.clip.1")
+        let bar = element(app, "editor.text.1")
+        let playhead = element(app, "editor.playhead")
+        XCTAssertTrue(bar.exists)
+        guard bar.exists else {
+            return
+        }
+
+        XCTAssertEqual(bar.frame.minX, blue.frame.minX, accuracy: 1)
+        XCTAssertEqual(bar.frame.width, 420, accuracy: 1)
+        XCTAssertEqual(shown(on: bar), "Peace")
+        screenshot("text-row-05-writing-middle")
+
+        // The end of the project is 120 points away and the scrub goes 300: the bar is then from x -219
+        // to 201, with its left half off the screen, and the writing begins at x 6 again.
+        scrub(app, fromX: 0.9, byPoints: -300)
+        waitUntil("the right end of the bar at the playhead line after the scrub to the end of the project") {
+            abs(bar.frame.maxX - playhead.frame.midX) <= 1
+        }
+        XCTAssertEqual(bar.frame.minX, blue.frame.minX, accuracy: 1)
+        XCTAssertEqual(bar.frame.width, 420, accuracy: 1)
+        XCTAssertEqual(shown(on: bar), "Peace")
+        screenshot("text-row-06-writing-end")
+    }
+
     func testABlankTextHasABarAndATapOnEmptyStripRemovesIt() {
         // At 6 seconds the strip is from x -159 to 261, so the 141 points right of the red block are empty.
         let app = startRow(seed: "two-clips-wide", playhead: 3600)

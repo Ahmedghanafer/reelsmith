@@ -32,6 +32,9 @@ public enum TimelineGeometry {
     public static func writing(
         barX: Double, barWidth: Double, shownX: Double, shownWidth: Double
     ) -> (x: Double, width: Double) {
-        return (x: 0, width: 0)
+        let inset: Double = 6
+        let left = max(barX, shownX)
+        let right = min(barX + barWidth, shownX + shownWidth)
+        return (x: left + inset, width: max(right - left - 2 * inset, 0))
     }
 }
