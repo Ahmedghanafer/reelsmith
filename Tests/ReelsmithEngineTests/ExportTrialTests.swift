@@ -61,7 +61,7 @@ final class ExportTrialTests: XCTestCase {
         XCTAssertEqual(try modified(file), before)
     }
 
-    // MARK: The trial (E12 and E13)
+    // MARK: The trial
 
     func testTheTrialAt1280By720At60WritesThatSizeAnd60FramesOfRedThenBlue() async throws {
         let made = try await trial(width: 1280, height: 720, rate: 60)
@@ -89,7 +89,7 @@ final class ExportTrialTests: XCTestCase {
         }
     }
 
-    /// E13: printed, never asserted.
+    /// Portrait 4K: printed, never asserted.
     func testTheTrialAt2160By3840At60PrintsWhatItWrote() async {
         await printedTrial(width: 2160, height: 3840, preset: AVAssetExportPresetHighestQuality, x: 960, y: 3300)
     }
