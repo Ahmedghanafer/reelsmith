@@ -12,6 +12,7 @@ import XCTest
 // https://developer.apple.com/documentation/xcuiautomation/xcuielement/tap()
 // https://developer.apple.com/documentation/xcuiautomation/xcuiapplication/terminate()
 // https://developer.apple.com/documentation/xcuiautomation/xcuielementtypequeryprovider/alerts
+// https://developer.apple.com/documentation/xcuiautomation/xcuielementquery/firstmatch
 // https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/isenabled
 // https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/isselected
 // https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/label
@@ -103,10 +104,12 @@ final class DraftDeleteTests: XCTestCase {
         }
     }
 
-    /// The tap on `drafts.delete`, the wait for the alert, and the tap on its button of that identifier.
+    /// The tap on `drafts.delete`, the wait for the alert, and the tap on its button of that identifier. The
+    /// system alert shows each button as a button holding a second button of the same identifier, so the first
+    /// match is taken.
     private func deleteAndAnswer(_ app: XCUIApplication, _ answer: String) {
         element(app, "drafts.delete").tap()
-        let button = element(app, answer)
+        let button = app.alerts.buttons[answer].firstMatch
         waitUntil(answer + " in the alert after the tap on drafts.delete") { button.exists }
         button.tap()
     }
