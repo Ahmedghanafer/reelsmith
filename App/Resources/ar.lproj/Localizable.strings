@@ -103,6 +103,11 @@
 /* end slot: add-music */
 
 /* slot: music-levels */
+"music.volume" = "مستوى صوت الموسيقى";
+"music.start" = "تبدأ عند";
+"music.fadeIn" = "ارتفاع تدريجي";
+"music.fadeOut" = "انخفاض تدريجي";
+"music.none" = "لا توجد موسيقى بعد";
 /* end slot: music-levels */
 
 /* slot: music-video */

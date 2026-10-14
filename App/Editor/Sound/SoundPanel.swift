@@ -46,6 +46,7 @@ struct SoundPanel: View {
             }
             if part == .levels {
                 // slot: levels
+                MusicLevels(store: store)
                 // end slot: levels
             }
             if part == .clips {

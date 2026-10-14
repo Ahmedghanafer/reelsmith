@@ -103,6 +103,11 @@
 /* end slot: add-music */
 
 /* slot: music-levels */
+"music.volume" = "Music volume";
+"music.start" = "Starts at";
+"music.fadeIn" = "Fade in";
+"music.fadeOut" = "Fade out";
+"music.none" = "No music yet";
 /* end slot: music-levels */
 
 /* slot: music-video */
