@@ -137,6 +137,10 @@
 "editor.redo" = "إعادة";
 /* end slot: undo */
 
+/* slot: draft-saving */
+"draft.save" = "حفظ";
+/* end slot: draft-saving */
+
 /* slot: project-list */
 /* end slot: project-list */
 

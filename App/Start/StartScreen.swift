@@ -1,9 +1,11 @@
+import Foundation
 import ReelsmithCore
 import SwiftUI
 
 /// The start screen: the title, the choice of the shape, and "New project", which opens the system picker for videos.
-/// It draws a `StartState`, which only `StartState.after(_:)` moves. Its one own state is the chosen shape.
-/// `open` gets the store the editor opens with.
+/// It draws a `StartState`, which only `StartState.after(_:)` moves. Its own state is the chosen shape and the
+/// summaries of the drafts on the shelf, read when it appears. `open` gets the store the editor opens with.
+/// A new project is a new draft: made first, the videos copied into its media folder, then written.
 ///
 /// https://developer.apple.com/documentation/swiftui/view/sheet(ispresented:ondismiss:content:)
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityaddtraits(_:)
@@ -11,13 +13,17 @@ import SwiftUI
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityidentifier(_:)
 /// https://developer.apple.com/documentation/swiftui/view/background(_:in:fillstyle:)
 /// https://developer.apple.com/documentation/swiftui/view/contentshape(_:eofill:)
+/// https://developer.apple.com/documentation/swiftui/view/onappear(perform:)
+/// https://developer.apple.com/documentation/swiftui/text/init(verbatim:)
 struct StartScreen: View {
     let options: LaunchOptions
+    let shelf: DraftShelf
     let open: @MainActor (EditorStore) -> Void
 
     @State private var state = StartState.idle
     @State private var canvas = ReelsmithCore.Canvas.startChoice
     @State private var picking = false
+    @State private var summaries: [DraftSummary] = []
 
     var body: some View {
         VStack(spacing: 24) {
@@ -62,12 +68,16 @@ struct StartScreen: View {
                 }
                 .accessibilityIdentifier("start.ok")
             }
+            if options.drafts != nil {
+                Text(verbatim: draftsInfo(summaries))
+                    .font(.footnote)
+                    .accessibilityIdentifier("start.draftsInfo")
+            }
         }
         .multilineTextAlignment(.center)
         .padding()
         .onAppear {
-            // The first read empties the folder, once for a process.
-            _ = pickedMediaFolder
+            summaries = shelf.list()
         }
         .sheet(isPresented: $picking) {
             VideoPicker(closed: pickerClosed)
@@ -80,14 +90,30 @@ struct StartScreen: View {
         picking = false
         state = state.after(.pickerClosed(chosen: videos.count))
         guard state == .copying else { return }
+        let draft: OpenDraft
+        do {
+            draft = try shelf.create(
+                Draft(project: Project(canvas: canvas), exportSettings: .startChoice, changed: Date()))
+        } catch {
+            // The shelf leaves no draft when it throws.
+            state = state.after(.copyingEnded([]))
+            return
+        }
         Task {
             // The copy throws nothing and nothing cancels it, so `copyingEnded` is always sent.
-            let facts = await copyPicked(videos)
+            let facts = await copyPicked(videos, into: draft.mediaFolder)
             state = state.after(.copyingEnded(facts))
             if case .ready(var project) = state {
                 project.canvas = canvas
+                do {
+                    try draft.write(Draft(project: project, exportSettings: .startChoice, changed: Date()))
+                } catch {
+                    NSLog("%@", "start: the new draft was not written: \(error)")
+                }
                 let editor = EditorState(project: project)
-                open(EditorStore(state: editor, mediaFolder: pickedMediaFolder, options: options))
+                open(EditorStore(state: editor, mediaFolder: draft.mediaFolder, options: options, draft: draft))
+            } else if state == .failed {
+                try? shelf.delete(draft.id)
             }
         }
     }

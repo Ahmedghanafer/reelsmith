@@ -2,10 +2,10 @@ import ReelsmithCore
 import SwiftUI
 
 /// The preview of the editor: the picture area in the shape of the project's canvas, and under it the
-/// row of the play button, the time label and, at its trailing end, undo and redo. It decides nothing:
+/// row of the play button, the time label and, at its trailing end, undo, redo and save. It decides nothing:
 /// the label is `timeLabel`, the symbol follows `isPlaying`, the button is enabled by `canPlay`, and a tap
 /// sends `play` or `pause`. Undo and redo are always shown and enabled by `canUndo` and `canRedo`, so
-/// nothing in the row moves when one is enabled.
+/// nothing in the row moves when one is enabled. Save is always shown and enabled, and writes the draft.
 /// Never mirrored: the whole pane is fixed left to right.
 ///
 /// https://developer.apple.com/documentation/swiftui/view/aspectratio(_:contentmode:)-771ow
@@ -73,13 +73,21 @@ struct PreviewPane: View {
                 .disabled(!store.editing.canRedo)
                 .accessibilityLabel(Text("editor.redo"))
                 .accessibilityIdentifier("editor.redo")
+                Button {
+                    still { store.write() }
+                } label: {
+                    Image(systemName: "square.and.arrow.down")
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(Text("draft.save"))
+                .accessibilityIdentifier("editor.save")
             }
         }
         .environment(\.layoutDirection, .leftToRight)
     }
 
     /// Runs a tap inside a transaction that disables animations: an undo can close a panel and change the
-    /// height of the layout, and the row must stand at once.
+    /// height of the layout, and the row must stand at once. Save is sent the same way.
     private func still(_ tap: () -> Void) {
         var still = Transaction()
         still.disablesAnimations = true
