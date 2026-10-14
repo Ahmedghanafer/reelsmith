@@ -131,3 +131,15 @@
 
 /* slot: export-path */
 /* end slot: export-path */
+
+/* slot: undo */
+/* end slot: undo */
+
+/* slot: project-list */
+/* end slot: project-list */
+
+/* slot: draft-delete */
+/* end slot: draft-delete */
+
+/* slot: draft-path */
+/* end slot: draft-path */

@@ -1,4 +1,4 @@
-public struct ClipID: Hashable, Sendable {
+public struct ClipID: Hashable, Codable, Sendable {
     public let raw: Int
 
     public init(_ raw: Int) {
@@ -6,7 +6,7 @@ public struct ClipID: Hashable, Sendable {
     }
 }
 
-public struct Clip: Equatable, Sendable {
+public struct Clip: Equatable, Codable, Sendable {
     public var id: ClipID
     public var media: MediaID
     public var sourceStart: Time
@@ -20,7 +20,7 @@ public struct Clip: Equatable, Sendable {
     }
 }
 
-public struct Project: Equatable, Sendable {
+public struct Project: Equatable, Codable, Sendable {
     public static let framesPerSecond = 30
 
     /// The shape every picture is fitted into.

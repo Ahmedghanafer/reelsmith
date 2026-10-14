@@ -10,7 +10,7 @@ extension Project {
 }
 
 /// A row of actions on one text of one kind, which together are one step.
-public enum EditRun: Equatable, Sendable {
+public enum EditRun: Equatable, Codable, Sendable {
     case typing(TextID)
     case shaping(TextID)
 
@@ -40,7 +40,7 @@ public enum EditRun: Equatable, Sendable {
     }
 }
 
-public struct UndoHistory: Equatable, Sendable {
+public struct UndoHistory: Equatable, Codable, Sendable {
     public static let depth: Int = 50
     /// Without blank texts, the oldest first.
     public private(set) var past: [Project]
@@ -107,6 +107,14 @@ public struct Editing: Equatable, Sendable {
     public init(state: EditorState) {
         self.state = state
         history = UndoHistory()
+        unsaved = false
+    }
+
+    /// The state as given, that history with its run ended, unsaved false.
+    public init(state: EditorState, history: UndoHistory) {
+        self.state = state
+        self.history = history
+        self.history.endRun()
         unsaved = false
     }
 
