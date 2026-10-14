@@ -17,13 +17,13 @@ final class ExportPanelTests: XCTestCase {
     /// The failed panel comes before any work.
     private let expectedFailed = 5.0
 
-    func testTheExportButtonIsTheOneButtonOfItsRegionAndEnabledOnAProject() {
+    func testTheExportButtonAndTheChoiceAreTheTwoButtonsOfTheRegionAndEnabledOnAProject() {
         let app = startExport(seed: "two-clips")
         let region = element(app, "editor.exportRegion")
         let export = region.descendants(matching: .any)["editor.export"]
 
         XCTAssertTrue(export.exists)
-        XCTAssertEqual(region.descendants(matching: .button).count, 1)
+        XCTAssertEqual(region.buttons.allElementsBoundByIndex.map { $0.identifier }, ["editor.exportSettings", "editor.export"])
         XCTAssertEqual(export.label, "Export")
         XCTAssertTrue(export.isEnabled)
         XCTAssertFalse(element(app, "export.words").exists)
