@@ -102,6 +102,17 @@ final class ToneLevelTests: XCTestCase {
         }
     }
 
+    /// A window that reaches past the end of the track has samples for a part of itself only.
+    func testAWindowThatTheTrackDoesNotFillFailsTheRead() async throws {
+        let file = try await writeTone("tone-440", hertz: 440, peak: 0.5, rate: 44100, channels: 1)
+        do {
+            let level = try await toneLevel(of: file, hertz: 440, from: Time(ticks: 1500), to: Time(ticks: 2100))
+            XCTFail("no error, the level reads \(level)")
+        } catch {
+            XCTAssertTrue(error is SoundReadingError, "\(error)")
+        }
+    }
+
     /// Exports as `export` does, with the mix given to the session, and prints what the sound tracks of the file are.
     /// https://developer.apple.com/documentation/avfoundation/avassetexportsession/audiomix
     @MainActor
