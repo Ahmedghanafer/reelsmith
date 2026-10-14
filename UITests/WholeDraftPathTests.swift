@@ -123,7 +123,7 @@ final class WholeDraftPathTests: XCTestCase {
             app.staticTexts["editor.seedInfo"].label == "1 clips, 1 files"
         }
         let bar = element(app, "editor.text.1")
-        XCTAssertTrue(bar.exists, "the text bar of the reopened draft")
+        waitUntil("the text bar of the reopened draft") { bar.exists }
         bar.tap()
         waitUntil("text 1 in editor.textInfo after the tap on its bar") {
             app.staticTexts["editor.textInfo"].label.hasPrefix("1 ")
