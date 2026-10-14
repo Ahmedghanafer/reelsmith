@@ -106,6 +106,7 @@
 /* end slot: music-levels */
 
 /* slot: music-video */
+"music.fromVideo" = "Använd ljudet från en video";
 /* end slot: music-video */
 
 /* slot: sound-path */
