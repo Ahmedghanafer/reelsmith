@@ -1,8 +1,9 @@
 // The sound actions and the rule that at most one of a clip, a text and the sound panel is open.
 
 /// What reduce calls for the case sound. A value past a limit is held at the limit. An action that would change
-/// nothing returns the state unchanged, the playing flag included, and so does a volume that is not a finite number
-/// and, for the four that name the music, an action with no music. An action that changes the state pauses.
+/// nothing returns the state unchanged, the playing flag included, and so does a volume that is not a finite number,
+/// a volume of a clip the project does not have and, for the four that name the music, an action with no music.
+/// An action that changes the state pauses.
 func reduceSound(_ state: EditorState, _ action: SoundAction) -> EditorState {
     var next = state
     switch action {
@@ -48,6 +49,11 @@ func reduceSound(_ state: EditorState, _ action: SoundAction) -> EditorState {
             return state
         }
         next.project.music?.fadeOut = held(fade, upTo: SoundGeometry.maximumFade)
+    case .setVolumeOfClip(let id, let volume):
+        guard volume.isFinite, let index = state.project.clips.firstIndex(where: { $0.id == id }) else {
+            return state
+        }
+        next.project.clips[index].volume = min(max(volume, 0), 1)
     }
     if next.project == state.project {
         return state
