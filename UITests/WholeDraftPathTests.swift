@@ -167,7 +167,8 @@ final class WholeDraftPathTests: XCTestCase {
         let delete = element(app, "drafts.delete")
         waitUntil("drafts.delete after the swipe on drafts.row.1", expected: 10.0 / 3) { delete.exists }
         delete.tap()
-        let confirm = element(app, "drafts.deleteConfirm")
+        // The answer of the alert shows as a button inside a button with one identifier, so the first is taken.
+        let confirm = app.alerts.buttons["drafts.deleteConfirm"].firstMatch
         waitUntil("drafts.deleteConfirm after the tap on drafts.delete", expected: 2) { confirm.exists }
         confirm.tap()
         waitUntil("no row after the tap on drafts.deleteConfirm", expected: 2) {
