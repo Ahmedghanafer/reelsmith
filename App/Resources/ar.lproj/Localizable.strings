@@ -118,6 +118,15 @@
 /* end slot: sound-path */
 
 /* slot: export-settings */
+"export.settings" = "إعدادات التصدير";
+"export.size" = "الحجم";
+"export.rate" = "الإطارات في الثانية";
+"export.size.720" = "720p";
+"export.size.1080" = "1080p";
+"export.size.4K" = "4K";
+"export.rate.30" = "30 إطارًا/ث";
+"export.rate.60" = "60 إطارًا/ث";
+"export.settings.done" = "تم";
 /* end slot: export-settings */
 
 /* slot: export-path */
