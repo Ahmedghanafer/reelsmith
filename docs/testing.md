@@ -374,6 +374,8 @@ That the item is built again when the footage changes, that an old build never r
 
 Screenshots: `undo-01-row` (undo and redo disabled at the trailing end of the row), `undo-01-row-ar`, `undo-01-row-sv`, `undo-02-undone` (two blocks again, blue in the picture). Mark: `undo-01-undo`, the undo of the delete.
 
+`Tests/ReelsmithCoreTests/UndoWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `undo` of the English, the Arabic or the Swedish file holds anything but `editor.undo` and `editor.redo` in that order, or an empty text, and when the English texts are not "Undo" and "Redo".
+
 ### UI tests of the preview with text
 
 `UITests/PreviewTextTests.swift` holds the picture area with text in eight tests, on the landscape seeds `two-clips-wide`, `text-wide` and `text-box-wide`. The picture is read only through the probe `share(of:in:)`, the count of the items the preview built as the value of `editor.picture`, and the position of the selected text as the first field of `editor.textInfo`. Two numbers are named in the file. T is 0.00001: neither clip has a white pixel, so with no text no read finds one, and with a text the share of white is more than T. B is 0.99: the blue clip alone gives a share of blue above it, and under the box of `text-box-wide` a share below it. No element says when a frame is drawn, so a share is asked again until it is as wanted, expected within 3 seconds and given up above 9, or within 2 and above 6 where the test says so. Each wait prints a line that starts with `preview-text: waited` with the seconds, the expected seconds and the limit.
