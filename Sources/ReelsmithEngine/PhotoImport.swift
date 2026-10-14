@@ -8,9 +8,10 @@ import Foundation
 import ReelsmithCore
 
 /// Reads the picture with its orientation applied, scales it so its long side is at most 3840 pixels and both sides
-/// are even, and writes it as a still movie `<folder>/<id raw>.mov`: one HEVC picture track with the 709 colour
-/// properties, of photoLongest, that holds the picture twice, at zero and one frame of 30 before the end. It gives
-/// the MediaInfo of that movie: kind photo, the upright size, quarterTurns 0, hasSound false, duration photoLongest.
+/// are even, and writes it as a still movie `<folder>/<id raw>.mov`: one picture track with the 709 colour
+/// properties, H.264 while the picture has at most 36864 blocks of 16 by 16 and HEVC above, of photoLongest, that
+/// holds the picture twice, at zero and one frame of 30 before the end. It gives the MediaInfo of that movie: kind
+/// photo, the upright size, quarterTurns 0, hasSound false, duration photoLongest.
 /// Throws cannotRead when it is no picture, cannotWrite when the movie cannot be written. Leaves nothing written
 /// when it throws: the movie is written under a temporary name beside it, then renamed.
 ///
@@ -104,9 +105,12 @@ private func pixelBuffer(of picture: CIImage, width: Int, height: Int) throws ->
 private func writeStill(_ frame: CVPixelBuffer, width: Int, height: Int, to file: URL) async throws {
     let writer = try AVAssetWriter(outputURL: file, fileType: .mov)
     writer.movieTimeScale = 600
+    // H.264, as the test clips, while the picture fits the 36864 blocks of 16 by 16 of its level 5.2, HEVC above.
+    let blocks = ((width + 15) / 16) * ((height + 15) / 16)
+    let codec: AVVideoCodecType = blocks <= 36864 ? .h264 : .hevc
     // https://developer.apple.com/documentation/avfoundation/video-settings
     let settings: [String: Any] = [
-        AVVideoCodecKey: AVVideoCodecType.hevc,
+        AVVideoCodecKey: codec,
         AVVideoWidthKey: width,
         AVVideoHeightKey: height,
         AVVideoColorPropertiesKey: [

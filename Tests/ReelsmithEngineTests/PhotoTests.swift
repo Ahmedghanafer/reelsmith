@@ -109,7 +109,7 @@ final class PhotoTests: XCTestCase {
         XCTAssertEqual(info.height, 400)
         assertPhotoFacts(info, id: "turned")
         let movie = folder.appendingPathComponent(info.fileName)
-        try await assertStillMovie(movie, width: 300, height: 400)
+        try await assertStillMovie(movie, width: 300, height: 400, coding: "avc1")
         let written = try await frame(of: AVURLAsset(url: movie), composition: nil, at: 0)
         XCTAssertGreaterThan(try share(of: red, in: written, CGRect(x: 140, y: 40, width: 20, height: 20)), 0.9, "top")
         XCTAssertGreaterThan(
@@ -127,7 +127,8 @@ final class PhotoTests: XCTestCase {
         XCTAssertEqual(info.width, 3840)
         XCTAssertEqual(info.height, 2560)
         assertPhotoFacts(info, id: "large")
-        try await assertStillMovie(folder.appendingPathComponent(info.fileName), width: 3840, height: 2560)
+        try await assertStillMovie(
+            folder.appendingPathComponent(info.fileName), width: 3840, height: 2560, coding: "hvc1")
     }
 
     func testAFileThatIsNoPictureThrowsCannotReadAndLeavesNothingWritten() async throws {
@@ -288,13 +289,17 @@ final class PhotoTests: XCTestCase {
         XCTAssertEqual(info.duration, Time(ticks: 108000), line: line)
     }
 
-    /// The movie has the size, one picture track of at least photoLongest and no sound track. Prints its bytes.
-    private func assertStillMovie(_ movie: URL, width: Int, height: Int, line: UInt = #line) async throws {
+    /// The movie has the size, one picture track in the coding of at least photoLongest and no sound track. H.264
+    /// for a picture its level holds, as a seed's photo in the simulator, HEVC above. Prints its bytes.
+    private func assertStillMovie(
+        _ movie: URL, width: Int, height: Int, coding: String, line: UInt = #line
+    ) async throws {
         let size = try await storedSize(of: movie)
         XCTAssertEqual(size.width, width, line: line)
         XCTAssertEqual(size.height, height, line: line)
         let all = try await tracks(of: movie)
         XCTAssertEqual(all.map { $0.kind }, ["vide"], line: line)
+        XCTAssertEqual(all.first?.coding, coding, line: line)
         let length = all.first.map { ticks($0.duration) } ?? -1
         XCTAssertGreaterThanOrEqual(length, 108000, line: line)
         let attributes = try FileManager.default.attributesOfItem(atPath: movie.path)
