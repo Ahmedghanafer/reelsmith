@@ -73,6 +73,7 @@ private func wholeTenths(from start: Time, to end: Time) throws -> CMTimeRange {
 
 /// Reads the window and weighs the first channel against a sine and a cosine of the pitch. Each sample takes its
 /// place in the window from the time of its buffer, so a buffer that begins before the window adds nothing wrong.
+/// Throws unless the window is filled with samples from its first to its last.
 ///
 /// https://developer.apple.com/documentation/coremedia/cmsamplebuffergetpresentationtimestamp(_:)
 /// https://developer.apple.com/documentation/coremedia/cmaudioformatdescriptiongetstreambasicdescription(_:)
@@ -86,6 +87,7 @@ private func pitchLevel(reader: AVAssetReader, output: AVAssetReaderOutput, hert
     var sine = 0.0
     var cosine = 0.0
     var rate = 0.0
+    var placed = 0
     while let buffer = output.copyNextSampleBuffer() {
         guard let block = CMSampleBufferGetDataBuffer(buffer),
               let format = CMSampleBufferGetFormatDescription(buffer),
@@ -110,6 +112,7 @@ private func pitchLevel(reader: AVAssetReader, output: AVAssetReaderOutput, hert
         for frame in 0..<(samples.count / channels) {
             let place = first + frame
             guard place >= 0, place < wanted else { continue }
+            placed += 1
             let angle = 2 * Double.pi * Double(hertz) * Double(place) / rate
             let value = Double(samples[frame * channels]) / 32768
             sine += value * sin(angle)
@@ -119,8 +122,10 @@ private func pitchLevel(reader: AVAssetReader, output: AVAssetReaderOutput, hert
     guard reader.status == .completed else {
         throw reader.error ?? SoundReadingError(description: "the reader did not finish")
     }
-    guard rate > 0 else {
-        throw SoundReadingError(description: "no samples in the window")
+    // A window the sound does not fill would read low, and a silent read would then prove nothing.
+    let wanted = Int((window.duration.seconds * rate).rounded())
+    guard rate > 0, placed == wanted else {
+        throw SoundReadingError(description: "the window holds \(placed) samples of the \(wanted) it is long")
     }
     return 2 * (sine * sine + cosine * cosine).squareRoot() / (window.duration.seconds * rate)
 }
