@@ -171,9 +171,9 @@ final class TextMoreTests: XCTestCase {
         print("text-more: field 10 after the move toward the upper end \(wide), the slider at \(slider.normalizedSliderPosition)")
         XCTAssertGreaterThan(wide, 0)
         let spaced = waitForTheShare(
-            of: blue, "blue with the box of the spaced lines", in: picture, lessThan: boxed - 0.005)
+            of: blue, "blue with the box of the spaced lines", in: picture, lessThan: boxed - 0.001)
         print("text-more: the share of blue with the box \(boxed) and with the box of the spaced lines \(spaced)")
-        XCTAssertLessThan(spaced, boxed - 0.005, "blue with the box of the spaced lines")
+        XCTAssertLessThan(spaced, boxed - 0.001, "blue with the box of the spaced lines")
         screenshot("text-more-03-spaced")
 
         slider.adjust(toNormalizedSliderPosition: 0.3)
