@@ -229,23 +229,21 @@ final class MusicProbeTests: XCTestCase {
         let described = CMAudioFormatDescriptionCreate(
             allocator: kCFAllocatorDefault, asbd: &format, layoutSize: 0, layout: nil, magicCookieSize: 0,
             magicCookie: nil, extensions: nil, formatDescriptionOut: &description)
-        XCTAssertEqual(described, noErr)
         var block: CMBlockBuffer?
         let allocated = CMBlockBufferCreateWithMemoryBlock(
             allocator: kCFAllocatorDefault, memoryBlock: nil, blockLength: bytes, blockAllocator: kCFAllocatorDefault,
             customBlockSource: nil, offsetToData: 0, dataLength: bytes, flags: kCMBlockBufferAssureMemoryNowFlag,
             blockBufferOut: &block)
-        XCTAssertEqual(allocated, kCMBlockBufferNoErr)
-        let filled = try XCTUnwrap(block)
+        guard described == noErr, allocated == kCMBlockBufferNoErr, let description, let filled = block else {
+            throw EngineError.cannotWrite
+        }
         let copied = CMBlockBufferReplaceDataBytes(
             with: samples, blockBuffer: filled, offsetIntoDestination: 0, dataLength: bytes)
-        XCTAssertEqual(copied, kCMBlockBufferNoErr)
         var made: CMSampleBuffer?
         let wrapped = CMAudioSampleBufferCreateReadyWithPacketDescriptions(
-            allocator: kCFAllocatorDefault, dataBuffer: filled, formatDescription: try XCTUnwrap(description),
+            allocator: kCFAllocatorDefault, dataBuffer: filled, formatDescription: description,
             sampleCount: count, presentationTimeStamp: .zero, packetDescriptions: nil, sampleBufferOut: &made)
-        XCTAssertEqual(wrapped, noErr)
-        let whole = try XCTUnwrap(made)
+        guard copied == kCMBlockBufferNoErr, wrapped == noErr, let whole = made else { throw EngineError.cannotWrite }
 
         let writer = try AVAssetWriter(outputURL: file, fileType: fileType)
         let input = AVAssetWriterInput(mediaType: .audio, outputSettings: settings)
