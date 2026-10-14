@@ -5,9 +5,9 @@ import UIKit
 
 /// The export row: the choice of size and rate, then the export button and the panel it puts over the editor.
 /// It decides nothing: `ExportState` says whether the button is enabled and what the panel shows, and only
-/// `ExportState.after(_:)` moves it. The choice is its own state from the start choice of Core until the editor
-/// goes, and the sheet of the choice sends the settings it is given back. The two buttons take an equal share of
-/// the row, so the export button stands still whatever the label of the choice says.
+/// `ExportState.after(_:)` moves it. The choice is the store's, which keeps it with the draft, and the sheet of the
+/// choice gives the settings it is given back to the store. The two buttons take an equal share of the row, so the
+/// export button stands still whatever the label of the choice says.
 /// The panel is a full screen cover, so nothing of the editor behind it answers a touch.
 ///
 /// https://developer.apple.com/documentation/swiftui/view/fullscreencover(ispresented:ondismiss:content:)
@@ -20,7 +20,6 @@ struct ExportButton: View {
     let store: EditorStore
 
     @State private var exportState = ExportState.idle
-    @State private var settings = ExportSettings.startChoice
     @State private var savedFacts: VideoFacts?
     @State private var choosing = false
 
@@ -38,8 +37,8 @@ struct ExportButton: View {
             choosing = true
         } label: {
             HStack(spacing: 6) {
-                Text(text(settings.size.words))
-                Text(text(settings.rate.words))
+                Text(text(store.exportSettings.size.words))
+                Text(text(store.exportSettings.rate.words))
             }
             .lineLimit(1)
             .frame(maxWidth: .infinity, minHeight: 44)
@@ -47,7 +46,8 @@ struct ExportButton: View {
         }
         .accessibilityIdentifier("editor.exportSettings")
         .sheet(isPresented: $choosing) {
-            ExportSettingsSheet(settings: settings, choose: { settings = $0 }, done: { choosing = false })
+            ExportSettingsSheet(
+                settings: store.exportSettings, choose: { store.choose($0) }, done: { choosing = false })
                 .presentationDetents([.medium])
         }
     }
@@ -65,8 +65,8 @@ struct ExportButton: View {
         .fullScreenCover(isPresented: .constant(exportState != .idle)) {
             ExportPanel(
                 state: exportState,
-                // Only a seeded start shows what the file holds, "none" when it could not be read.
-                fileInfo: store.options.seed != nil ? (savedFacts?.infoText ?? "none") : nil,
+                // A seeded start or a launch with -drafts shows what the file holds, "none" when it cannot be read.
+                fileInfo: store.options.showsInfo ? (savedFacts?.infoText ?? "none") : nil,
                 close: { exportState = exportState.after(.closed) })
         }
         // The phone does not lock while an export runs, and may lock again once it ends, saved or failed.
@@ -83,7 +83,7 @@ struct ExportButton: View {
         store.send(.pause)
         exportState = exportState.after(.started)
         let project = store.state.project
-        let chosen = settings
+        let chosen = store.exportSettings
         let mediaFolder = store.mediaFolder
         let fails = store.options.exportFails
         Task {
