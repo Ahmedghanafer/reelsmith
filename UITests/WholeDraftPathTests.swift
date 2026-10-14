@@ -163,7 +163,20 @@ final class WholeDraftPathTests: XCTestCase {
         element(app, panel).tap()
         waitUntil("the panel gone after the tap on " + panel) { !self.element(app, panel).exists }
         back(app)
-        element(app, "drafts.row.1").swipeLeft()
+        // A swipe sent while the start screen still settles after the editor closed is lost, so the row is
+        // swiped once it stands in the same place on two reads in a row.
+        let row = element(app, "drafts.row.1")
+        var last = CGRect.zero
+        waitUntil("drafts.row.1 standing on the start screen") {
+            guard row.exists else {
+                return false
+            }
+            let now = row.frame
+            defer { last = now }
+            return now == last
+        }
+        print("draft-path: drafts.row.1 at \(row.frame), start.draftsInfo reads " + draftsInfo(app))
+        row.swipeLeft()
         let delete = element(app, "drafts.delete")
         waitUntil("drafts.delete after the swipe on drafts.row.1", expected: 10.0 / 3) { delete.exists }
         delete.tap()
