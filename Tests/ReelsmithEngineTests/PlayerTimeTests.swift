@@ -68,6 +68,21 @@ final class PlayerTimeTests: XCTestCase {
         try await wait("the player stands on 3000 ticks", expected: 5) { player.currentTime() == self.ticks(3000) }
     }
 
+    /// The second item of a player, as after an edit: it is sought before it goes in, and the player
+    /// stands on that time when the item is ready, with no seek on the player.
+    /// https://developer.apple.com/documentation/avfoundation/avplayer/replacecurrentitem(with:)
+    @MainActor
+    func testAnItemSoughtBeforeItGoesIntoThePlayerIsReadyOnThatTime() async throws {
+        let player = try await readyPlayer(with: try await wideItem())
+        let second = try await wideItem()
+
+        second.seekExactly(to: Time(ticks: 3000))
+        player.replaceCurrentItem(with: second)
+        try await wait("the second item is ready", expected: 10) { second.status != .unknown }
+        XCTAssertEqual(second.status, .readyToPlay, "the item's error: \(String(describing: second.error))")
+        XCTAssertEqual(player.currentTime(), ticks(3000))
+    }
+
     /// A time between two ticks shows the rounding: 1801 thousandths of a second are 1080.6 ticks.
     /// https://developer.apple.com/documentation/avfoundation/avplayer/seek(to:tolerancebefore:toleranceafter:completionhandler:)
     @MainActor

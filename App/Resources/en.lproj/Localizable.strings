@@ -44,15 +44,36 @@
 /* end slot: m1-12-whole-path */
 
 /* slot: add-text */
+"tools.text" = "Text";
+"text.tab.type" = "Type";
+"text.tab.look" = "Look";
+"text.tab.more" = "More";
+"text.done" = "Done";
+"text.field" = "Your text";
 /* end slot: add-text */
 
 /* slot: text-look */
+"text.font.naskh" = "Naskh";
+"text.font.naskhBold" = "Naskh bold";
+"text.font.system" = "System";
+"text.colour" = "Colour %1$@";
+"text.size" = "Size";
 /* end slot: text-look */
 
 /* slot: text-more */
+"text.align.left" = "Left";
+"text.align.centre" = "Centre";
+"text.align.right" = "Right";
+"text.spacing" = "Line spacing";
+"text.outline" = "Outline";
+"text.shadow" = "Shadow";
+"text.box" = "Box";
 /* end slot: text-more */
 
 /* slot: text-row */
+"textRow.bar" = "Text %1$@";
+"textRow.trimStart" = "Text start";
+"textRow.trimEnd" = "Text end";
 /* end slot: text-row */
 
 /* slot: text-path */

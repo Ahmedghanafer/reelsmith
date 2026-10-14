@@ -23,9 +23,15 @@ struct PlayerPicture: UIViewRepresentable {
 }
 
 /// A black area whose layer shows the player. The player follows the state: its item is built again
-/// when the project changes, it seeks when the playhead changes while not playing, and it starts from
-/// the playhead when `isPlaying` turns true. While playing it reports its time with `movePlayhead`,
-/// which never makes it seek, and at the end it sends `pause`. Never mirrored.
+/// when the footage of the project changes and refreshed when only the texts change, it seeks when the
+/// playhead changes while not playing, and it starts from the playhead when `isPlaying` turns true.
+/// A new item is given the playhead as its starting time before it goes in, and a state that rests
+/// or starts there sends no seek.
+/// While playing it reports its time with `movePlayhead`, which never makes it seek, and at the end
+/// it sends `pause`. Never mirrored.
+///
+/// On a seeded start, and only then, the accessibility value of the area is the count of the items
+/// the view began to build, in the digits 0 to 9. A refresh does not change it.
 ///
 /// A new item has no frame to show at first. So the picture the layer shows is copied before the new
 /// item goes into the player and lies over the layer until the layer says that the first frame of
@@ -49,18 +55,15 @@ struct PlayerPicture: UIViewRepresentable {
 /// https://developer.apple.com/documentation/avfoundation/avplayer/replacecurrentitem(with:)
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/status-swift.property
 /// https://developer.apple.com/documentation/objectivec/nsobject-swift.class/observe(_:options:changehandler:)
-/// https://developer.apple.com/documentation/avfoundation/avplayer/seek(to:tolerancebefore:toleranceafter:)
-/// https://developer.apple.com/documentation/avfoundation/avplayer/seek(to:tolerancebefore:toleranceafter:completionhandler:)
 /// https://developer.apple.com/documentation/avfoundation/avplayer/play()
 /// https://developer.apple.com/documentation/avfoundation/avplayer/pause()
-/// https://developer.apple.com/documentation/avfoundation/avplayer/addperiodictimeobserver(forinterval:queue:using:)
 /// https://developer.apple.com/documentation/avfoundation/avplayer/removetimeobserver(_:)
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/didplaytoendtimenotification
 /// https://developer.apple.com/documentation/foundation/notificationcenter/addobserver(_:selector:name:object:)
-/// https://developer.apple.com/documentation/coremedia/cmtime/convertscale(_:method:)
-/// https://developer.apple.com/documentation/swift/mainactor/assumeisolated(_:file:line:)
 /// https://developer.apple.com/documentation/uikit/uiview/semanticcontentattribute
 /// https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier
+/// https://developer.apple.com/documentation/objectivec/nsobject-swift.class/accessibilityvalue
+/// https://developer.apple.com/documentation/avfoundation/avplayeritem/videocomposition
 final class PlayerPictureView: UIView {
     override class var layerClass: AnyClass {
         AVPlayerLayer.self
@@ -68,10 +71,14 @@ final class PlayerPictureView: UIView {
 
     private let store: EditorStore
     private let player: AVPlayer
-    /// The project of the newest build of the item.
+    /// The project the view was last handed, or the one a build that landed was refreshed to.
     private var project: Project?
     /// Counts the builds, so the result of a build that a newer one superseded is dropped.
     private var build = 0
+    /// True from the start of a build of an item until it lands.
+    private var isBuilding = false
+    /// Counts the items the view began to build, for the accessibility value of a seeded start.
+    private var built = 0
     /// The item of the newest build, the one whose status is observed.
     private var item: AVPlayerItem?
     /// True while `item` is ready to play.
@@ -79,11 +86,16 @@ final class PlayerPictureView: UIView {
     private var statusObservation: NSKeyValueObservation?
     /// True from the moment the state turns to playing until the player is stopped.
     private var isPlaying = false
-    /// The playhead of the last seek with a completion handler, or the end when the item has played
-    /// to it. While one seek is in flight it can be a newer playhead, whose seek is sent when the one
-    /// in flight has ended. Nil when the player is not known to stand on a playhead of the state: a
-    /// new item, a seek that did not finish, from a start on.
+    /// The playhead of the last seek with a completion handler. While one seek is in flight it can
+    /// be a newer playhead, whose seek is sent when the one in flight has ended. Nil when the player
+    /// is not known to stand on a playhead of the state: a new item, a seek that did not finish,
+    /// from a start on.
     private var target: Time?
+    /// The time the newest item was given before it went into the player, its starting time. Nil
+    /// from the first seek with a handler and from a start on. A state whose playhead is sought as
+    /// this time sends no seek: the player answers a seek to the time it already has at once, with
+    /// no frame of its own.
+    private var sent: Time?
     /// True while one seek is in flight. A newer playhead waits in `target` until it lands.
     private var isSeeking = false
     private var timeObserver: Any?
@@ -110,6 +122,9 @@ final class PlayerPictureView: UIView {
         backgroundColor = UIColor.black
         isAccessibilityElement = true
         accessibilityIdentifier = "editor.picture"
+        if store.options.seed != nil {
+            accessibilityValue = String(built)
+        }
         (layer as? AVPlayerLayer)?.player = player
         // Without this request the simulator's layer refuses every frame of a clip that fills the canvas
         // unscaled and shows black. It names a kind of buffer. What it costs on a device is not measured.
@@ -130,13 +145,41 @@ final class PlayerPictureView: UIView {
         return nil
     }
 
-    /// Called with every state of the store.
+    /// Called with every state of the store. Another footage builds a new item. Other texts on the
+    /// same footage refresh the standing item, and build a new one when the Engine refuses the refresh.
+    /// While a build runs nothing is refreshed: the build does it when it lands. With no item and the
+    /// same footage (an empty project, a failed build) nothing is done.
     func follow(_ state: EditorState) {
-        if project != state.project {
-            project = state.project
+        if project == state.project {
+            if isReady {
+                bring(to: state)
+            }
+            return
+        }
+        let sameFootage: Bool = project?.sameFootage(as: state.project) ?? false
+        project = state.project
+        if !sameFootage {
             rebuild(for: state)
-        } else if isReady {
-            bring(to: state)
+        } else if !isBuilding, let standing = item {
+            if refresh(standing, to: state.project) {
+                if isReady {
+                    bring(to: state)
+                }
+            } else {
+                rebuild(for: state)
+            }
+        }
+    }
+
+    /// Gives the item the picture of the project, whose footage is the one the item was built from.
+    /// It only sets the video composition of the item, and a paused player is expected to draw its
+    /// frame again from it. False when the Engine refused: the item is then as it was.
+    private func refresh(_ item: AVPlayerItem, to project: Project) -> Bool {
+        do {
+            try refreshPicture(of: item, plan: renderPlan(for: project), media: project.media)
+            return true
+        } catch {
+            return false
         }
     }
 
@@ -151,11 +194,16 @@ final class PlayerPictureView: UIView {
         isReady = false
         statusObservation = nil
         stop()
+        isBuilding = state.canPlay
         guard state.canPlay else {
             item = nil
             keepTheOldPicture(until: nil, without: "an empty project")
             player.replaceCurrentItem(with: nil)
             return
+        }
+        built += 1
+        if store.options.seed != nil {
+            accessibilityValue = String(built)
         }
         let project: Project = state.project
         Task {
@@ -169,21 +217,33 @@ final class PlayerPictureView: UIView {
             guard number == self.build else {
                 return
             }
+            self.isBuilding = false
+            // A text edit made while the build ran: the item is refreshed once, before it goes into
+            // the player and is brought to the state.
+            let now: Project = self.store.state.project
+            if let made = item, now != project, now.sameFootage(as: project) {
+                self.project = now
+                if !self.refresh(made, to: now) {
+                    self.rebuild(for: self.store.state)
+                    return
+                }
+            }
             self.install(item, build: number)
         }
     }
 
     private func install(_ item: AVPlayerItem?, build number: Int) {
         self.item = item
-        keepTheOldPicture(until: item, without: "a failed build")
-        player.replaceCurrentItem(with: item)
-        // The first playhead goes with the item, so the player gets ready on that frame and not on
-        // the first one. A seek with no completion handler may be sent before the item is ready.
-        // Nothing says when it lands, so the player does not count as standing there: at ready it is
-        // sought to the playhead of that moment with a handler, and rests or starts when that landed.
+        // The item is given the first playhead before it goes into the player, so that time is its
+        // starting time: the player makes the item ready on that frame and never begins on the
+        // first one. A seek sent after the item went in could reach a player that had already
+        // begun to decode the first frame of the project, and that frame was once seen to stay.
         let first: Time = store.state.playhead
         target = nil
-        player.seek(to: CMTime(value: first.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        sent = frameTime(of: first)
+        item?.seekExactly(to: frameTime(of: first))
+        keepTheOldPicture(until: item, without: "a failed build")
+        player.replaceCurrentItem(with: item)
         // A seek with a completion handler needs an item that is ready, so the player waits for it.
         // The change can come on any thread.
         statusObservation = item?.observe(\.status, options: [.initial, .new]) { [weak self] _, _ in
@@ -277,9 +337,10 @@ final class PlayerPictureView: UIView {
         if state.isPlaying {
             if !isPlaying {
                 // The player starts when it stands on the playhead: at once when a seek to it has
-                // landed before, otherwise when the seek to it has landed.
+                // landed before or it is the starting time of the item, otherwise when the seek to
+                // it has landed.
                 isPlaying = true
-                if target != state.playhead {
+                if target != state.playhead, sent != frameTime(of: state.playhead) {
                     seek(to: state.playhead)
                 }
                 if !isSeeking {
@@ -290,7 +351,7 @@ final class PlayerPictureView: UIView {
             if isPlaying {
                 stop()
             }
-            if target != state.playhead {
+            if target != state.playhead, sent != frameTime(of: state.playhead) {
                 seek(to: state.playhead)
             }
         }
@@ -300,6 +361,7 @@ final class PlayerPictureView: UIView {
     /// to the newest one when the seek in flight has landed.
     private func seek(to playhead: Time) {
         target = playhead
+        sent = nil
         if !isSeeking {
             seekToTarget()
         }
@@ -311,14 +373,19 @@ final class PlayerPictureView: UIView {
         }
         isSeeking = true
         let number = build
-        // The handler can come on any thread.
-        player.seek(
-            to: CMTime(value: wanted.ticks, timescale: 600), toleranceBefore: .zero, toleranceAfter: .zero
-        ) { [weak self] finished in
-            Task { @MainActor [weak self] in
-                self?.seekEnded(wanted, finished: finished, build: number)
-            }
+        player.seekExactly(to: frameTime(of: wanted)) { [weak self] finished in
+            self?.seekEnded(wanted, finished: finished, build: number)
         }
+    }
+
+    /// The time the player is sent to for a playhead: at the very end of the project the last frame,
+    /// the one that holds the last tick before the end. A text is drawn in a frame before its end.
+    /// Sent to the time of the end itself the player shows that same last frame with no text in it.
+    private func frameTime(of playhead: Time) -> Time {
+        guard let length: Time = project?.duration, playhead >= length else {
+            return playhead
+        }
+        return (length - Time(ticks: 1)).roundedDownToFrame
     }
 
     private func seekEnded(_ sought: Time, finished: Bool, build number: Int) {
@@ -340,16 +407,10 @@ final class PlayerPictureView: UIView {
     private func start() {
         // From here the player moves by itself and stands on no playhead of the state.
         target = nil
+        sent = nil
         player.play()
-        // The queue is the main queue, so the block runs on the main actor.
-        timeObserver = player.addPeriodicTimeObserver(
-            forInterval: CMTime(value: Time.frame.ticks, timescale: 600), queue: .main
-        ) { [weak self] time in
-            MainActor.assumeIsolated {
-                if let self {
-                    self.report(time)
-                }
-            }
+        timeObserver = player.reportTime(every: Time.frame) { [weak self] time in
+            self?.report(time)
         }
     }
 
@@ -364,11 +425,11 @@ final class PlayerPictureView: UIView {
 
     /// The state of the store is read at this moment: once it has stopped playing nothing more is
     /// reported, also when this view has not been handed that state yet.
-    private func report(_ time: CMTime) {
+    private func report(_ time: Time) {
         guard store.state.isPlaying, timeObserver != nil else {
             return
         }
-        store.send(.movePlayhead(Time(ticks: time.convertScale(600, method: .roundTowardZero).value)))
+        store.send(.movePlayhead(time))
     }
 
     /// The notification can come on any thread.
@@ -385,7 +446,7 @@ final class PlayerPictureView: UIView {
         stop()
         store.send(.movePlayhead(store.state.project.duration))
         store.send(.pause)
-        // The player stands on its last frame, which is the picture of the end. No seek goes there.
-        target = store.state.playhead
+        // The player stands on the time of the end, where a frame drawn again has no text. It counts
+        // as standing on no playhead, so the paused state seeks to the last frame.
     }
 }

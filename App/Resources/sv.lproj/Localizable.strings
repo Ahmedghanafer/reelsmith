@@ -44,15 +44,36 @@
 /* end slot: m1-12-whole-path */
 
 /* slot: add-text */
+"tools.text" = "Text";
+"text.tab.type" = "Skriv";
+"text.tab.look" = "Utseende";
+"text.tab.more" = "Mer";
+"text.done" = "Klar";
+"text.field" = "Din text";
 /* end slot: add-text */
 
 /* slot: text-look */
+"text.font.naskh" = "Naskh";
+"text.font.naskhBold" = "Naskh fet";
+"text.font.system" = "System";
+"text.colour" = "Färg %1$@";
+"text.size" = "Storlek";
 /* end slot: text-look */
 
 /* slot: text-more */
+"text.align.left" = "Vänster";
+"text.align.centre" = "Mitten";
+"text.align.right" = "Höger";
+"text.spacing" = "Radavstånd";
+"text.outline" = "Kontur";
+"text.shadow" = "Skugga";
+"text.box" = "Ruta";
 /* end slot: text-more */
 
 /* slot: text-row */
+"textRow.bar" = "Text %1$@";
+"textRow.trimStart" = "Textens början";
+"textRow.trimEnd" = "Textens slut";
 /* end slot: text-row */
 
 /* slot: text-path */

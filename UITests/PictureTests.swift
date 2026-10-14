@@ -114,7 +114,9 @@ final class PictureTests: XCTestCase {
 
     /// A delete that changes the clip under a playhead that stays where it is. At 4 seconds red is
     /// under the playhead and the blue block is from x -39 to 141. With blue gone, red is from 0 to 4
-    /// seconds and green starts at 4, under the playhead. Red and green both fill the area.
+    /// seconds and green starts at 4, under the playhead. Red and green both fill the area. The
+    /// playhead stands exactly on the cut, where the picture is the clip that begins there: green
+    /// above 0.9 within the wait, and then red below 0.05.
     func testADeleteBeforeThePlayheadNeverLeavesThePictureAreaBlack() {
         let app = startApp(seed: "three-clips", playhead: 2400)
         waitForTheEditor(app)
@@ -126,6 +128,7 @@ final class PictureTests: XCTestCase {
         mark("picture-05-edit-delete-before")
         app.descendants(matching: .any)["editor.delete"].tap()
         readBlackUntil(green, "green", in: picture, after: "the delete of blue")
+        XCTAssertLessThan(share(of: red, in: picture), 0.05, "red after the delete of blue")
         XCTAssertEqual(app.descendants(matching: .any)["editor.playhead"].value as? String, "00:04")
         screenshot("picture-08-green-after-delete")
     }

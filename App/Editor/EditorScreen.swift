@@ -1,7 +1,9 @@
 import ReelsmithCore
+import ReelsmithEngine
 import SwiftUI
 
-/// The editor shell: four regions from top to bottom, each with the slot of the story that fills it.
+/// The editor shell: four regions from top to bottom, each with the slot of the story that fills it,
+/// and between the tools and the export a fifth, the text region, only while a text is selected.
 /// The root and the regions are accessibility containers, so a region is found while it is empty
 /// and a control inside it keeps its own identifier.
 ///
@@ -16,6 +18,12 @@ struct EditorScreen: View {
                 Text(text(seedInfo))
                     .font(.footnote)
                     .accessibilityIdentifier("editor.seedInfo")
+                Text(verbatim: store.state.textInfo)
+                    .font(.footnote)
+                    .accessibilityIdentifier("editor.textInfo")
+                Text(verbatim: faceName(of: .naskh) + " " + faceName(of: .naskhBold))
+                    .font(.footnote)
+                    .accessibilityIdentifier("editor.faceInfo")
             }
             ZStack {
                 // slot: preview
@@ -28,7 +36,7 @@ struct EditorScreen: View {
                 // slot: timeline
                 // A wrapped UIKit view takes all the height it is offered, so the strip fixes its own.
                 TimelineStrip(state: store.state, send: { action in store.send(action) })
-                    .frame(height: 72)
+                    .frame(height: 104)
                 // end slot: timeline
             }
             .region("editor.timelineRegion")
@@ -38,6 +46,12 @@ struct EditorScreen: View {
                 // end slot: tools
             }
             .region("editor.toolsRegion")
+            if let selected: TextID = store.state.selectedText {
+                // A panel is made anew for every text that gets selected, so it starts on the part of that text.
+                TextPanel(store: store)
+                    .id(selected)
+                    .region("editor.textRegion")
+            }
             ZStack {
                 // slot: export
                 ExportButton(store: store)
@@ -45,6 +59,10 @@ struct EditorScreen: View {
             }
             .region("editor.exportRegion")
         }
+        // Takes the animation out of every transaction that comes down to the editor, so the text region
+        // does not slide in or out.
+        // https://developer.apple.com/documentation/swiftui/view/transaction(_:)
+        .transaction { $0.animation = nil }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("editor.root")
     }

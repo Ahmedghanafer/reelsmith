@@ -44,15 +44,36 @@
 /* end slot: m1-12-whole-path */
 
 /* slot: add-text */
+"tools.text" = "نص";
+"text.tab.type" = "كتابة";
+"text.tab.look" = "المظهر";
+"text.tab.more" = "المزيد";
+"text.done" = "تم";
+"text.field" = "النص";
 /* end slot: add-text */
 
 /* slot: text-look */
+"text.font.naskh" = "نسخ";
+"text.font.naskhBold" = "نسخ عريض";
+"text.font.system" = "خط النظام";
+"text.colour" = "اللون %1$@";
+"text.size" = "الحجم";
 /* end slot: text-look */
 
 /* slot: text-more */
+"text.align.left" = "يسار";
+"text.align.centre" = "وسط";
+"text.align.right" = "يمين";
+"text.spacing" = "تباعد الأسطر";
+"text.outline" = "حدود";
+"text.shadow" = "ظل";
+"text.box" = "خلفية";
 /* end slot: text-more */
 
 /* slot: text-row */
+"textRow.bar" = "النص %1$@";
+"textRow.trimStart" = "بداية النص";
+"textRow.trimEnd" = "نهاية النص";
 /* end slot: text-row */
 
 /* slot: text-path */
