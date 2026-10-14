@@ -676,7 +676,7 @@ Screenshots: `export-choice-01-sheet` (the sheet at the start choice), `export-c
 - In Arabic and in Swedish: 4K and 60 chosen, the picture of the editor.
 - No part of the history: started at 2 seconds, 720p and 60 chosen, the red block selected and deleted, then `editor.undo` and two blocks again: the label still holds "720p" and "60 fps".
 - The export at the choice: 720p and 60 chosen, a tap on `editor.export` reaches the saved panel and `export.fileInfo` reads `1280 720 60`.
-- Without `-drafts`: a draft at 4K and 60 written first, the app ended and started on `two-clips-wide` alone, the label holds "1080p" and "30 fps".
+- Without `-drafts`: a draft at 4K and 60 written first and read back as `1 2+4200+0+2160x60+.`, then the app started on `two-clips-wide` alone: the label holds "1080p" and "30 fps".
 
 The wait for the sheet is expected within 3.3 seconds and fails at 10, and prints the tree of the app when it fails. The wait for the saved panel prints a line that starts with `export-kept: export.done after`, expected 45 seconds and failing at 135, since it can be the first export of its run. The wait for the start screen is expected within 10 seconds. Every other wait is expected within 1 second, fails above 3, and prints a line that starts with `export-kept: waited`.
 

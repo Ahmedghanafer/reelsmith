@@ -77,6 +77,9 @@ final class ExportKeptTests: XCTestCase {
         var app = startSeeded(language: "en")
         choose(app, "export.size.uhd4K", "export.rate.sixty")
         app.terminate()
+        app = startApp(seed: nil, drafts: "kept")
+        XCTAssertEqual(draftsInfo(app), "1 2+4200+0+2160x60+.")
+        app.terminate()
 
         app = startApp(seed: "two-clips-wide")
         waitForTheEditor(app)
