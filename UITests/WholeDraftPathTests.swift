@@ -28,7 +28,7 @@ final class WholeDraftPathTests: XCTestCase {
     /// The seconds from the tap on `editor.projects` to the start screen, the cover written on the way.
     private let expectedBack = 5.0
 
-    /// The first export of a run, 3 seconds at 720p and 60 with its save (backlog line 556).
+    /// The export of 3 seconds at 720p and 60 with its save, in seconds, as the first export of a run is.
     private let expectedExport = 45.0
 
     /// The seconds from a launch to the start screen, the first launch of a fresh simulator included.
