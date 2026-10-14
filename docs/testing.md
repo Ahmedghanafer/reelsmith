@@ -4,8 +4,8 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 352 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 480 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 355 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 483 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 143 UI tests in twenty-two classes.
 
 What comes back from the simulator run:
@@ -168,6 +168,10 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 - `Tests/ReelsmithCoreTests/StartStateTests.swift` runs on Linux. It holds the word key of each case of `StartState`, the two keys of `allWords`, the project that `ready` carries, and every move of `after(_:)`: nothing chosen, one or more chosen, facts that give a project, one of two videos read, no facts, facts too short to give a clip, the confirmed failure, and the nine pairs of a case and an event with no meaning in it, which leave the case unchanged.
 - `Tests/ReelsmithCoreTests/ExportStateTests.swift` holds `ExportState`: the words and the percent text of each case, the percent that never goes down and stays between "0%" and "100%" with the digits 0 to 9, `allWords`, every move of `after(_:)`, and `canStart(_:)` on the seeds `two-clips` and `empty`.
+
+### Tests of the awake screen
+
+- `Tests/ReelsmithCoreTests/ExportAwakeTests.swift` runs on Linux. It holds `ExportState.keepsScreenAwake` for each case, and its values along the moves of a saved export and of a failed one. No UI test can read whether the screen may lock.
 
 ### The word files
 

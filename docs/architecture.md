@@ -375,6 +375,13 @@ The export button and its panel, in the folder `App/Editor/Export/`. They draw t
 - `App/Editor/Export/ExportPanel.swift`: `ExportPanel` draws the state: its words (`export.words`), the percent (`export.percent`, fixed left to right), the button `export.done` with the key `export.done` on `saved`, and the button `export.close` with the key `export.close` on `failed`. Both buttons send `closed`, which gives `idle` and takes the panel away. The editor state is not touched. While exporting there is no button, so there is no cancel.
 - `App/Editor/Export/ExportToPhotos.swift`: `exportToPhotos(project:mediaFolder:fails:progress:)` makes the plan with `renderPlan(for:)`, calls `export(plan:media:mediaFolder:to:progress:)` with the media of the project and the output place `<temporary folder>/<uuid>.mp4`, asks the photo library for the right to add only (`PHPhotoLibrary.requestAuthorization(for: .addOnly)`), and adds the file as a video (`PHAssetCreationRequest`). It returns the event that ends the export: `saved`, `failed(notAllowed: true)` when the right to add is not given, and `failed(notAllowed: false)` for every error of the plan, of the Engine and of the save. The file is removed after the save and after a failure. With `-export-fails` the output place is `<temporary folder>/<uuid>/export.mp4` in a folder that is not there, so the Engine throws `cannotWrite` before any work and reports no progress.
 
+### The awake screen
+
+The phone does not lock while an export runs, since an export longer than the auto lock would fail.
+
+- `Sources/ReelsmithCore/Export/ExportState.swift`: `keepsScreenAwake` is true for `exporting(percent:)`, whatever the percent, and false for `idle`, `saved` and `failed(notAllowed:)`.
+- `App/Editor/Export/ExportButton.swift`: one `onChange(of: exportState)` sets `UIApplication.shared.isIdleTimerDisabled` to `exportState.keepsScreenAwake`, so the idle timer is off from the tap on Export to the saved or the failed panel. No other file of the app names the idle timer, and the Engine names none.
+
 ## The word files
 
 - `App/WordsText.swift`: `text(_:)` looks the key of a `Words` value up in `Localizable.strings` and puts its arguments in at `%1$@`, `%2$@` and so on. A fixed label is written with its key, as in `Text("start.title")`.

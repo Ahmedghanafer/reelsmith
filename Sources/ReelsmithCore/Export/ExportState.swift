@@ -42,6 +42,12 @@ public enum ExportState: Equatable, Sendable {
         return String(percent) + "%"
     }
 
+    /// Whether the phone must not lock: true while exporting, whatever the percent, and false in the three other cases.
+    public var keepsScreenAwake: Bool {
+        guard case .exporting = self else { return false }
+        return true
+    }
+
     /// Whether a tap on the export button starts an export.
     public func canStart(_ editor: EditorState) -> Bool {
         self == .idle && editor.canExport
