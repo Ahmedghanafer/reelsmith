@@ -153,10 +153,10 @@ final class ExportTrialTests: XCTestCase {
                 let colour = try await pixel(of: file, at: Time(ticks: 10 * Int64(n) + 5), x: x, y: y)
                 read.append("\(colour.r) \(colour.g) \(colour.b)")
             }
-            print("export-trial: \(file.lastPathComponent) at (\(x), \(y)), frames 0 to 5: "
+            print("export-trial: \(file.lastPathComponent) at (\(x), \(y)), at 5, 15, 25, 35, 45 and 55 ticks: "
                 + read.joined(separator: ", "))
         } catch {
-            print("export-trial: \(file.lastPathComponent) at (\(x), \(y)), frames 0 to 5: "
+            print("export-trial: \(file.lastPathComponent) at (\(x), \(y)), at 5, 15, 25, 35, 45 and 55 ticks: "
                 + read.joined(separator: ", ") + ", then the read threw \(error)")
         }
     }
@@ -242,6 +242,7 @@ final class ExportTrialTests: XCTestCase {
     /// https://developer.apple.com/documentation/coremedia/kcmformatdescriptionextension_sampledescriptionextensionatoms
     private func profileAndLevel(of file: URL) async throws -> (profile: Int, level: Int)? {
         let asset = AVURLAsset(url: file)
+        defer { withExtendedLifetime(asset) {} }
         let pictureTracks = try await asset.loadTracks(withMediaType: .video)
         let track = try XCTUnwrap(pictureTracks.first)
         let descriptions = try await track.load(.formatDescriptions)
