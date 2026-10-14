@@ -2,7 +2,7 @@ import PhotosUI
 import SwiftUI
 
 /// The system photo picker for videos. With the limit 0, the default, more than one may be chosen and the order
-/// of choosing is kept. With a limit of one the selection is left at the picker's default.
+/// of choosing is kept. With a limit, as the one of the music part, the selection is left at the picker's default.
 /// It is made with no photo library, so it runs outside the app and no permission is asked.
 /// `closed` gets the chosen videos in the order of choosing, none when she cancelled.
 ///
