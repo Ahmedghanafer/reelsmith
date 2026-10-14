@@ -2,10 +2,10 @@ import Foundation
 import ReelsmithCore
 import ReelsmithEngine
 
-/// The start on a seed: writes the seed's test clips once into `<caches>/Seeds/`, keeps a file that is
-/// already there, and gives the store the editor opens with. Nil when the launch names no seed.
-/// A clip that cannot be written leaves its file missing: the file count of `editor.seedInfo` shows it
-/// and the error is logged.
+/// The start on a seed: writes the seed's test clips and test tones once into `<caches>/Seeds/`, keeps a file
+/// that is already there, and gives the store the editor opens with, the sound panel open when the seed says so.
+/// Nil when the launch names no seed. A clip or a tone that cannot be written leaves its file missing: the file
+/// count of `editor.seedInfo` shows it and the error is logged.
 ///
 /// https://developer.apple.com/documentation/foundation/filemanager/urls(for:in:)
 @MainActor
@@ -20,9 +20,17 @@ func seedStart(_ options: LaunchOptions) async -> EditorStore? {
             NSLog("%@", "seed start: " + clip.name + ".mov was not written: \(error)")
         }
     }
+    for tone in seed.testTones {
+        do {
+            _ = try await writeTestTone(tone, to: folder)
+        } catch {
+            NSLog("%@", "seed start: " + tone.name + ".mov was not written: \(error)")
+        }
+    }
     let project: Project = seed.project
     var state = EditorState(project: project)
     state.selectedText = seed.selectedText
+    state.showsSound = seed.showsSound
     if let playhead: Time = options.playhead {
         state = reduce(state, .movePlayhead(playhead))
     }

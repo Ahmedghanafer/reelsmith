@@ -80,6 +80,11 @@
 /* end slot: text-path */
 
 /* slot: sound-panel */
+"tools.sound" = "الصوت";
+"sound.tab.music" = "الموسيقى";
+"sound.tab.levels" = "المستويات";
+"sound.tab.clips" = "المقاطع";
+"sound.done" = "تم";
 /* end slot: sound-panel */
 
 /* slot: sound-clips */
