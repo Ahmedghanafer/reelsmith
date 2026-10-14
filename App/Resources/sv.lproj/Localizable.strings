@@ -78,3 +78,21 @@
 
 /* slot: text-path */
 /* end slot: text-path */
+
+/* slot: sound-panel */
+/* end slot: sound-panel */
+
+/* slot: sound-clips */
+/* end slot: sound-clips */
+
+/* slot: add-music */
+/* end slot: add-music */
+
+/* slot: music-levels */
+/* end slot: music-levels */
+
+/* slot: music-video */
+/* end slot: music-video */
+
+/* slot: sound-path */
+/* end slot: sound-path */

@@ -127,6 +127,8 @@ private func clipKind(of action: EditorAction, in state: EditorState) -> ClipKin
         return .pause
     case .text:
         return nil
+    case .sound:
+        return nil
     }
 }
 
