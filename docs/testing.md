@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 409 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 557 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 148 UI tests in twenty-four classes.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift` and `TextExportTests.swift`, which sit inside `#if canImport(CoreText)`. That is 411 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 559 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 154 UI tests in twenty-five classes.
 
 What comes back from the simulator run:
 
@@ -361,6 +361,18 @@ The system picker is driven by the walk of `UITests/WholePathTests.swift`, descr
 Screenshots: `m1-7-preview-01-first-frame` (blue whole with a black bar above and below), `m1-7-preview-01-first-frame-ar`, `m1-7-preview-02-placed` (red fills the area), `m1-7-preview-03-after-scrub` (blue with bars again), `m1-7-preview-04-empty` (black), `m1-7-preview-05-wide` (blue fills the wide area), `m1-7-preview-06-wide-bars` (red whole with a black bar left and right). Mark: `m1-7-preview-01-play`, the playback of the play and pause test. The pictures `m1-7-preview-02-placed` and `m1-7-preview-05-wide` are the two where a clip fills the canvas unscaled, the case that showed black in the simulator before the layer asked for its buffers (`docs/architecture.md`, The preview). `PictureTests` sees a black area there, on starts with a playhead: it makes the start of `m1-7-preview-02-placed`. The start of `m1-7-preview-05-wide` has no playhead value and no picture test makes it, so that picture is looked at after every run.
 
 That the item is built again when the footage changes, that an old build never replaces a new one, that nothing is reported after a `pause`, that one seek is in flight at a time and that a failed build leaves the area black cannot be seen in these tests and is held by no test. That the picture from before an edit stays until the new one is ready is held as far as a probe can by the two edit tests of `PictureTests`, described under the picture probe. That the old picture goes after 15 seconds over an item that fails is held by no test.
+
+### UI tests of undo
+
+`UITests/UndoTests.swift` holds undo and redo in the row of play, on the seeds `two-clips-wide` and `text-wide`. Every test waits for the editor with `waitForTheEditor`. Places are compared in whole points with a room of 1 point. Every wait reads an effect, prints the seconds it took and fails only above three times the expected seconds.
+
+- The row, on `two-clips-wide`: `editor.play`, `editor.time`, `editor.undo` and `editor.redo` are among the descendants of `editor.previewRegion`, from left to right, all under the picture, `editor.redo` at the trailing end of the region, play, undo and redo each 44 by 44 points. Undo and redo are disabled at the start.
+- A delete undone and redone, on `two-clips-wide` with `-playhead 1200`, inside blue: a tap on the red block and on `editor.delete` leaves one block, undo enabled and redo disabled. A tap on undo brings two blocks back, redo enabled and undo disabled. That each change reached the player is read from a higher count of builds in the value of `editor.picture`, and after the undo from a share of blue in the picture above 0.9. A tap on redo leaves one block. The frames of the four elements of the row are the same before the delete and after the redo.
+- A typed word, on `text-wide`: a tap on `text.tab.type`, then on `text.field`, and "XY" typed change the value of the field. A tap on undo gives the string of the seed back with the panel still showing and undo disabled, so the two letters were one step. A tap on redo gives the value from before the undo.
+- A drag, on `text-wide`: a drag of 100 points to the right changes field 6 of `editor.textInfo`, the centre, and a tap on undo gives that field back. The test asserts the change and its undo, never a number of pixels.
+- Arabic and Swedish, on `two-clips-wide`: the row as in English, in Arabic undo left of redo.
+
+Screenshots: `undo-01-row` (undo and redo disabled at the trailing end of the row), `undo-01-row-ar`, `undo-01-row-sv`, `undo-02-undone` (two blocks again, blue in the picture). Mark: `undo-01-undo`, the undo of the delete.
 
 ### UI tests of the preview with text
 
