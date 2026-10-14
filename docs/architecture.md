@@ -210,7 +210,7 @@ The Engine draws the plan's size at the plan's rate, and reads both from the pla
 The cover is the first frame of the plan as the compositor draws it, texts included, made small and written as a JPEG.
 
 - `writeCover(plan:media:mediaFolder:to:)` in `Sources/ReelsmithEngine/Cover.swift`, public and off the main actor, builds through `buildComposition` and reads the frame at zero with an `AVAssetImageGenerator` given the video composition of that build, with both tolerances zero. There is no second builder, so the cover is the frame of the preview and of the export.
-- Core Image scales the frame so that its long side is at most 360 pixels, which makes 360 by 202 or 203 on the landscape canvas, and writes it as a JPEG in sRGB under a temporary name beside the file, then renames it over a file that is there. The whole file sits inside `#if canImport(CoreText)` and imports no ImageIO, UIKit or AppKit.
+- Core Image scales the frame so that its long side is at most 360 pixels, with a high quality downsample, and crops it to whole pixels, which makes 360 by 202 on the landscape canvas. It writes it as a JPEG in sRGB under a temporary name beside the file, then moves it into place, or replaces a file that is there with `replaceItemAt`, which keeps the old cover when the replace fails. The whole file sits inside `#if canImport(CoreText)` and imports no ImageIO, UIKit or AppKit.
 - It throws `nothingToExport` for a plan with no segment, `cannotWrite` when the folder of the file is not there or cannot be written, `sourceMissing` and `cannotRead` as `buildComposition` does, `cannotRead` when the generator gives no frame, and `cannotWrite` when the JPEG cannot be written or renamed. When it throws, nothing is written at the place asked.
 
 ## The app
