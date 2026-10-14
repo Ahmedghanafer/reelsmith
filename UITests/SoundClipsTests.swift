@@ -80,10 +80,9 @@ final class SoundClipsTests: XCTestCase {
             let lowered = waitUntil("field 1 below \(before) after move \(moves) to the lower end", required: false) {
                 (volume(app) ?? 100) < before
             }
-            if lowered {
-                waitUntil("a higher count of builds after move \(moves) to the lower end") {
-                    (builds(picture) ?? 0) > (count ?? Int.max)
-                }
+            // Also after a move that showed no effect in time, so a late build is not counted for the next move.
+            waitUntil("a higher count of builds after move \(moves) to the lower end", required: lowered) {
+                (builds(picture) ?? 0) > (count ?? Int.max)
             }
             print("sound-clips: after move \(moves) to the lower end field 1 reads \(volume(app) ?? -1), editor.picture \(builds(picture) ?? -1)")
         }
