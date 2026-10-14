@@ -1,7 +1,8 @@
 import PhotosUI
 import SwiftUI
 
-/// The system photo picker for videos: more than one may be chosen and the order of choosing is kept.
+/// The system photo picker for videos. With the limit 0, the default, more than one may be chosen and the order
+/// of choosing is kept. With a limit of one the selection is left at the picker's default.
 /// It is made with no photo library, so it runs outside the app and no permission is asked.
 /// `closed` gets the chosen videos in the order of choosing, none when she cancelled.
 ///
@@ -15,6 +16,8 @@ import SwiftUI
 /// https://developer.apple.com/documentation/swiftui/uiviewcontrollerrepresentable
 struct VideoPicker: UIViewControllerRepresentable {
     let closed: @MainActor ([NSItemProvider]) -> Void
+    /// The most videos she may choose. Zero is no limit.
+    var limit: Int = 0
 
     func makeCoordinator() -> Coordinator {
         Coordinator(closed: closed)
@@ -23,9 +26,11 @@ struct VideoPicker: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var configuration = PHPickerConfiguration()
         configuration.filter = .videos
-        // Zero is no limit.
-        configuration.selectionLimit = 0
-        configuration.selection = .ordered
+        configuration.selectionLimit = limit
+        // The order of choosing is kept only with no limit.
+        if limit == 0 {
+            configuration.selection = .ordered
+        }
         let picker = PHPickerViewController(configuration: configuration)
         picker.delegate = context.coordinator
         return picker

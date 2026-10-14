@@ -60,6 +60,7 @@ struct MusicPart: View {
                         .accessibilityIdentifier("sound.removeMusic")
                 }
                 // slot: from-video
+                MusicFromVideo(store: store, importing: $importing)
                 // end slot: from-video
                 Spacer()
             }
