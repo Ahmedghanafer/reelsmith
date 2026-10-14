@@ -1,5 +1,6 @@
 import ReelsmithCore
 import SwiftUI
+import UIKit
 
 /// The export button and the panel it puts over the editor. It decides nothing: `ExportState` says whether the
 /// button is enabled and what the panel shows, and only `ExportState.after(_:)` moves it.
@@ -22,6 +23,12 @@ struct ExportButton: View {
         .accessibilityIdentifier("editor.export")
         .fullScreenCover(isPresented: .constant(exportState != .idle)) {
             ExportPanel(state: exportState, close: { exportState = exportState.after(.closed) })
+        }
+        // The phone does not lock while an export runs, and may lock again once it ends, saved or failed.
+        // https://developer.apple.com/documentation/uikit/uiapplication/isidletimerdisabled
+        // https://developer.apple.com/documentation/swiftui/view/onchange(of:initial:_:)
+        .onChange(of: exportState) {
+            UIApplication.shared.isIdleTimerDisabled = exportState.keepsScreenAwake
         }
     }
 
