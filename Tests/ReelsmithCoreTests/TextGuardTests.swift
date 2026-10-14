@@ -129,6 +129,9 @@ private func clipKind(of action: EditorAction, in state: EditorState) -> ClipKin
         return nil
     case .sound:
         return nil
+    case .moveClip: return nil
+    case .cutBefore: return nil
+    case .cutAfter: return nil
     }
 }
 

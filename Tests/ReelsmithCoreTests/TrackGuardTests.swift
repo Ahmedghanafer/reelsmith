@@ -107,6 +107,9 @@ private func kind(of action: EditorAction, in state: EditorState) -> Kind {
         return .clearSelection
     case .sound:
         return .clearSelection
+    case .moveClip: return .clearSelection
+    case .cutBefore: return .clearSelection
+    case .cutAfter: return .clearSelection
     }
 }
 
