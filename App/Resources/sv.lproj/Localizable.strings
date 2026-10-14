@@ -116,3 +116,9 @@
 
 /* slot: sound-path */
 /* end slot: sound-path */
+
+/* slot: export-settings */
+/* end slot: export-settings */
+
+/* slot: export-path */
+/* end slot: export-path */
