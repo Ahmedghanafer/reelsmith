@@ -115,7 +115,7 @@ final class DraftTests: XCTestCase {
         }
     }
 
-    func testAHistoryOfThreeStepsComesBackAndUndoesTheSameThree() throws {
+    func testAHistoryOfThreeStepsComesBackHoldingTheThreeProjectsTheUndosGive() throws {
         var state = EditorState(project: Seed.textWide.project)
         state.selectedText = TextID(1)
         var editing = Editing(state: state)
