@@ -30,18 +30,14 @@ public struct DraftShelf: Equatable, Sendable {
     }
 
     /// A new id, `<folder>/<id>/Media` made with every folder above it, draft.json written.
-    /// When the write fails the new folder is removed again, so no draft is left.
+    /// When either fails the new folder is removed again, so no draft is left.
     public func create(_ draft: Draft) throws -> OpenDraft {
         let open = OpenDraft(shelf: self, id: DraftID(UUID().uuidString))
         do {
             try FileManager.default.createDirectory(at: open.mediaFolder, withIntermediateDirectories: true)
-        } catch {
-            NSLog("%@", "drafts: the folder of a new draft was not made: \(error)")
-            throw DraftError.cannotWrite
-        }
-        do {
             try open.write(draft)
         } catch {
+            NSLog("%@", "drafts: a new draft was not made: \(error)")
             try? FileManager.default.removeItem(at: draftFolder(of: open.id))
             throw DraftError.cannotWrite
         }
