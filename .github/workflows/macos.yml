@@ -120,6 +120,7 @@ jobs:
 
       - name: Write a tone file into the Files app of the simulator
         if: ${{ !cancelled() && steps.layer3.outcome == 'success' }}
+        continue-on-error: true
         run: |
           # The storage of the Files app is the app group whose metadata names the local storage of the file
           # provider. A tone of 3 seconds at 440 Hz, mono, 16 bit at 44100 samples a second, goes into its folder.

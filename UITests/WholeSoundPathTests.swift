@@ -202,7 +202,7 @@ final class WholeSoundPathTests: XCTestCase {
             print("sound-path: browser not driven: it did not show")
             return
         }
-        let browse = app.tabBars.firstMatch.buttons.allElementsBoundByIndex.last
+        let browse = app.tabBars.count > 0 ? app.tabBars.firstMatch.buttons.allElementsBoundByIndex.last : nil
         if let browse, browse.exists {
             print("sound-path: the last button of the tab bar at \(browse.frame): " + browse.label)
             tap(app, theMiddleOf: browse.frame)
@@ -211,24 +211,35 @@ final class WholeSoundPathTests: XCTestCase {
         }
 
         for step in ["the first location", "the file"] {
-            let cells = waitUntil("a cell for \(step)", expected: 5, required: false) { topmostCell(app) != nil }
+            var found: (any XCUIElementSnapshot)?
+            waitUntil("a cell for \(step)", expected: 5, required: false) {
+                found = (try? app.snapshot()).flatMap { topmostCell(in: $0) }
+                return found != nil
+            }
             print("sound-path: the whole tree before the tap on \(step)")
             print(app.debugDescription)
-            guard cells, let cell = topmostCell(app) else {
+            guard let cell = found else {
                 print("sound-path: browser not driven: no cell for \(step)")
                 return
             }
             print("sound-path: tapped for \(step) at \(cell.frame): " + cell.label)
             tap(app, theMiddleOf: cell.frame)
+            // A snapshot that could not be taken says nothing, so only a read tree counts.
             waitUntil("the cell for \(step) gone from its place", expected: 5, required: false) {
-                topmostCell(app)?.frame != cell.frame || topmostCell(app)?.label != cell.label
+                guard let tree = try? app.snapshot() else {
+                    return false
+                }
+                let now = topmostCell(in: tree)
+                return now == nil || now?.frame != cell.frame || now?.label != cell.label
             }
         }
 
+        // The browser may still cover the editor, so the line of the sound is read only when it is there.
+        let info = app.staticTexts["editor.soundInfo"]
         let added = waitUntil("field 3 no longer none after the tap on the file", expected: expectedImport, required: false) {
-            field(app, 3) != "none" && field(app, 3) != ""
+            info.exists && field(app, 3) != "none" && field(app, 3) != ""
         }
-        print("sound-path: browser " + (added ? "driven" : "not driven") + ", editor.soundInfo reads \(soundInfo(app))")
+        print("sound-path: browser " + (added ? "driven" : "not driven") + ", editor.soundInfo reads " + (info.exists ? info.label : "nothing, it is not there"))
         screenshot("sound-path-11-browser-music")
     }
 
@@ -280,11 +291,8 @@ final class WholeSoundPathTests: XCTestCase {
     }
 
     /// The cell of the browser that stands highest on the screen, the leftmost of a row, read from one snapshot.
-    private func topmostCell(_ app: XCUIApplication) -> (any XCUIElementSnapshot)? {
-        guard let tree = try? app.snapshot() else {
-            return nil
-        }
-        return flattened(tree).filter { $0.elementType == .cell && $0.frame.width > 1 && $0.frame.height > 1 }
+    private func topmostCell(in tree: any XCUIElementSnapshot) -> (any XCUIElementSnapshot)? {
+        flattened(tree).filter { $0.elementType == .cell && $0.frame.width > 1 && $0.frame.height > 1 }
             .min { ($0.frame.minY, $0.frame.minX) < ($1.frame.minY, $1.frame.minX) }
     }
 
