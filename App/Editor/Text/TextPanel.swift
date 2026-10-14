@@ -67,6 +67,7 @@ struct TextPanel: View {
             }
             if part == .more {
                 // slot: more
+                TextMore(store: store)
                 // end slot: more
             }
         }
