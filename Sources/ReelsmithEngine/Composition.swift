@@ -175,7 +175,7 @@ private func videoComposition(
         // The transform counts both pictures from the top left, the compositor from the bottom left.
         let placing = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(info.height))
             .concatenating(transform(for: segment.placement, width: info.width, height: info.height))
-            .concatenating(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(plan.canvas.height)))
+            .concatenating(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(plan.height)))
         let made = pieceTexts(of: plan, in: range, kept: kept)
         kept += made.texts
         instructions.append(PieceInstruction(
@@ -185,8 +185,8 @@ private func videoComposition(
     // Standard range colour properties, so a high dynamic range source is converted for preview and export alike.
     // https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition/colorprimaries
     let videoComposition = AVMutableVideoComposition()
-    videoComposition.renderSize = CGSize(width: plan.canvas.width, height: plan.canvas.height)
-    videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(Project.framesPerSecond))
+    videoComposition.renderSize = CGSize(width: plan.width, height: plan.height)
+    videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(plan.framesPerSecond))
     videoComposition.instructions = instructions
     videoComposition.customVideoCompositorClass = Compositor.self
     videoComposition.colorPrimaries = AVVideoColorPrimaries_ITU_R_709_2
