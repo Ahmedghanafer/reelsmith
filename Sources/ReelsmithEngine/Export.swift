@@ -5,8 +5,8 @@ import ReelsmithCore
 
 /// Writes an MPEG-4 file, whatever the name of the output place, with H.264 and AAC
 /// at the size of the plan's canvas (1920 by 1080 or 1080 by 1920) and 30 frames.
-/// Replaces a file at the output place. The sound ends where the last clip with sound ends, no silence is added
-/// after it. Progress goes from 0 to 1 and never goes back.
+/// Replaces a file at the output place. The sound ends where the last clip with sound ends or where the music ends,
+/// whichever is later, no silence is added after it. Progress goes from 0 to 1 and never goes back.
 ///
 /// Throws `nothingToExport` for an empty plan, `sourceMissing` for a file that is not in the media folder,
 /// `cannotRead` for a file that has no picture or cannot be put into the composition, and `cannotWrite` when
@@ -17,6 +17,7 @@ import ReelsmithCore
 /// https://developer.apple.com/documentation/avfoundation/avassetexportpresethighestquality
 /// https://developer.apple.com/documentation/avfoundation/avassetexportsession/exportasynchronously(completionhandler:)
 /// https://developer.apple.com/documentation/avfoundation/avassetexportsession/progress
+/// https://developer.apple.com/documentation/avfoundation/avassetexportsession/audiomix
 public func export(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: URL, to output: URL,
                    progress: @escaping @Sendable (Double) -> Void) async throws {
     guard !plan.segments.isEmpty else { throw EngineError.nothingToExport }
@@ -28,6 +29,7 @@ public func export(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: U
     else { throw EngineError.cannotWrite }
     let temporary = folder.appendingPathComponent(UUID().uuidString + ".tmp.mp4")
     session.videoComposition = built.videoComposition
+    session.audioMix = built.audioMix
     session.outputFileType = .mp4
     session.outputURL = temporary
 
