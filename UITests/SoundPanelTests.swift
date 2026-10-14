@@ -27,6 +27,9 @@ final class SoundPanelTests: XCTestCase {
     private let expectedFrame = 3.0
 
     private let tabs = ["sound.tab.music", "sound.tab.levels", "sound.tab.clips"]
+    /// The part buttons whose slot is still empty, so nothing shows under the row while their part shows.
+    /// A story that fills a slot takes its button out of this list.
+    private let emptyParts = ["sound.tab.music", "sound.tab.levels", "sound.tab.clips"]
     private let tools = ["editor.split", "editor.delete", "editor.addText", "editor.sound"]
     private let withMusic = "100 . 0+4200 100 0 0"
 
@@ -82,7 +85,9 @@ final class SoundPanelTests: XCTestCase {
                 selectedTabs(app) == [tab] && inOneRow(app, tabs + ["sound.done"])
             }
             XCTAssertEqual(selectedTabs(app), [tab])
-            assertNothingUnderTheRow(app, tab)
+            if emptyParts.contains(tab) {
+                assertNothingUnderTheRow(app, tab)
+            }
             XCTAssertEqual(soundInfo(app), withMusic, tab)
         }
     }
