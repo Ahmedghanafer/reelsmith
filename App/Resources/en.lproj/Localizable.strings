@@ -116,3 +116,18 @@
 
 /* slot: sound-path */
 /* end slot: sound-path */
+
+/* slot: export-settings */
+"export.settings" = "Export settings";
+"export.size" = "Size";
+"export.rate" = "Frames a second";
+"export.size.720" = "720p";
+"export.size.1080" = "1080p";
+"export.size.4K" = "4K";
+"export.rate.30" = "30 fps";
+"export.rate.60" = "60 fps";
+"export.settings.done" = "Done";
+/* end slot: export-settings */
+
+/* slot: export-path */
+/* end slot: export-path */
