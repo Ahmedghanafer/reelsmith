@@ -91,6 +91,7 @@ final class ToneLevelTests: XCTestCase {
         XCTAssertEqual(rate, 48000)
         let atSlow = try await toneLevel(of: slow, hertz: 440, from: Time(ticks: 600), to: Time(ticks: 1200))
         let atFast = try await toneLevel(of: fast, hertz: 440, from: Time(ticks: 600), to: Time(ticks: 1200))
+        assertLevel(atFast, near: 0.5, "440 Hz at 48000 samples a second")
         assertLevel(atFast, near: atSlow, "440 Hz at 48000 samples a second against 44100")
     }
 
@@ -109,7 +110,8 @@ final class ToneLevelTests: XCTestCase {
             let level = try await toneLevel(of: file, hertz: 440, from: Time(ticks: 1500), to: Time(ticks: 2100))
             XCTFail("no error, the level reads \(level)")
         } catch {
-            XCTAssertTrue(error is SoundReadingError, "\(error)")
+            let words = (error as? SoundReadingError)?.description
+            XCTAssertEqual(words, "the window holds 22050 samples of the 44100 it is long")
         }
     }
 
