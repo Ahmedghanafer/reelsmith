@@ -229,7 +229,7 @@ The text button, the text region and the panel of the selected text. They decide
 - `App/Editor/Text/TextPanel.swift`: `TextPanel`, with `let store: EditorStore`. One row from leading to trailing, so Arabic mirrors it: the three part buttons `text.tab.type`, `text.tab.look` and `text.tab.more`, each with the word key of the same name, and at the trailing end the button `text.done` with the key `text.done`. Under the row stands one part. The button of the part that shows has the trait selected and is drawn bold.
 - Which part shows is the one state of the panel. It is set when the panel is made: `type` when the selected text is blank (`isBlank`) at that moment, `look` otherwise. A tap on a part button changes it. So a new text opens on `type`, and a start on a text seed opens on `look`.
 - The part `type` holds the field `text.field`, a `TextEditor` 88 points high whose accessibility label is the key `text.field`. It is bound to the string of the selected text: it reads the string from the store and sends `text(.setString)` with the whole string on every change, a line break included. The field sets no direction, so a line takes its direction from what is typed. The keyboard goes with the field: on another part, on done and on a delete.
-- The parts `look` and `more` are the slots `look` and `more` of the file, both empty. A part put there has the `store` of the panel to hand and needs no state about the parts.
+- The parts `look` and `more` are the slots `look` and `more` of the file, each filled with one line: `TextLook(store: store)` and `TextMore(store: store)`. A part put there has the `store` of the panel to hand and needs no state about the parts.
 - `text.done` sends `clearSelection` and nothing else, from every part. The panel removes no text itself: the blank rule of Core removes a text that is left blank when it stops being selected, by done, by a tap on a clip or by another new text, with no message. The Delete button removes the selected text through `deleteSelected` and leaves the clips.
 
 ### The look of a text
@@ -243,6 +243,18 @@ The part `look` of the text panel: the face, the colour and the size of the sele
 - Every control sends `text(.setStyle)` with the whole style the text has at that moment, changed in one value: the font, the colour or the size. The screen holds no limit of its own, Core holds the size between its two limits. The picture follows by the preview, under "The preview and text": `TextLook.swift` names no player, no item and no function of the Engine.
 - The rows lay out from leading to trailing, so Arabic mirrors them, the slider included. No control changes the height of the layout.
 - Its five word keys stand in the group `text-look` of the three word files: `text.font.naskh`, `text.font.naskhBold`, `text.font.system`, `text.colour` and `text.size`.
+
+### More of a text
+
+The part `more` of the text panel: the alignment, the line spacing, the outline, the shadow and the box of the selected text.
+
+- `App/Editor/Text/TextMore.swift`: `TextMore`, with `let store: EditorStore`. The slot `more` of `TextPanel.swift` holds the one line that makes `TextMore(store: store)`. It holds no state and decides nothing: it reads the selected text as `state.selectedText.flatMap { state.project.text($0) }`, shows what its style holds, and draws nothing when no text is selected.
+- The alignment: one row of three buttons in the order of `TextAlign.allCases`, with the identifiers `text.align.left`, `text.align.centre` and `text.align.right` (`text.align.` and the raw value of the case). The word key of a button is its identifier. The button of the side the text has is drawn bold and has the trait selected. The three share the width of the row, each 44 points high. The alignment is a side of the picture, so the row has the layout direction left to right in every language and Arabic does not mirror it.
+- The line spacing: the word of the key `text.spacing` and the slider `text.spacing`, from 0 to 2 in steps of 0.1. The slider reads the line spacing from the store at every call, so it shows the value Core holds.
+- The marks: one row of three toggles with the identifiers and word keys `text.outline`, `text.shadow` and `text.box`. Each is a `Toggle` in the button style, so a tap anywhere on it turns it and no switch is drawn. A toggle that is on has the trait selected. The three share the width of the row.
+- Every control sends `text(.setStyle)` with the whole style the text has at that moment, changed in one value: the alignment, the line spacing, the outline, the shadow or the box. Core holds the line spacing between 0 and 2. The picture follows by the preview, under "The preview and text": `TextMore.swift` names no player, no item and no function of the Engine.
+- The slider and the toggles lay out from leading to trailing, so Arabic mirrors them. No control changes the height of the layout.
+- Its seven word keys stand in the group `text-more` of the three word files: `text.align.left`, `text.align.centre`, `text.align.right`, `text.spacing`, `text.outline`, `text.shadow` and `text.box`.
 
 ### The export button and its panel
 
