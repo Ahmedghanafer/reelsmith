@@ -7,11 +7,13 @@ import ReelsmithCore
 
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/init(asset:)
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/videocomposition
+/// https://developer.apple.com/documentation/avfoundation/avplayeritem/audiomix
 @MainActor
 public func makePlayerItem(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: URL) async throws -> AVPlayerItem {
     let built = try await buildComposition(plan: plan, media: media, mediaFolder: mediaFolder)
     let item = AVPlayerItem(asset: built.composition)
     item.videoComposition = built.videoComposition
+    item.audioMix = built.audioMix
     return item
 }
 
@@ -40,14 +42,15 @@ public func refreshPicture(of item: AVPlayerItem, plan: RenderPlan, media: [Medi
 }
 
 /// The one builder for the player item and for the export. One picture track, one sound track when a segment
-/// has sound, and the video composition of the plan.
+/// has sound, one more sound track when the plan has music, the video composition of the plan, and the audio mix
+/// with one set of parameters for each sound track.
 /// Throws `sourceMissing` when a file is not in the media folder and `cannotRead` when a file cannot be used.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avmutablecomposition
 /// https://developer.apple.com/documentation/avfoundation/avmutablecompositiontrack/inserttimerange(_:of:at:)
 /// https://developer.apple.com/documentation/avfoundation/avasset/loadtracks(withmediatype:)
 func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: URL) async throws
-    -> (composition: AVMutableComposition, videoComposition: AVMutableVideoComposition) {
+    -> (composition: AVMutableComposition, videoComposition: AVMutableVideoComposition, audioMix: AVAudioMix) {
     let composition = AVMutableComposition()
     guard let picture = composition.addMutableTrack(
         withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
@@ -85,8 +88,71 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
             throw EngineError.cannotRead
         }
     }
+
+    var parameters: [AVMutableAudioMixInputParameters] = []
+    if let track = sound {
+        let clips = AVMutableAudioMixInputParameters()
+        clips.trackID = track.trackID
+        clips.setVolume(Float(plan.sound.clipVolume), at: .zero)
+        parameters.append(clips)
+    }
+    if let layer = plan.sound.music {
+        parameters.append(try await addMusic(layer, to: composition, mediaFolder: mediaFolder))
+    }
+    let mix = AVMutableAudioMix()
+    mix.inputParameters = parameters
+
     let tracks = [CMPersistentTrackID](repeating: picture.trackID, count: plan.segments.count)
-    return (composition, try videoComposition(plan: plan, media: media, tracks: tracks, kept: []))
+    return (composition, try videoComposition(plan: plan, media: media, tracks: tracks, kept: []), mix)
+}
+
+/// Lays `duration` of the music file from `sourceStart` at zero on a sound track of its own, and gives the
+/// parameters of that track: 0 rising to `volume` over the first `fadeIn`, `volume` up to the last `fadeOut`, and
+/// falling to 0 over it. A fade of zero sets no ramp.
+/// Throws `sourceMissing` with the id of the layer when the file is not in the media folder, and `cannotRead`
+/// when it has no sound track or cannot be put into the composition.
+///
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomix
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolume(_:at:)
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolumeramp(fromstartvolume:toendvolume:timerange:)
+private func addMusic(_ layer: MusicLayer, to composition: AVMutableComposition, mediaFolder: URL) async throws
+    -> AVMutableAudioMixInputParameters {
+    let file = mediaFolder.appendingPathComponent(layer.fileName)
+    guard FileManager.default.fileExists(atPath: file.path) else { throw EngineError.sourceMissing(layer.media) }
+    let asset = AVURLAsset(url: file)
+    guard let track = composition.addMutableTrack(
+        withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+    else { throw EngineError.cannotRead }
+    do {
+        let soundTracks = try await asset.loadTracks(withMediaType: .audio)
+        guard let source = soundTracks.first else { throw EngineError.cannotRead }
+        let range = CMTimeRange(
+            start: CMTime(value: layer.sourceStart.ticks, timescale: 600),
+            duration: CMTime(value: layer.duration.ticks, timescale: 600))
+        try track.insertTimeRange(range, of: source, at: .zero)
+    } catch {
+        throw EngineError.cannotRead
+    }
+
+    let volume = Float(layer.volume)
+    let parameters = AVMutableAudioMixInputParameters()
+    parameters.trackID = track.trackID
+    if layer.fadeIn.ticks > 0 {
+        parameters.setVolumeRamp(
+            fromStartVolume: 0, toEndVolume: volume,
+            timeRange: CMTimeRange(start: .zero, duration: CMTime(value: layer.fadeIn.ticks, timescale: 600)))
+    } else {
+        parameters.setVolume(volume, at: .zero)
+    }
+    if layer.fadeOut.ticks > 0 {
+        parameters.setVolumeRamp(
+            fromStartVolume: volume, toEndVolume: 0,
+            timeRange: CMTimeRange(
+                start: CMTime(value: layer.duration.ticks - layer.fadeOut.ticks, timescale: 600),
+                duration: CMTime(value: layer.fadeOut.ticks, timescale: 600)))
+    }
+    return parameters
 }
 
 /// The video composition of a plan, for a new item, an export and a refresh alike: one instruction per segment
