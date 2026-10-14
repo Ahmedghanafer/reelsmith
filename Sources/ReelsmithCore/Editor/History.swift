@@ -125,7 +125,9 @@ public struct Editing: Equatable, Sendable {
         let a = next.state.project.withoutBlankTexts
         let k = EditRun.of(action, on: state)
         if !oneStepApart(a, b) {
-            if k != history.run {
+            if case .movePlayhead = action {
+                // The player's clock moves the playhead while the video plays: the run is kept as it is.
+            } else if k != history.run {
                 next.history.endRun()
             }
         } else if k != nil && k == history.run {
