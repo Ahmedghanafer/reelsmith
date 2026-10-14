@@ -123,6 +123,8 @@ final class TestClipMakerTests: XCTestCase {
             _ = try await writeTestClip(clip, to: folder)
             XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent(clip.name + ".mov").path))
         }
+        _ = try writeTestPhoto(.magenta, to: folder)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("magenta.png").path))
     }
 
     private func emptyFolder() throws -> URL {

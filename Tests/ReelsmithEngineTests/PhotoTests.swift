@@ -40,6 +40,14 @@ final class PhotoTests: XCTestCase {
     static let photoAlone = Task<Made, Error> { @MainActor in
         try await made(project([(photo, 3600)]), name: "photo-alone", expected: 3600)
     }
+    /// The test photo as its picture and its still movie in the folder, written once for every plan.
+    static let photoMovie = Task<Void, Error> {
+        let folder = ExportTests.folder
+        let picture = try writeTestPhoto(.magenta, to: folder)
+        if !FileManager.default.fileExists(atPath: folder.appendingPathComponent(photo.fileName).path) {
+            _ = try await importPhoto(from: picture, id: photo.id, into: folder)
+        }
+    }
     static let photoThenBlue = Task<Made, Error> { @MainActor in
         try await made(project([(photo, 3600), (TestClip.blue.info, 1800)]), name: "photo-then-blue", expected: 5400)
     }
@@ -91,6 +99,50 @@ final class PhotoTests: XCTestCase {
         XCTAssertGreaterThan(made.exportMagenta, 0.9)
     }
 
+    // 4. The import: the orientation applied, the long side held at 3840, a file that is no picture refused.
+    func testAPhotoTurnedBySixImportsUprightWithRedAtTheTop() async throws {
+        let source = try emptyFolder().appendingPathComponent("turned.tif")
+        try orientedTIFF().write(to: source)
+        let folder = try emptyFolder()
+        let info = try await imported(source, id: "turned", into: folder)
+        XCTAssertEqual(info.width, 300)
+        XCTAssertEqual(info.height, 400)
+        assertPhotoFacts(info, id: "turned")
+        let movie = folder.appendingPathComponent(info.fileName)
+        try await assertStillMovie(movie, width: 300, height: 400)
+        let written = try await frame(of: AVURLAsset(url: movie), composition: nil, at: 0)
+        XCTAssertGreaterThan(try share(of: red, in: written, CGRect(x: 140, y: 40, width: 20, height: 20)), 0.9, "top")
+        XCTAssertGreaterThan(
+            try share(of: green, in: written, CGRect(x: 140, y: 340, width: 20, height: 20)), 0.9, "bottom")
+    }
+
+    func testAPhotoOf6000By4000ImportsAt3840By2560() async throws {
+        let source = try emptyFolder().appendingPathComponent("large.jpg")
+        let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
+        let large = CIImage(color: CIColor(red: 0, green: 1, blue: 0))
+            .cropped(to: CGRect(x: 0, y: 0, width: 6000, height: 4000))
+        try CIContext().writeJPEGRepresentation(of: large, to: source, colorSpace: space)
+        let folder = try emptyFolder()
+        let info = try await imported(source, id: "large", into: folder)
+        XCTAssertEqual(info.width, 3840)
+        XCTAssertEqual(info.height, 2560)
+        assertPhotoFacts(info, id: "large")
+        try await assertStillMovie(folder.appendingPathComponent(info.fileName), width: 3840, height: 2560)
+    }
+
+    func testAFileThatIsNoPictureThrowsCannotReadAndLeavesNothingWritten() async throws {
+        let source = try emptyFolder().appendingPathComponent("words.jpg")
+        try Data("no picture".utf8).write(to: source)
+        let folder = try emptyFolder()
+        do {
+            _ = try await importPhoto(from: source, id: MediaID("words"), into: folder)
+            XCTFail("no error, cannotRead wanted")
+        } catch {
+            XCTAssertEqual(error as? EngineError, .cannotRead)
+        }
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), [])
+    }
+
     // 5. The cover of a plan whose first segment is the photo.
     func testTheCoverOfThePhotoThenBlueIs360OnItsLongSideAndMagentaInTheMiddle() async throws {
         let made = try await Self.photoThenBlue.value
@@ -98,6 +150,28 @@ final class PhotoTests: XCTestCase {
         let cover = try picture(of: made.cover)
         let centre = CGRect(x: cover.width / 2 - 10, y: cover.height / 2 - 10, width: 20, height: 20)
         XCTAssertGreaterThan(try share(of: magenta, in: cover, centre), 0.9)
+    }
+
+    // 7. The test photo.
+    func testWriteTestPhotoWritesMagentaPngOf1080By1440IntoAFolderItMakes() throws {
+        let folder = try emptyFolder().appendingPathComponent("made")
+        let file = try writeTestPhoto(.magenta, to: folder)
+        XCTAssertEqual(file, folder.appendingPathComponent("magenta.png"))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), ["magenta.png"])
+        let written = try picture(of: file)
+        XCTAssertEqual(written.width, 1080)
+        XCTAssertEqual(written.height, 1440)
+        let whole = CGRect(x: 0, y: 0, width: 1080, height: 1440)
+        XCTAssertEqual(try share(of: magenta, in: written, whole, within: 6), 1)
+    }
+
+    func testWriteTestPhotoKeepsAFileThatIsThere() throws {
+        let folder = try emptyFolder()
+        let there = Data("kept".utf8)
+        try there.write(to: folder.appendingPathComponent("magenta.png"))
+        let file = try writeTestPhoto(.magenta, to: folder)
+        XCTAssertEqual(try Data(contentsOf: file), there)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), ["magenta.png"])
     }
 
     // 6. A text added to an item of photo-wide, drawn with no file read.
@@ -128,7 +202,7 @@ final class PhotoTests: XCTestCase {
         XCTAssertEqual(overRed, 0.5, accuracy: 0.075, "440 Hz over red")
     }
 
-    /// Writes the clips and the photo, then makes the item, the export and the cover of the plan of the project and
+    /// Writes the clips and the photo's movie, then makes the item, the export and the cover of the plan of the project and
     /// prints one line that starts with `E19:`.
     @MainActor
     static func made(_ project: Project, name: String, expected: Int64) async throws -> Made {
@@ -136,36 +210,102 @@ final class PhotoTests: XCTestCase {
         for clip in [TestClip.blue, TestClip.red] {
             _ = try await writeTestClip(clip, to: folder)
         }
-        try writeMagentaForNow(to: folder)
+        try await photoMovie.value
         let plan = try renderPlan(for: project)
 
-        let item = try await makePlayerItem(plan: plan, media: project.media, mediaFolder: folder)
-        let compositionTicks = ticks(try await item.asset.load(.duration))
-        let itemFrame = try await frame(of: item.asset, composition: item.videoComposition, at: 2700)
-        let itemMagenta = try share(of: magenta, in: itemFrame, photoPlace)
-        let ready = try await readyTicks(of: item)
-
         let output = folder.appendingPathComponent("photo-\(name).mp4")
-        try await export(plan: plan, media: project.media, mediaFolder: folder, to: output) { _ in }
-        let pictureTrack = try await tracks(of: output).first { $0.kind == "vide" }
-        let exportTicks = pictureTrack.map { ticks($0.duration) } ?? -1
-        let frames = try await frameCount(of: output)
-        let exportFrame = try await frame(of: AVURLAsset(url: output), composition: nil, at: 2700)
-        let exportMagenta = try share(of: magenta, in: exportFrame, photoPlace)
-
         let cover = folder.appendingPathComponent("photo-\(name).cover.jpg")
-        try await writeCover(plan: plan, media: project.media, mediaFolder: folder, to: cover)
-        let coverPicture = try picture(of: cover)
+        // A step that throws leaves -1 and its error in the printed line, and the steps after it still run.
+        var made = Made(
+            name: name, expected: expected, itemTicks: -1, compositionTicks: -1, itemMagenta: -1, export: output,
+            exportTicks: -1, frames: -1, exportMagenta: -1, cover: cover, coverWidth: -1, coverHeight: -1)
+        var errors: [String] = []
 
-        print("E19: \(name) item \(ready.ticks) ticks (\(ready.status)), composition \(compositionTicks) ticks, "
-            + "export \(exportTicks) ticks and \(frames) frames, magenta at 4.5 seconds \(itemMagenta) in the item "
-            + "and \(exportMagenta) in the export, cover \(coverPicture.width) by \(coverPicture.height), "
-            + "expected \(expected) ticks")
-        return Made(
-            name: name, expected: expected, itemTicks: ready.ticks, compositionTicks: compositionTicks,
-            itemMagenta: itemMagenta, export: output, exportTicks: exportTicks, frames: frames,
-            exportMagenta: exportMagenta, cover: cover, coverWidth: coverPicture.width,
-            coverHeight: coverPicture.height)
+        do {
+            let item = try await makePlayerItem(plan: plan, media: project.media, mediaFolder: folder)
+            made.compositionTicks = ticks(try await item.asset.load(.duration))
+            do {
+                let itemFrame = try await frame(of: item.asset, composition: item.videoComposition, at: 2700)
+                made.itemMagenta = try share(of: magenta, in: itemFrame, photoPlace)
+            } catch {
+                errors.append("the frame of the item: \(error)")
+            }
+            let ready = try await readyTicks(of: item)
+            made.itemTicks = ready.ticks
+            if ready.ticks < 0 {
+                errors.append("the item: \(ready.status)")
+            }
+        } catch {
+            errors.append("the item: \(error)")
+        }
+
+        do {
+            try await export(plan: plan, media: project.media, mediaFolder: folder, to: output) { _ in }
+            let pictureTrack = try await tracks(of: output).first { $0.kind == "vide" }
+            made.exportTicks = pictureTrack.map { ticks($0.duration) } ?? -1
+            made.frames = try await frameCount(of: output)
+            let exportFrame = try await frame(of: AVURLAsset(url: output), composition: nil, at: 2700)
+            made.exportMagenta = try share(of: magenta, in: exportFrame, photoPlace)
+        } catch {
+            errors.append("the export: \(error)")
+        }
+
+        do {
+            try await writeCover(plan: plan, media: project.media, mediaFolder: folder, to: cover)
+            let coverPicture = try picture(of: cover)
+            made.coverWidth = coverPicture.width
+            made.coverHeight = coverPicture.height
+        } catch {
+            errors.append("the cover: \(error)")
+        }
+
+        print("E19: \(name) item \(made.itemTicks) ticks, composition \(made.compositionTicks) ticks, "
+            + "export \(made.exportTicks) ticks and \(made.frames) frames, magenta at 4.5 seconds "
+            + "\(made.itemMagenta) in the item and \(made.exportMagenta) in the export, "
+            + "cover \(made.coverWidth) by \(made.coverHeight), expected \(expected) ticks, "
+            + (errors.isEmpty ? "no error" : errors.joined(separator: ", ")))
+        return made
+    }
+
+    /// Imports the photo and prints the bytes of the file written and the seconds the import took.
+    private func imported(_ source: URL, id: String, into folder: URL) async throws -> MediaInfo {
+        let began = Date()
+        let info = try await importPhoto(from: source, id: MediaID(id), into: folder)
+        let seconds = Date().timeIntervalSince(began)
+        let written = folder.appendingPathComponent(info.fileName)
+        let attributes = try FileManager.default.attributesOfItem(atPath: written.path)
+        let bytes = (attributes[.size] as? NSNumber)?.int64Value ?? -1
+        print("photo import: \(id) \(info.width) by \(info.height), \(bytes) bytes, \(seconds) seconds")
+        return info
+    }
+
+    private func assertPhotoFacts(_ info: MediaInfo, id: String, line: UInt = #line) {
+        XCTAssertEqual(info.id, MediaID(id), line: line)
+        XCTAssertEqual(info.fileName, id + ".mov", line: line)
+        XCTAssertEqual(info.kind, .photo, line: line)
+        XCTAssertEqual(info.quarterTurns, 0, line: line)
+        XCTAssertFalse(info.hasSound, line: line)
+        XCTAssertEqual(info.duration, Time(ticks: 108000), line: line)
+    }
+
+    /// The movie has the size, one picture track of at least photoLongest and no sound track. Prints its bytes.
+    private func assertStillMovie(_ movie: URL, width: Int, height: Int, line: UInt = #line) async throws {
+        let size = try await storedSize(of: movie)
+        XCTAssertEqual(size.width, width, line: line)
+        XCTAssertEqual(size.height, height, line: line)
+        let all = try await tracks(of: movie)
+        XCTAssertEqual(all.map { $0.kind }, ["vide"], line: line)
+        let length = all.first.map { ticks($0.duration) } ?? -1
+        XCTAssertGreaterThanOrEqual(length, 108000, line: line)
+        let attributes = try FileManager.default.attributesOfItem(atPath: movie.path)
+        let bytes = (attributes[.size] as? NSNumber)?.int64Value ?? -1
+        print("photo import: the movie \(movie.lastPathComponent) is \(length) ticks and \(bytes) bytes")
+    }
+
+    private func emptyFolder() throws -> URL {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("photo-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder
     }
 
     /// The length of the item once a player has it ready, -1 when it never is, with the status in words.
@@ -185,16 +325,6 @@ final class PhotoTests: XCTestCase {
         }
         return (ticks(item.duration), "ready")
     }
-
-    /// Until the Engine writes the photo: the magenta photo as a PNG, kept when it is there.
-    static func writeMagentaForNow(to folder: URL) throws {
-        let file = folder.appendingPathComponent("magenta.png")
-        guard !FileManager.default.fileExists(atPath: file.path) else { return }
-        let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
-        let colour = try XCTUnwrap(CIColor(red: 1, green: 0, blue: 1, alpha: 1, colorSpace: space))
-        let image = CIImage(color: colour).cropped(to: CGRect(x: 0, y: 0, width: 1080, height: 1440))
-        try CIContext().writePNGRepresentation(of: image, to: file, format: .RGBA8, colorSpace: space)
-    }
 }
 
 private let photo = TestPhoto.magenta.info
@@ -202,6 +332,7 @@ private let magenta = RGB(r: 255, g: 0, b: 255)
 private let blue = RGB(r: 0, g: 0, b: 255)
 private let red = RGB(r: 255, g: 0, b: 0)
 private let black = RGB(r: 0, g: 0, b: 0)
+private let green = RGB(r: 0, g: 255, b: 0)
 
 /// The photo's place, x 555 to 1365, over its middle 200 rows.
 private let photoPlace = CGRect(x: 555, y: 440, width: 810, height: 200)
@@ -245,9 +376,59 @@ private func picture(of file: URL) throws -> CGImage {
     return try XCTUnwrap(CIContext().createCGImage(image, from: image.extent))
 }
 
-/// The share of the pixels of the rectangle, counted from the top left, within 24 per channel of the colour.
+/// An uncompressed TIFF stored 400 by 300, red on its left half and green on its right, with the orientation 6
+/// (tag 274): turned a quarter clockwise to be upright, so red is at the top of the upright picture.
+private func orientedTIFF() -> Data {
+    let width = 400
+    let height = 300
+    var data = Data()
+    func short(_ value: Int) {
+        data.append(UInt8(value & 0xFF))
+        data.append(UInt8((value >> 8) & 0xFF))
+    }
+    func long(_ value: Int) {
+        short(value & 0xFFFF)
+        short((value >> 16) & 0xFFFF)
+    }
+    // Tag, type (3 short, 4 long), count, value. The three bits per sample stand at 146, the pixels at 152.
+    let entries: [(Int, Int, Int, Int)] = [
+        (256, 3, 1, width), (257, 3, 1, height), (258, 3, 3, 146), (259, 3, 1, 1), (262, 3, 1, 2),
+        (273, 4, 1, 152), (274, 3, 1, 6), (277, 3, 1, 3), (278, 3, 1, height), (279, 4, 1, width * height * 3),
+        (284, 3, 1, 1),
+    ]
+    data.append(contentsOf: [0x49, 0x49] as [UInt8])
+    short(42)
+    long(8)
+    short(entries.count)
+    for (tag, type, count, value) in entries {
+        short(tag)
+        short(type)
+        long(count)
+        if type == 3 && count == 1 {
+            short(value)
+            short(0)
+        } else {
+            long(value)
+        }
+    }
+    long(0)
+    short(8)
+    short(8)
+    short(8)
+    let left: [UInt8] = [255, 0, 0]
+    let right: [UInt8] = [0, 255, 0]
+    for _ in 0..<height {
+        for x in 0..<width {
+            data.append(contentsOf: x < width / 2 ? left : right)
+        }
+    }
+    return data
+}
+
+/// The share of the pixels of the rectangle, counted from the top left, within 24 per channel of the colour, or
+/// within the number given.
 /// https://developer.apple.com/documentation/coregraphics/cgcontext/draw(_:in:byTiling:)
-private func share(of colour: RGB, in image: CGImage, _ rect: CGRect) throws -> Double {
+private func share(of colour: RGB, in image: CGImage, _ rect: CGRect, within: Int = 24) throws -> Double {
     guard rect.minX >= 0, rect.minY >= 0, Int(rect.maxX) <= image.width, Int(rect.maxY) <= image.height else {
         XCTFail("\(rect) lies outside the picture of \(image.width) by \(image.height)")
         return 0
@@ -266,7 +447,7 @@ private func share(of colour: RGB, in image: CGImage, _ rect: CGRect) throws -> 
             let worst = max(
                 abs(Int(bytes[offset]) - Int(colour.r)), abs(Int(bytes[offset + 1]) - Int(colour.g)),
                 abs(Int(bytes[offset + 2]) - Int(colour.b)))
-            if worst <= 24 {
+            if worst <= within {
                 near += 1
             }
             all += 1
