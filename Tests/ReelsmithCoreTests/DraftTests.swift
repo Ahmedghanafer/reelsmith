@@ -115,18 +115,18 @@ final class DraftTests: XCTestCase {
         }
     }
 
-    func testAHistoryOfThreeStepsComesBackHoldingTheThreeProjectsTheUndosGive() throws {
+    func testAHistoryOfThreeStepsReadBackUndoesTheSameThree() throws {
         var state = EditorState(project: Seed.textWide.project)
         state.selectedText = TextID(1)
         var editing = Editing(state: state)
         var style = Seed.textWide.project.texts[0].style
         style.outline = true
         editing = editing.after(.text(.setStyle(TextID(1), style)))
-        style.shadow = true
-        editing = editing.after(.text(.setStyle(TextID(1), style)))
         editing = editing.after(.select(ClipID(2)))
         editing = editing.after(.deleteSelected)
+        editing = editing.after(.text(.setString(TextID(1), "Peace")))
         XCTAssertEqual(editing.history.past.count, 3)
+        XCTAssertEqual(editing.history.run, .typing(TextID(1)))
 
         var undone: [Project] = []
         var stepping = editing
@@ -134,15 +134,23 @@ final class DraftTests: XCTestCase {
             stepping = stepping.undone()
             undone.append(stepping.state.project)
         }
+        XCTAssertEqual(undone.count, 3)
 
         let draft = Draft(
             project: editing.state.project, exportSettings: .startChoice, changed: date, history: editing.history)
         let back = try roundTrip(draft)
-
         XCTAssertEqual(back, draft)
-        let history = try XCTUnwrap(back.history)
-        XCTAssertEqual(history, editing.history)
-        XCTAssertEqual(Array(history.past.reversed()), undone)
+
+        var opened = Editing(state: EditorState(project: back.project), history: try XCTUnwrap(back.history))
+        XCTAssertNil(opened.history.run)
+        XCTAssertFalse(opened.unsaved)
+        var undoneAfterOpen: [Project] = []
+        while opened.canUndo {
+            opened = opened.undone()
+            undoneAfterOpen.append(opened.state.project)
+        }
+
+        XCTAssertEqual(undoneAfterOpen, undone)
         XCTAssertNil(try roundTrip(Draft(project: Seed.textWide.project, exportSettings: .startChoice, changed: date)).history)
     }
 
