@@ -1,9 +1,9 @@
 import Foundation
 import XCTest
 
-/// Holds the five groups of the drafts and of undo at the end of each word file, the last two empty.
+/// Holds the five groups of the drafts and of undo at the end of each word file, the last one empty.
 final class DraftSlotsTests: XCTestCase {
-    func testEachWordFileEndsWithTheFiveSlotsInTheirOrderTheLastTwoEmpty() throws {
+    func testEachWordFileEndsWithTheFiveSlotsInTheirOrderTheLastOneEmpty() throws {
         var wanted: [String] = []
         for topic in ["undo", "draft-saving", "project-list", "draft-delete", "draft-path"] {
             wanted += ["/* slot: " + topic + " */", "/* end slot: " + topic + " */"]
@@ -16,12 +16,12 @@ final class DraftSlotsTests: XCTestCase {
             let lines = try String(contentsOf: file, encoding: .utf8).split(whereSeparator: \.isNewline)
             let filled = lines.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
 
-            // The last ten marks are the five groups in their order. The groups undo, draft-saving and project-list
-            // hold their words, and the last four lines that are not blank are the marks alone, so each group after
-            // them is empty.
+            // The last ten marks are the five groups in their order. The groups undo, draft-saving, project-list and
+            // draft-delete hold their words, and the last two lines that are not blank are the marks alone, so the
+            // group draft-path is empty.
             let marks = filled.filter { $0.hasPrefix("/* slot: ") || $0.hasPrefix("/* end slot: ") }
             XCTAssertEqual(Array(marks.suffix(wanted.count)), wanted, language)
-            XCTAssertEqual(Array(filled.suffix(4)), Array(wanted.suffix(4)), language)
+            XCTAssertEqual(Array(filled.suffix(2)), Array(wanted.suffix(2)), language)
         }
     }
 }
