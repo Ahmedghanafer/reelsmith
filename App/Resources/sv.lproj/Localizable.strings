@@ -61,6 +61,13 @@
 /* end slot: text-look */
 
 /* slot: text-more */
+"text.align.left" = "Vänster";
+"text.align.centre" = "Mitten";
+"text.align.right" = "Höger";
+"text.spacing" = "Radavstånd";
+"text.outline" = "Kontur";
+"text.shadow" = "Skugga";
+"text.box" = "Ruta";
 /* end slot: text-more */
 
 /* slot: text-row */
