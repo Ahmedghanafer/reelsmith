@@ -205,6 +205,14 @@ The Engine draws the plan's size at the plan's rate, and reads both from the pla
 - `export` takes `AVAssetExportPresetHEVCHighestQuality` when `plan.settings.size.shortSide` is 2160 and `AVAssetExportPresetHighestQuality` otherwise, with the file type MPEG-4 at every size. On the hosted Mac the highest quality preset writes 720p and 1080p at 30 and 60 with H.264, but 4K at 30 only, and the HEVC preset writes 4K at 60 with every frame. An export the session cannot write throws `cannotWrite`, as before.
 - The preview is not the export: `makePlayerItem` and `refreshPicture` get plans of `renderPlan(for:)`, which are 1920 by 1080 or 1080 by 1920 at 30, so the player item is as it was.
 
+### The cover of a draft
+
+The cover is the first frame of the plan as the compositor draws it, texts included, made small and written as a JPEG.
+
+- `writeCover(plan:media:mediaFolder:to:)` in `Sources/ReelsmithEngine/Cover.swift`, public and off the main actor, builds through `buildComposition` and reads the frame at zero with an `AVAssetImageGenerator` given the video composition of that build, with both tolerances zero. There is no second builder, so the cover is the frame of the preview and of the export.
+- Core Image scales the frame so that its long side is at most 360 pixels, with a high quality downsample, clamped at its edges so they are not blended with the clear outside, and crops it to whole pixels, which makes 360 by 202 on the landscape canvas. It writes it as a JPEG in sRGB under a temporary name beside the file, then moves it into place, or replaces a file that is there with `replaceItemAt`, which keeps the old cover when the replace fails. The whole file sits inside `#if canImport(CoreText)` and imports no ImageIO, UIKit or AppKit.
+- It throws `nothingToExport` for a plan with no segment, `cannotWrite` when the folder of the file is not there or cannot be written, `sourceMissing` and `cannotRead` as `buildComposition` does, `cannotRead` when the generator gives no frame, and `cannotWrite` when the JPEG cannot be written or renamed. When it throws, nothing is written at the place asked.
+
 ## The app
 
 Screens live in `App/`, hold no logic and no word, and draw a Core state. `project.yml` sets Swift 5 language mode for the app and the UI tests. `UITests/` is the UI test target `ReelsmithUITests` of `project.yml`. The scheme `Reelsmith` has a test action that runs it.
