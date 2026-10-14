@@ -9,7 +9,8 @@ import ReelsmithCore
 
 /// Reads the picture with its orientation applied, scales it so its long side is at most 3840 pixels and both sides
 /// are even, and writes it as a still movie `<folder>/<id raw>.mov`: one picture track with the 709 colour
-/// properties, H.264 while the picture has at most 36864 blocks of 16 by 16 and HEVC above, of photoLongest, that
+/// properties, H.264 while the picture has at most 36864 blocks of 16 by 16 and HEVC above or when the H.264
+/// write fails, of photoLongest, that
 /// holds the picture twice, at zero and one frame of 30 before the end. It gives the MediaInfo of that movie: kind
 /// photo, the upright size, quarterTurns 0, hasSound false, duration photoLongest.
 /// Throws cannotRead when it is no picture, cannotWrite when the movie cannot be written. Leaves nothing written
@@ -48,7 +49,16 @@ public func importPhoto(from source: URL, id: MediaID, into folder: URL) async t
     let temporary = folder.appendingPathComponent(id.raw + "." + UUID().uuidString + ".tmp.mov")
     do {
         let frame = try pixelBuffer(of: picture, width: width, height: height)
-        try await writeStill(frame, width: width, height: height, to: temporary)
+        // H.264, as the test clips, while the picture fits the 36864 blocks of 16 by 16 of its level 5.2, HEVC above.
+        // An encoder may still refuse a tall picture in H.264, so a failed H.264 write is made again in HEVC.
+        let blocks = ((width + 15) / 16) * ((height + 15) / 16)
+        let codec: AVVideoCodecType = blocks <= 36864 ? .h264 : .hevc
+        do {
+            try await writeStill(frame, codec: codec, width: width, height: height, to: temporary)
+        } catch where codec == .h264 {
+            try? FileManager.default.removeItem(at: temporary)
+            try await writeStill(frame, codec: .hevc, width: width, height: height, to: temporary)
+        }
         try FileManager.default.moveItem(at: temporary, to: file)
     } catch {
         try? FileManager.default.removeItem(at: temporary)
@@ -101,13 +111,15 @@ private func pixelBuffer(of picture: CIImage, width: Int, height: Int) throws ->
 
 /// One picture track of photoLongest at a time scale of 600 that shows the frame from zero to its end. The frame is
 /// appended at zero and once more one frame of 30 before the end, so the track holds two pictures and not one for
-/// every frame, and the session ends at photoLongest.
-private func writeStill(_ frame: CVPixelBuffer, width: Int, height: Int, to file: URL) async throws {
+/// every frame, and the session ends at photoLongest. A writer that is still writing when a step fails is cancelled
+/// before the throw.
+///
+/// https://developer.apple.com/documentation/avfoundation/avassetwriter/cancelwriting()
+private func writeStill(
+    _ frame: CVPixelBuffer, codec: AVVideoCodecType, width: Int, height: Int, to file: URL
+) async throws {
     let writer = try AVAssetWriter(outputURL: file, fileType: .mov)
     writer.movieTimeScale = 600
-    // H.264, as the test clips, while the picture fits the 36864 blocks of 16 by 16 of its level 5.2, HEVC above.
-    let blocks = ((width + 15) / 16) * ((height + 15) / 16)
-    let codec: AVVideoCodecType = blocks <= 36864 ? .h264 : .hevc
     // https://developer.apple.com/documentation/avfoundation/video-settings
     let settings: [String: Any] = [
         AVVideoCodecKey: codec,
@@ -125,19 +137,27 @@ private func writeStill(_ frame: CVPixelBuffer, width: Int, height: Int, to file
     let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: nil)
     writer.add(input)
     guard writer.startWriting() else { throw writer.error ?? EngineError.cannotWrite }
-    writer.startSession(atSourceTime: .zero)
-    let end = MediaInfo.photoLongest.ticks
-    for ticks in [0, end - 20] {
-        while !input.isReadyForMoreMediaData {
-            guard writer.status == .writing else { throw writer.error ?? EngineError.cannotWrite }
-            try await Task.sleep(nanoseconds: 2_000_000)
+    do {
+        writer.startSession(atSourceTime: .zero)
+        let end = MediaInfo.photoLongest.ticks
+        for ticks in [0, end - 20] {
+            while !input.isReadyForMoreMediaData {
+                guard writer.status == .writing else { throw writer.error ?? EngineError.cannotWrite }
+                try await Task.sleep(nanoseconds: 2_000_000)
+            }
+            guard adaptor.append(frame, withPresentationTime: CMTime(value: ticks, timescale: 600))
+            else { throw writer.error ?? EngineError.cannotWrite }
         }
-        guard adaptor.append(frame, withPresentationTime: CMTime(value: ticks, timescale: 600))
-        else { throw writer.error ?? EngineError.cannotWrite }
+        input.markAsFinished()
+        writer.endSession(atSourceTime: CMTime(value: end, timescale: 600))
+        await writer.finishWriting()
+        guard writer.status == .completed else { throw writer.error ?? EngineError.cannotWrite }
+    } catch {
+        // A writer that failed or finished is past cancelling.
+        if writer.status == .writing {
+            writer.cancelWriting()
+        }
+        throw error
     }
-    input.markAsFinished()
-    writer.endSession(atSourceTime: CMTime(value: end, timescale: 600))
-    await writer.finishWriting()
-    guard writer.status == .completed else { throw writer.error ?? EngineError.cannotWrite }
 }
 #endif

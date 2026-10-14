@@ -40,9 +40,12 @@ final class PhotoTests: XCTestCase {
     static let photoAlone = Task<Made, Error> { @MainActor in
         try await made(project([(photo, 3600)]), name: "photo-alone", expected: 3600)
     }
-    /// The test photo as its picture and its still movie in the folder, written once for every plan.
+    /// Blue, red, and the test photo as its picture and its still movie in the folder, written once for every plan.
     static let photoMovie = Task<Void, Error> {
         let folder = ExportTests.folder
+        for clip in [TestClip.blue, TestClip.red] {
+            _ = try await writeTestClip(clip, to: folder)
+        }
         let picture = try writeTestPhoto(.magenta, to: folder)
         if !FileManager.default.fileExists(atPath: folder.appendingPathComponent(photo.fileName).path) {
             _ = try await importPhoto(from: picture, id: photo.id, into: folder)
@@ -52,7 +55,7 @@ final class PhotoTests: XCTestCase {
         try await made(project([(photo, 3600), (TestClip.blue.info, 1800)]), name: "photo-then-blue", expected: 5400)
     }
 
-    // 1. E19: every plan gives an item, an export and a cover of its length, the photo drawn over the empty range.
+    // 1. E19: every plan gives an item, an export and a cover of its length, the photo drawn from its still movie.
     func testE19EachOfTheFourPlansGivesAnItemAnExportAndACoverOfItsLengthWithThePhotoDrawn() async throws {
         let plans = [
             ("photo-wide", Self.photoWide), ("blue-then-photo", Self.blueThenPhoto),
@@ -129,6 +132,36 @@ final class PhotoTests: XCTestCase {
         assertPhotoFacts(info, id: "large")
         try await assertStillMovie(
             folder.appendingPathComponent(info.fileName), width: 3840, height: 2560, coding: "hvc1")
+
+        // The cover of the movie on the landscape canvas, where it fills 1620 by 1080 in the middle.
+        var project = Project(canvas: .landscape)
+        project.media[info.id] = info
+        project.clips = [Clip(id: ClipID(1), media: info.id, sourceStart: .zero, duration: MediaInfo.photoLength)]
+        project.nextClipID = 2
+        let cover = folder.appendingPathComponent("large.cover.jpg")
+        try await writeCover(plan: renderPlan(for: project), media: project.media, mediaFolder: folder, to: cover)
+        let read = try picture(of: cover)
+        let centre = CGRect(x: read.width / 2 - 10, y: read.height / 2 - 10, width: 20, height: 20)
+        XCTAssertGreaterThan(try share(of: green, in: read, centre), 0.9, "the middle of the cover")
+    }
+
+    /// The photo from 106200 for 1800 ticks, the last 3 seconds of its movie, reaches its second picture.
+    @MainActor
+    func testThePhotoFromNearTheEndOfItsMovieIsMagentaToItsLastFrame() async throws {
+        try await Self.photoMovie.value
+        var project = Project(canvas: .landscape)
+        project.media[photo.id] = photo
+        project.clips = [
+            Clip(id: ClipID(1), media: photo.id, sourceStart: Time(ticks: 106200), duration: Time(ticks: 1800)),
+        ]
+        project.nextClipID = 2
+        let item = try await makePlayerItem(
+            plan: renderPlan(for: project), media: project.media, mediaFolder: ExportTests.folder)
+        XCTAssertEqual(ticks(try await item.asset.load(.duration)), 1800)
+        for time: Int64 in [0, 900, 1780] {
+            let shown = try await frame(of: item.asset, composition: item.videoComposition, at: time)
+            XCTAssertGreaterThan(try share(of: magenta, in: shown, photoPlace), 0.9, "at \(time) ticks")
+        }
     }
 
     func testAFileThatIsNoPictureThrowsCannotReadAndLeavesNothingWritten() async throws {
@@ -208,9 +241,6 @@ final class PhotoTests: XCTestCase {
     @MainActor
     static func made(_ project: Project, name: String, expected: Int64) async throws -> Made {
         let folder = ExportTests.folder
-        for clip in [TestClip.blue, TestClip.red] {
-            _ = try await writeTestClip(clip, to: folder)
-        }
         try await photoMovie.value
         let plan = try renderPlan(for: project)
 
