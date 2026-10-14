@@ -73,7 +73,9 @@ struct StartScreen: View {
             if !summaries.isEmpty {
                 Text("drafts.title")
                     .font(.headline)
+                // While a new project is copied no other draft opens, so the copy's own open is the only one.
                 DraftList(summaries: summaries, shelf: shelf, open: { openDraft($0) })
+                    .disabled(state != .idle)
             }
             if options.drafts != nil {
                 Text(verbatim: draftsInfo(summaries))
