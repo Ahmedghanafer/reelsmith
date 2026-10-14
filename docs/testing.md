@@ -6,7 +6,7 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 - On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift` and `CoverTests.swift`, which sit inside `#if canImport(CoreText)`. That is 411 tests on Linux.
 - On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 567 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 154 UI tests in twenty-five classes.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 161 UI tests in twenty-six classes.
 
 What comes back from the simulator run:
 
@@ -23,7 +23,7 @@ The simulator run has three kinds, started as `docs/operations.md` tells. With n
 
 The helpers in `UITests/Support/Harness.swift` are methods of `XCTestCase`, in an extension marked `@MainActor`. A test class that uses them is marked `@MainActor` too, as in `@MainActor final class TimelineTests: XCTestCase`:
 
-- `func startApp(seed: String?, language: String = "en", playhead: Int? = nil, exportFails: Bool = false) -> XCUIApplication` starts the app and returns it right after the launch, without waiting for any screen. `seed` is the name of a seed such as `"two-clips"`, or nil for a start with no seed. `language` is `"en"`, `"ar"` or `"sv"` and is passed as `-AppleLanguages (<code>)` and `-AppleLocale <code>`. `playhead` is in ticks, 600 a second.
+- `func startApp(seed: String?, language: String = "en", playhead: Int? = nil, exportFails: Bool = false, drafts: String? = nil) -> XCUIApplication` starts the app and returns it right after the launch, without waiting for any screen. `drafts` is `"fresh"` or `"kept"` and adds `-drafts <value>`. `seed` is the name of a seed such as `"two-clips"`, or nil for a start with no seed. `language` is `"en"`, `"ar"` or `"sv"` and is passed as `-AppleLanguages (<code>)` and `-AppleLocale <code>`. `playhead` is in ticks, 600 a second.
 - `func waitForTheEditor(_ app: XCUIApplication)` waits for the editor after a seeded start, as described below.
 - `func screenshot(_ name: String)` keeps a picture of the screen under the given name, also when the test passes. A name is a prefix, two digits and what the picture shows. The prefix of the newer pictures is their topic, as in `picture-01-blue-fills`, and that of the older ones is a fixed label, as in `m1-10-export-03-saved`.
 - `func mark(_ name: String)` marks the start of a stretch of the recording: a text attachment `<name>.mark.txt` with the clock second of the call, whole seconds since 1970.
@@ -180,7 +180,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 - `Tests/ReelsmithCoreTests/DraftTests.swift` runs on Linux and compares every value with no tolerance. A draft of each of the seven seeds at `startChoice` comes back equal through `encodeDraft` and `decodeDraft`, at version 1, with the Arabic line and the line breaks of `text-wide` scalar by scalar. A text at x 3.857142857142857 with size 64.1 comes back exact, and so do 4K at 60 and the date. "not json", `{"a":1}` and the draft of `two-clips-wide` at version 2 throw `unreadable`. It holds `fileNames` of three seeds and of `music-wide` after red is deleted through `reduce`, `keepingFiles` with three sets of names, the summary of `text-wide` and of an unreadable draft, `dateText` in UTC, a draft whose undo history of three steps, read back and opened through `Editing(state:history:)` with its run ended, undoes the same three, and `draftsInfo` of none, of the example of its comment and of an unreadable draft.
 - `Tests/ReelsmithCoreTests/DraftVersionOneTests.swift` holds a JSON text of version 1 written in the test, the draft of `music-wide` at 4K and 60 on 2026-10-14 at 21:05:09 in UTC as `encodeDraft` wrote it, and that it decodes to that draft. The text is never changed: a change to a stored type keeps this test green.
 - `Tests/ReelsmithCoreTests/LaunchDraftsTests.swift`: `-drafts` with `fresh`, `kept`, another value and no value, `showsInfo` with a seed, with drafts, with both and with neither, and both places of `draftsFolder`.
-- `Tests/ReelsmithCoreTests/DraftSlotsTests.swift`: in each word file the last eight marks of groups are those of `undo`, `project-list`, `draft-delete` and `draft-path`, in that order, and the last six lines that are not blank are the marks alone, so each group after `undo` is empty. `ExportSlotsTests.swift` holds that the two groups of export follow the end of `sound-path`.
+- `Tests/ReelsmithCoreTests/DraftSlotsTests.swift`: in each word file the last ten marks of groups are those of `undo`, `draft-saving`, `project-list`, `draft-delete` and `draft-path`, in that order, and the last six lines that are not blank are the marks alone, so each group after `draft-saving` is empty. `ExportSlotsTests.swift` holds that the two groups of export follow the end of `sound-path`.
 
 ### Tests of the draft shelf
 
@@ -347,11 +347,24 @@ Both files run with `swift test` on macOS, write every file into a folder of the
 - The start screen in English: the title, the two shapes with `start.landscape` selected and on the left, the button enabled, no `editor.root`, and the four English texts as labels.
 - In Arabic: the Arabic label of `start.newProject`, `start.landscape` on the right of `start.portrait`, and labels that still hold "16:9" and "9:16".
 - A tap on `start.portrait` selects it and not `start.landscape`, and a tap on `start.landscape` moves the choice back. The first tap lands near the leading edge of the shape, inside the padding around its words, so a border that takes no tap fails the test. Then the app is ended with `start.portrait` selected, and the next start with no seed reads `start.landscape` as selected and `start.portrait` not, which a product that remembered the choice would fail.
-- The relaunch: a start on `two-clips` until `editor.root` is there, the app ended, then a start with no seed shows the start screen with `start.landscape` selected and no `editor.root`. That only `<documents>/Media/` is emptied is held by no test, since no screen shows a folder.
+- The relaunch: a start on `two-clips` until `editor.root` is there, the app ended, then a start with no seed shows the start screen with `start.landscape` selected and no `editor.root`. That the drafts are kept across launches is held by the tests of saving below.
 
 Screenshots: `m1-6b-new-project-01-start`, `m1-6b-new-project-01-start-ar`, `m1-6b-new-project-04-relaunch`, `m1-6b-new-project-05-portrait`. This file sets no mark.
 
 The system picker is driven by the walk of `UITests/WholePathTests.swift`, described under the whole path. The words "Copying videos" and the state with `start.noneReadable` and `start.ok` are not reached by any launch value and have no UI test. Their keys are held on Linux and the screens are judged by eye on the phone.
+
+### UI tests of saving
+
+`UITests/DraftSavingTests.swift` holds the saving of a draft in seven tests. A draft is read only through the label of `start.draftsInfo` after a launch with `-drafts kept` and no seed, read when `start.newProject` is there. Each test starts its first launch with `-drafts fresh`. The seeded starts are on `two-clips-wide` with `-playhead 1200`, so the red block is on the screen, and wait for the editor with `waitForTheEditor`. "Ended" is `terminate()`. Every wait reads an effect, prints the seconds it took and fails only above three times the expected seconds.
+
+- With no seed the line reads `0`, in English, Arabic and Swedish.
+- `editor.seedInfo` reads "2 clips, 2 files", the files copied into the draft's `Media/`. A tap on the red block and on `editor.delete`, the app ended: the line reads `1 1+1800+0+1080x30+.`.
+- `editor.addText`, a tap on `text.field` and "Hi" typed, a run that is not yet written, then the home button, 2 seconds and the app ended: the line reads `1 2+4200+1+1080x30+.`, written when the app left the active phase.
+- The red clip deleted, a tap on `editor.undo`, the app ended: the line reads `1 2+4200+0+1080x30+.`.
+- `-drafts fresh` alone and ended, then a start on the seed with no `-drafts`, the red clip deleted and ended: the line reads `0`, so that start wrote nothing.
+- "Hi" typed as above, a tap on `editor.save`, the app ended: the line reads `1 2+4200+1+1080x30+.`.
+
+Screenshots: `draft-saving-01-start`, `draft-saving-01-start-ar`, `draft-saving-01-start-sv`. This file sets no mark. That the undo history is written with each draft is held by review, and its return after a relaunch by the tests of the project list. The line "cover try:" of the seed start is read in the log of the run and fails nothing.
 
 ### The preview
 
@@ -374,7 +387,7 @@ That the item is built again when the footage changes, that an old build never r
 
 `UITests/UndoTests.swift` holds undo and redo in the row of play, on the seeds `two-clips-wide` and `text-wide`. Every test waits for the editor with `waitForTheEditor`. Places are compared in whole points with a room of 1 point. Every wait reads an effect, prints the seconds it took and fails only above three times the expected seconds.
 
-- The row, on `two-clips-wide`: `editor.play`, `editor.time`, `editor.undo` and `editor.redo` are among the descendants of `editor.previewRegion`, from left to right, all under the picture, `editor.redo` at the trailing end of the region with undo 16 points left of it, play, undo and redo each 44 by 44 points. Undo and redo are disabled at the start, and their labels read "Undo" and "Redo".
+- The row, on `two-clips-wide`: `editor.play`, `editor.time`, `editor.undo` and `editor.redo` are among the descendants of `editor.previewRegion`, from left to right, all under the picture, `editor.save` right of redo at the trailing end of the region, undo 16 points left of redo, play, undo and redo each 44 by 44 points. Undo and redo are disabled at the start, and their labels read "Undo" and "Redo".
 - A delete undone and redone, on `two-clips-wide` with `-playhead 1200`, inside blue: a tap on the red block and on `editor.delete` leaves one block, undo enabled and redo disabled. A tap on undo brings two blocks back, redo enabled and undo disabled. That each change reached the player is read from a higher count of builds in the value of `editor.picture`, and after the undo from a share of blue in the picture above 0.9. A tap on redo leaves one block, with a higher count of builds and, as the last change of the footage, a share of blue above 0.9 again. The frames of the four elements of the row are the same before the delete and after the redo.
 - A typed word, on `text-wide`: a tap on `text.tab.type`, then on `text.field`, and "XY" typed change the value of the field. A tap on undo gives the string of the seed back with the panel still showing and undo disabled, so the two letters were one step. A tap on redo gives the value from before the undo.
 - A drag, on `text-wide`: a drag of 100 points to the right changes field 6 of `editor.textInfo`, the centre, and a tap on undo gives that field back. The test asserts the change and its undo, never a number of pixels.

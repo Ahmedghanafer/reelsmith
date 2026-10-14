@@ -123,4 +123,4 @@ This works: on 2026-10-12 an unsigned build of this project was installed with S
 5. On the iPhone, switch on Developer Mode under Settings, Privacy & Security (the switch appears only after the install), then restart the phone when asked.
 6. Open Reelsmith. The start screen shows the name of the app, the two shapes and "New project".
 
-A free Apple ID install stops working after 7 days. Repeat step 3 with the same Apple ID to renew it. The app saves nothing yet, so a renewal has no saved data to keep.
+A free Apple ID install stops working after 7 days. Repeat step 3 with the same Apple ID to renew it. A renewal installs over the app, which keeps its drafts. Never delete the app before a renewal: that removes every draft. Whether the drafts survive a renewal is on the list of what is judged on the phone.
