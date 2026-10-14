@@ -1,5 +1,5 @@
 /// The shape of a project. The picture of every clip is fitted whole inside it.
-public enum Canvas: CaseIterable, Equatable, Sendable {
+public enum Canvas: CaseIterable, Equatable, Codable, Sendable {
     /// 16:9. `allCases` is landscape then portrait, the order on the start screen.
     case landscape
     /// 9:16.

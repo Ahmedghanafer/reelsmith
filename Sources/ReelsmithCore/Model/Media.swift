@@ -1,4 +1,4 @@
-public struct MediaID: Hashable, Sendable {
+public struct MediaID: Hashable, Codable, Sendable {
     /// A seed clip uses its name, a picked video a new UUID string.
     public let raw: String
 
@@ -7,7 +7,7 @@ public struct MediaID: Hashable, Sendable {
     }
 }
 
-public struct MediaInfo: Equatable, Sendable {
+public struct MediaInfo: Equatable, Codable, Sendable {
     public var id: MediaID
     /// The file's name inside the media folder, with its extension.
     public var fileName: String
