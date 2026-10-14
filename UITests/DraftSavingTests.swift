@@ -93,6 +93,17 @@ final class DraftSavingTests: XCTestCase {
         XCTAssertEqual(draftsInfo(startApp(seed: nil, drafts: "kept")), "1 2+4200+1+1080x30+.")
     }
 
+    /// The control of the test above: with the run of the typed word open and no home button, ending the app
+    /// writes nothing, so the draft is still the seed's, with no text.
+    func testEndingTheAppWithATypedRunOpenWritesNothing() {
+        let app = startSeeded(drafts: "fresh")
+        typeHi(app)
+
+        app.terminate()
+
+        XCTAssertEqual(draftsInfo(startApp(seed: nil, drafts: "kept")), "1 2+4200+0+1080x30+.")
+    }
+
     /// Starts on two-clips-wide at 2 seconds, so the red block is on the screen, and waits for the editor: the
     /// first seeded start in a fresh simulator writes the clips first.
     private func startSeeded(drafts: String) -> XCUIApplication {

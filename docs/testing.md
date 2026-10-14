@@ -6,7 +6,7 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 - On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift` and `CoverTests.swift`, which sit inside `#if canImport(CoreText)`. That is 411 tests on Linux.
 - On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 567 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 161 UI tests in twenty-six classes.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 162 UI tests in twenty-six classes.
 
 What comes back from the simulator run:
 
@@ -355,7 +355,7 @@ The system picker is driven by the walk of `UITests/WholePathTests.swift`, descr
 
 ### UI tests of saving
 
-`UITests/DraftSavingTests.swift` holds the saving of a draft in seven tests. A draft is read only through the label of `start.draftsInfo` after a launch with `-drafts kept` and no seed, read when `start.newProject` is there. Each test starts its first launch with `-drafts fresh`. The seeded starts are on `two-clips-wide` with `-playhead 1200`, so the red block is on the screen, and wait for the editor with `waitForTheEditor`. "Ended" is `terminate()`. Every wait reads an effect, prints the seconds it took and fails only above three times the expected seconds.
+`UITests/DraftSavingTests.swift` holds the saving of a draft in eight tests. A draft is read only through the label of `start.draftsInfo` after a launch with `-drafts kept` and no seed, read when `start.newProject` is there. Each test starts its first launch with `-drafts fresh`. The seeded starts are on `two-clips-wide` with `-playhead 1200`, so the red block is on the screen, and wait for the editor with `waitForTheEditor`. "Ended" is `terminate()`. Every wait reads an effect, prints the seconds it took and fails only above three times the expected seconds.
 
 - With no seed the line reads `0`, in English, Arabic and Swedish.
 - `editor.seedInfo` reads "2 clips, 2 files", the files copied into the draft's `Media/`. A tap on the red block and on `editor.delete`, the app ended: the line reads `1 1+1800+0+1080x30+.`.
@@ -363,6 +363,7 @@ The system picker is driven by the walk of `UITests/WholePathTests.swift`, descr
 - The red clip deleted, a tap on `editor.undo`, the app ended: the line reads `1 2+4200+0+1080x30+.`.
 - `-drafts fresh` alone and ended, then a start on the seed with no `-drafts`, the red clip deleted and ended: the line reads `0`, so that start wrote nothing.
 - "Hi" typed as above, a tap on `editor.save`, the app ended: the line reads `1 2+4200+1+1080x30+.`.
+- The control of Save: "Hi" typed as above and the app ended with no home button: the line reads `1 2+4200+0+1080x30+.`, so ending the app writes nothing and only Save wrote the word above.
 
 Screenshots: `draft-saving-01-start`, `draft-saving-01-start-ar`, `draft-saving-01-start-sv`. This file sets no mark. That the undo history is written with each draft is held by review, and its return after a relaunch by the tests of the project list. The line "cover try:" of the seed start is read in the log of the run and fails nothing.
 
