@@ -26,7 +26,7 @@ struct SoundClips: View {
                 step: 0.05, send: { store.send(.sound(.setClipVolume($0))) })
             HStack {
                 // Read at the call, so two quick taps turn it twice. The change is made with animations off, so
-                // the toggle shows it in the same frame as the line of the sound, before the new item is built.
+                // the toggle shows it in the same frame as the line of the sound.
                 Toggle(
                     isOn: Binding(
                         get: { store.state.project.clipsMuted },

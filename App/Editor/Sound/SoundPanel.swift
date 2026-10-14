@@ -24,7 +24,7 @@ struct SoundPanel: View {
 
     @State private var part: Part = .music
 
-    /// Holds the tallest part, levels: a label and four sound sliders of 31 points each, 8 points apart.
+    /// The least height under the row: what levels will need, a label and four sound sliders of 31 points, 8 apart.
     private let partHeight: CGFloat = 176
 
     var body: some View {
@@ -54,7 +54,7 @@ struct SoundPanel: View {
                 // end slot: clips
             }
             }
-            .frame(maxWidth: .infinity, minHeight: partHeight, maxHeight: partHeight, alignment: .top)
+            .frame(maxWidth: .infinity, minHeight: partHeight, alignment: .top)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
