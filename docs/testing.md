@@ -391,7 +391,7 @@ Screenshots: `project-list-01-list`, `project-list-01-list-ar`, `project-list-01
 
 Screenshots: `draft-delete-01-swiped`, `draft-delete-01-swiped-ar`, `draft-delete-01-swiped-sv` (the button after the swipe), `draft-delete-02-deleted` (one row left). This file sets no mark.
 
-`Tests/ReelsmithCoreTests/DraftDeleteWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `draft-delete` of a language holds anything but `drafts.delete`, `drafts.deleteQuestion` and `drafts.deleteCancel` in that order, or an empty text, and when the texts are not "Delete", "Delete this draft?" and "Cancel" in English, "حذف", "حذف هذه المسودة؟" and "إلغاء" in Arabic, and "Radera", "Radera det här utkastet?" and "Avbryt" in Swedish.
+`Tests/ReelsmithCoreTests/DraftDeleteWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `draft-delete` of a language holds anything but `drafts.delete`, `drafts.deleteQuestion` and `drafts.deleteCancel` in that order, or an empty text, and when the texts are not "Delete", "Delete this project?" and "Cancel" in English, "حذف", "حذف هذا المشروع؟" and "إلغاء" in Arabic, and "Radera", "Radera det här projektet?" and "Avbryt" in Swedish.
 
 ### The preview
 

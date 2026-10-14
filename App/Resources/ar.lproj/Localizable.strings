@@ -150,7 +150,7 @@
 
 /* slot: draft-delete */
 "drafts.delete" = "حذف";
-"drafts.deleteQuestion" = "حذف هذه المسودة؟";
+"drafts.deleteQuestion" = "حذف هذا المشروع؟";
 "drafts.deleteCancel" = "إلغاء";
 /* end slot: draft-delete */
 

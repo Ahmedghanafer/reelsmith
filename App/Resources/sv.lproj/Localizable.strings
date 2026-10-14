@@ -150,7 +150,7 @@
 
 /* slot: draft-delete */
 "drafts.delete" = "Radera";
-"drafts.deleteQuestion" = "Radera det här utkastet?";
+"drafts.deleteQuestion" = "Radera det här projektet?";
 "drafts.deleteCancel" = "Avbryt";
 /* end slot: draft-delete */
 

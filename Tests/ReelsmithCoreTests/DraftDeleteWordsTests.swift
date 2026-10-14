@@ -15,9 +15,9 @@ final class DraftDeleteWordsTests: XCTestCase {
     }
 
     func testTheTextsOfTheGroupDraftDelete() throws {
-        XCTAssertEqual(try group(of: "en").map { $0.text }, ["Delete", "Delete this draft?", "Cancel"])
-        XCTAssertEqual(try group(of: "ar").map { $0.text }, ["حذف", "حذف هذه المسودة؟", "إلغاء"])
-        XCTAssertEqual(try group(of: "sv").map { $0.text }, ["Radera", "Radera det här utkastet?", "Avbryt"])
+        XCTAssertEqual(try group(of: "en").map { $0.text }, ["Delete", "Delete this project?", "Cancel"])
+        XCTAssertEqual(try group(of: "ar").map { $0.text }, ["حذف", "حذف هذا المشروع؟", "إلغاء"])
+        XCTAssertEqual(try group(of: "sv").map { $0.text }, ["Radera", "Radera det här projektet?", "Avbryt"])
     }
 
     /// The lines between the two markers of the group in the word file of one language, in their order.
