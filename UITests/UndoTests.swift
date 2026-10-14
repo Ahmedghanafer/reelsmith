@@ -37,6 +37,7 @@ final class UndoTests: XCTestCase {
         assertTheRow(app)
         XCTAssertFalse(element(app, "editor.undo").isEnabled)
         XCTAssertFalse(element(app, "editor.redo").isEnabled)
+        assertTheLabels(app, "Undo", "Redo")
         screenshot("undo-01-row")
     }
 
@@ -49,6 +50,7 @@ final class UndoTests: XCTestCase {
         let red = element(app, "editor.clip.2")
         let picture = element(app, "editor.picture")
         let before = frames(app)
+        waitUntil("a count of builds in editor.picture after the start") { self.builds(picture) != nil }
         let first = builds(picture)
         XCTAssertNotNil(first, "editor.picture has no count of builds")
 
@@ -78,9 +80,16 @@ final class UndoTests: XCTestCase {
         XCTAssertGreaterThan(found, blueOfTheClip, "blue after the undo")
         screenshot("undo-02-undone")
 
+        let undone = builds(picture)
         redo.tap()
-        waitUntil("one block after the redo") { !red.exists && element(app, "editor.clip.1").exists }
+        waitUntil("one block and a higher count of builds after the redo") {
+            !red.exists && element(app, "editor.clip.1").exists && (self.builds(picture) ?? 0) > (undone ?? Int.max)
+        }
         XCTAssertFalse(red.exists)
+        // The redo is the last change of the footage, so the share is read once more after it.
+        let last = waitForTheShare(of: blue, "blue", in: picture, moreThan: blueOfTheClip)
+        print("undo: after the redo the share of blue is \(last), B \(blueOfTheClip)")
+        XCTAssertGreaterThan(last, blueOfTheClip, "blue after the redo")
 
         let after = frames(app)
         for (place, identifier) in row.enumerated() {
@@ -111,8 +120,8 @@ final class UndoTests: XCTestCase {
             app.keyboards.firstMatch.exists
         }
         field.typeText("XY")
-        waitUntil("a changed value of the field and undo enabled after the typing") {
-            (field.value as? String ?? seed) != seed && undo.isEnabled
+        waitUntil("XY in the value of the field and undo enabled after the typing") {
+            (field.value as? String ?? "").contains("XY") && undo.isEnabled
         }
         let typed = field.value as? String ?? ""
         XCTAssertNotEqual(typed, seed)
@@ -154,6 +163,7 @@ final class UndoTests: XCTestCase {
 
         assertTheRow(app)
         XCTAssertLessThan(element(app, "editor.undo").frame.minX, element(app, "editor.redo").frame.minX)
+        assertTheLabels(app, "\u{062A}\u{0631}\u{0627}\u{062C}\u{0639}", "\u{0625}\u{0639}\u{0627}\u{062F}\u{0629}")
         screenshot("undo-01-row-ar")
     }
 
@@ -161,7 +171,17 @@ final class UndoTests: XCTestCase {
         let app = startUndo(seed: "two-clips-wide", language: "sv")
 
         assertTheRow(app)
+        assertTheLabels(app, "\u{00C5}ngra", "G\u{00F6}r om")
         screenshot("undo-01-row-sv")
+    }
+
+    /// The buttons show only their symbols, so their words are read from their labels and printed.
+    private func assertTheLabels(_ app: XCUIApplication, _ undo: String, _ redo: String) {
+        let undoLabel = element(app, "editor.undo").label
+        let redoLabel = element(app, "editor.redo").label
+        print("undo: the labels of undo and redo read " + undoLabel + " and " + redoLabel)
+        XCTAssertEqual(undoLabel, undo)
+        XCTAssertEqual(redoLabel, redo)
     }
 
     /// Play, the time, undo and redo from left to right under the picture, undo and redo at the trailing end
@@ -179,6 +199,8 @@ final class UndoTests: XCTestCase {
             }
         }
         XCTAssertEqual(found[3].frame.maxX, region.frame.maxX, accuracy: 1, "redo at the trailing end")
+        // Undo stands beside redo, the 16 points of the row between them.
+        XCTAssertEqual(found[3].frame.minX - found[2].frame.maxX, 16, accuracy: 1, "undo beside redo")
         for place in [0, 2, 3] {
             XCTAssertEqual(found[place].frame.width, 44, accuracy: 1, row[place])
             XCTAssertEqual(found[place].frame.height, 44, accuracy: 1, row[place])
