@@ -1,7 +1,7 @@
 public struct Placement: Equatable, Sendable {
     /// Copied from the MediaInfo.
     public var quarterTurns: Int
-    /// Canvas pixels, origin top left: the rectangle the upright picture fills.
+    /// Pixels of the plan's picture, origin top left: the rectangle the upright picture fills.
     public var x: Double
     public var y: Double
     public var width: Double
@@ -43,12 +43,13 @@ public struct TextLayer: Equatable, Sendable {
     public var timelineStart: Time
     /// Its length. The layer is drawn in a frame at time t when timelineStart <= t < timelineStart + duration.
     public var duration: Time
-    /// Canvas pixels: the centre of the block.
+    /// Pixels of the plan's picture: the centre of the block.
     public var x: Double
     public var y: Double
     public var rotation: Double
+    /// Its size is in pixels of the plan's picture.
     public var style: TextStyle
-    /// Canvas pixels: a line longer than this wraps. The canvas width times TextGeometry.wrapShare.
+    /// Pixels of the plan's picture: a line longer than this wraps. The plan's width times TextGeometry.wrapShare.
     public var lineWidth: Double
 
     public init(text: TextID, string: String, timelineStart: Time, duration: Time, x: Double, y: Double, rotation: Double, style: TextStyle, lineWidth: Double) {
@@ -114,13 +115,33 @@ public struct RenderPlan: Equatable, Sendable {
     public var texts: [TextLayer]
     /// The volume of the clips and the music, as they are heard.
     public var sound: SoundPlan
+    /// The size and the rate of the picture the plan describes.
+    public var settings: ExportSettings
 
-    public init(segments: [Segment], duration: Time, canvas: Canvas = .portrait, texts: [TextLayer] = [], sound: SoundPlan = .plain) {
+    /// Pixels: the width of the picture.
+    public var width: Int {
+        settings.width(on: canvas)
+    }
+
+    /// Pixels: the height of the picture.
+    public var height: Int {
+        settings.height(on: canvas)
+    }
+
+    public var framesPerSecond: Int {
+        settings.rate.framesPerSecond
+    }
+
+    public init(
+        segments: [Segment], duration: Time, canvas: Canvas = .portrait, texts: [TextLayer] = [],
+        sound: SoundPlan = .plain, settings: ExportSettings = .standard
+    ) {
         self.segments = segments
         self.duration = duration
         self.canvas = canvas
         self.texts = texts
         self.sound = sound
+        self.settings = settings
     }
 }
 
@@ -128,8 +149,13 @@ public enum PlanError: Error, Equatable, Sendable {
     case unknownMedia(MediaID)
 }
 
-/// An empty project gives an empty plan and no error.
+/// The plan at `ExportSettings.standard`: the plan of the preview.
 public func renderPlan(for project: Project) throws -> RenderPlan {
+    try renderPlan(for: project, settings: .standard)
+}
+
+/// An empty project gives an empty plan with the settings and no error.
+public func renderPlan(for project: Project, settings: ExportSettings) throws -> RenderPlan {
     let canvasWidth = Double(project.canvas.width)
     let canvasHeight = Double(project.canvas.height)
     var segments: [Segment] = []
@@ -175,5 +201,6 @@ public func renderPlan(for project: Project) throws -> RenderPlan {
             volume: stored.volume, fadeIn: min(stored.fadeIn, half), fadeOut: min(stored.fadeOut, half))
     }
     let sound = SoundPlan(clipVolume: project.clipsMuted ? 0 : project.clipVolume, music: music)
-    return RenderPlan(segments: segments, duration: start, canvas: project.canvas, texts: texts, sound: sound)
+    return RenderPlan(
+        segments: segments, duration: start, canvas: project.canvas, texts: texts, sound: sound, settings: settings)
 }

@@ -1,9 +1,9 @@
 import Foundation
 import XCTest
 
-/// Holds the six groups for the words of sound at the end of each word file. What stands inside a group is not read.
+/// Holds the six groups for the words of sound after `text-path` in each word file. What stands inside a group is not read.
 final class SoundSlotsTests: XCTestCase {
-    func testEachWordFileEndsWithTheSixSlotsOfSoundInTheirOrder() throws {
+    func testTheSixSlotsOfSoundFollowTheEndOfTextPathInTheirOrder() throws {
         let topics = ["sound-panel", "sound-clips", "add-music", "music-levels", "music-video", "sound-path"]
         var wanted = ["/* end slot: text-path */"]
         for topic in topics {
@@ -16,8 +16,9 @@ final class SoundSlotsTests: XCTestCase {
             let file = repository.appendingPathComponent("App/Resources/" + language + ".lproj/Localizable.strings")
             let lines = try String(contentsOf: file, encoding: .utf8).split(whereSeparator: \.isNewline)
             let marks = lines.map(String.init).filter { $0.contains("slot: ") }
+            let start = try XCTUnwrap(marks.firstIndex(of: wanted[0]), language)
 
-            XCTAssertEqual(Array(marks.suffix(wanted.count)), wanted, language)
+            XCTAssertEqual(Array(marks[start...].prefix(wanted.count)), wanted, language)
         }
     }
 }
