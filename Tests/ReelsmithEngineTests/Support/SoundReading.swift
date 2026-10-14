@@ -30,6 +30,8 @@ func toneLevel(of file: URL, hertz: Int, from start: Time, to end: Time) async t
 }
 
 /// The same number for all sound tracks of the asset mixed with the mix, read with no export. Prints the level.
+/// A volume that is held reads as in the exported file. Inside a ramp of the mix this read comes out lower than
+/// the exported file does, so the size of a ramp is asserted on an exported file and never here.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avassetreaderaudiomixoutput
 /// https://developer.apple.com/documentation/avfoundation/avassetreaderaudiomixoutput/audiomix
