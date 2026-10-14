@@ -54,7 +54,9 @@ struct MusicPart: View {
                     .disabled(importing == .copying)
                     .accessibilityIdentifier("sound.addMusic")
                 if music != nil {
+                    // Disabled while copying too, so a file that comes in after it cannot undo a removal.
                     Button("music.remove") { still { store.send(.sound(.removeMusic)) } }
+                        .disabled(importing == .copying)
                         .accessibilityIdentifier("sound.removeMusic")
                 }
                 // slot: from-video
