@@ -74,8 +74,8 @@ final class ExportTrialTests: XCTestCase {
         let made = try await trial(width: 3840, height: 2160, rate: 60)
         XCTAssertEqual(made.facts.width, 3840)
         XCTAssertEqual(made.facts.height, 2160)
-        // Settled by the Executive after the first run of this trial: at this size the preset wrote H.264 level 5.1
-        // at 30 frames a second, so the rate, the count of frames and the alternation are printed, not asserted.
+        // At this size the highest quality preset writes H.264 level 5.1 at 30 frames a second, the even frames
+        // only, so the rate, the count of frames and the alternation are printed, not asserted.
         await printColours(of: made.file, x: 960, y: 1620)
     }
 
@@ -94,7 +94,7 @@ final class ExportTrialTests: XCTestCase {
         await printedTrial(width: 2160, height: 3840, preset: AVAssetExportPresetHighestQuality, x: 960, y: 3300)
     }
 
-    // MARK: Printed trials, settled by the Executive after the first run: no assertion
+    // MARK: Printed trials of other presets and rates: no assertion
 
     func testTheHEVCPresetAt3840By2160At60PrintsWhatItWrote() async {
         await printedTrial(width: 3840, height: 2160, preset: AVAssetExportPresetHEVCHighestQuality, x: 960, y: 1620)
