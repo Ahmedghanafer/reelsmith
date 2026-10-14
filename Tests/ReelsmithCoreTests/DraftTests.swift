@@ -13,7 +13,7 @@ final class DraftTests: XCTestCase {
     }
 
     func testADraftOfEverySeedRoundTripsAtVersionOne() throws {
-        XCTAssertEqual(Seed.allCases.count, 7)
+        XCTAssertEqual(Seed.allCases.count, 8)
         for seed in Seed.allCases {
             let draft = Draft(project: seed.project, exportSettings: .startChoice, changed: date)
 

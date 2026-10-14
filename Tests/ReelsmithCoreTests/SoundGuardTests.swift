@@ -241,6 +241,7 @@ private func soundKind(of action: SoundAction, in state: EditorState) -> SoundKi
         return timeKind(
             fade, stored: music.fadeOut, upper: SoundGeometry.maximumFade,
             (.fadeOutSame, .fadeOutBelow, .fadeOutAbove, .fadeOutOffFrame, .fadeOut))
+    case .setVolumeOfClip: preconditionFailure("the runs draw no volume of a clip")
     }
 }
 

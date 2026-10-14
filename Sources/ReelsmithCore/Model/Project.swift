@@ -11,12 +11,25 @@ public struct Clip: Equatable, Codable, Sendable {
     public var media: MediaID
     public var sourceStart: Time
     public var duration: Time
+    /// 0 to 1, a factor on the volume of the clips. 1 when a stored file lacks it.
+    public var volume: Double
 
-    public init(id: ClipID, media: MediaID, sourceStart: Time, duration: Time) {
+    public init(id: ClipID, media: MediaID, sourceStart: Time, duration: Time, volume: Double = 1) {
         self.id = id
         self.media = media
         self.sourceStart = sourceStart
         self.duration = duration
+        self.volume = volume
+    }
+
+    /// The coding keys and the encoding stay synthesized. A file written before volume existed reads as 1.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(ClipID.self, forKey: .id)
+        media = try container.decode(MediaID.self, forKey: .media)
+        sourceStart = try container.decode(Time.self, forKey: .sourceStart)
+        duration = try container.decode(Time.self, forKey: .duration)
+        volume = try container.decodeIfPresent(Double.self, forKey: .volume) ?? 1
     }
 }
 
@@ -137,5 +150,18 @@ public struct Project: Equatable, Codable, Sendable {
     public func sameFootage(as other: Project) -> Bool {
         canvas == other.canvas && clips == other.clips && media == other.media
             && clipVolume == other.clipVolume && clipsMuted == other.clipsMuted && music == other.music
+    }
+}
+
+extension Project {
+    /// "<media raw> <sourceStart ticks>+<duration ticks> <volume times 100, rounded> <v or p>", nil for an unknown
+    /// id. "v" for a video, "p" for a photo. Digits 0 to 9 in every language. Example: "blue 0+1800 100 v".
+    public func clipInfo(_ id: ClipID) -> String? {
+        guard let clip = clips.first(where: { $0.id == id }) else {
+            return nil
+        }
+        let kind = media[clip.media]?.kind == .photo ? "p" : "v"
+        return clip.media.raw + " " + String(clip.sourceStart.ticks) + "+" + String(clip.duration.ticks) + " "
+            + String(Int((clip.volume * 100).rounded())) + " " + kind
     }
 }

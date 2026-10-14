@@ -15,4 +15,6 @@ public enum SoundAction: Equatable, Sendable {
     case setFadeIn(Time)
     /// Held between zero and maximumFade, rounded toward zero to a whole frame.
     case setFadeOut(Time)
+    /// Held between 0 and 1. Nothing for an unknown clip or a value that is not finite.
+    case setVolumeOfClip(ClipID, Double)
 }
