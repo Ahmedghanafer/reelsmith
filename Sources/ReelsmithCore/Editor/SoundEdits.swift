@@ -18,7 +18,7 @@ func reduceSound(_ state: EditorState, _ action: SoundAction) -> EditorState {
         guard volume.isFinite else {
             return state
         }
-        next.project.clipVolume = min(max(volume, 0), 1)
+        next.project.clipVolume = max(volume, 0)
     case .muteClips(let muted):
         next.project.clipsMuted = muted
     case .setMusic(let file):

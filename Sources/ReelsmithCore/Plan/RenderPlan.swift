@@ -172,7 +172,7 @@ public func renderPlan(for project: Project) throws -> RenderPlan {
         let half = Time(ticks: heard.ticks / 2)
         music = MusicLayer(
             media: stored.file.id, fileName: stored.file.fileName, sourceStart: stored.start, duration: heard,
-            volume: stored.volume, fadeIn: min(stored.fadeIn, half), fadeOut: min(stored.fadeOut, half))
+            volume: stored.volume, fadeIn: stored.fadeIn, fadeOut: min(stored.fadeOut, half))
     }
     let sound = SoundPlan(clipVolume: project.clipsMuted ? 0 : project.clipVolume, music: music)
     return RenderPlan(segments: segments, duration: start, canvas: project.canvas, texts: texts, sound: sound)
