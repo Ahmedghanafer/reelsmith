@@ -15,15 +15,34 @@ public enum MusicImport: Equatable, Sendable {
     }
 
     /// Every key `words` can give.
-    public static let allWords: [String] = []
+    public static let allWords: [String] = ["music.copying", "music.notReadable", "music.protected"]
 
     /// Nil when idle.
     public var words: Words? {
-        nil
+        switch self {
+        case .idle:
+            return nil
+        case .copying:
+            return Words("music.copying")
+        case .failed(let isProtected):
+            return Words(isProtected ? "music.protected" : "music.notReadable")
+        }
     }
 
-    /// The five moves. Every other pair leaves the case unchanged.
+    /// The five moves. Every other pair leaves the case unchanged, so a pick while copying changes nothing
+    /// and a new pick is the way out of a refusal too.
     public func after(_ event: Event) -> MusicImport {
-        self
+        switch (self, event) {
+        case (.idle, .picked), (.failed, .picked):
+            return .copying
+        case (.copying, .imported):
+            return .idle
+        case (.copying, .refused(let isProtected)):
+            return .failed(isProtected: isProtected)
+        case (.failed, .failureConfirmed):
+            return .idle
+        default:
+            return self
+        }
     }
 }
