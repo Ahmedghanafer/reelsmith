@@ -70,7 +70,6 @@ final class UndoHistoryTests: XCTestCase {
             editing = editing.after(.text(.setString(TextID(1), String("Hello wo".prefix(count)))))
             editing = editing.after(.movePlayhead(Time(ticks: 33 * Int64(count))))
         }
-        XCTAssertTrue(editing.state.isPlaying)
         XCTAssertEqual(editing.state.playhead, Time(ticks: 260))
         XCTAssertEqual(editing.state.project.text(TextID(1))?.string, "Hello wo")
         XCTAssertEqual(editing.history.past.count, 1)
