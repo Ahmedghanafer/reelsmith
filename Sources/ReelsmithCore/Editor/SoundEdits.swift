@@ -7,9 +7,6 @@ func reduceSound(_ state: EditorState, _ action: SoundAction) -> EditorState {
     var next = state
     switch action {
     case .open:
-        guard state.canOpenSound else {
-            return state
-        }
         next.showsSound = true
         next.selection = nil
         next.selectedText = nil
@@ -60,7 +57,7 @@ func reduceSound(_ state: EditorState, _ action: SoundAction) -> EditorState {
 /// and on an empty project, and changes nothing else.
 func settleSound(_ state: EditorState) -> EditorState {
     guard state.showsSound,
-        state.selection != nil || state.selectedText != nil || state.project.clips.isEmpty
+        state.selectedText != nil
     else {
         return state
     }
