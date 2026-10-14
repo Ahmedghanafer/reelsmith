@@ -62,8 +62,8 @@ final class TestToneMakerTests: XCTestCase {
                 if !names.isEmpty && !names.contains("long-tone.mov") {
                     sawOnlyAnotherName = true
                 }
-                // No pause: an uncompressed tone is written in a few milliseconds.
-                await Task.yield()
+                // A short pause: an uncompressed tone is written in a few milliseconds.
+                try? await Task.sleep(nanoseconds: 200_000)
             }
             return sawOnlyAnotherName
         }
