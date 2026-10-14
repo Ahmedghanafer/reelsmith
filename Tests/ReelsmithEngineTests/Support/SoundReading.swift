@@ -24,7 +24,7 @@ func toneLevel(of file: URL, hertz: Int, from start: Time, to end: Time) async t
     }
     let reader = try AVAssetReader(asset: asset)
     let output = AVAssetReaderTrackOutput(track: track, outputSettings: sixteenBitSamples)
-    let level = try pitchLevel(reader: reader, output: output, hertz: hertz, window: window, peak: true)
+    let level = try pitchLevel(reader: reader, output: output, hertz: hertz, window: window)
     print("level of \(hertz) Hz from \(start.ticks) to \(end.ticks) ticks in \(file.lastPathComponent): \(level)")
     return level
 }
@@ -75,7 +75,7 @@ private func wholeTenths(from start: Time, to end: Time) throws -> CMTimeRange {
 /// https://developer.apple.com/documentation/coremedia/cmsamplebuffergetpresentationtimestamp(_:)
 /// https://developer.apple.com/documentation/coremedia/cmaudioformatdescriptiongetstreambasicdescription(_:)
 /// https://developer.apple.com/documentation/coremedia/cmblockbuffercopydatabytes(_:atoffset:datalength:destination:)
-private func pitchLevel(reader: AVAssetReader, output: AVAssetReaderOutput, hertz: Int, window: CMTimeRange, peak: Bool = false) throws -> Double {
+private func pitchLevel(reader: AVAssetReader, output: AVAssetReaderOutput, hertz: Int, window: CMTimeRange) throws -> Double {
     reader.timeRange = window
     reader.add(output)
     guard reader.startReading() else {
@@ -84,7 +84,6 @@ private func pitchLevel(reader: AVAssetReader, output: AVAssetReaderOutput, hert
     var sine = 0.0
     var cosine = 0.0
     var rate = 0.0
-    var highest = 0.0
     while let buffer = output.copyNextSampleBuffer() {
         guard let block = CMSampleBufferGetDataBuffer(buffer),
               let format = CMSampleBufferGetFormatDescription(buffer),
@@ -111,7 +110,6 @@ private func pitchLevel(reader: AVAssetReader, output: AVAssetReaderOutput, hert
             guard place >= 0, place < wanted else { continue }
             let angle = 2 * Double.pi * Double(hertz) * Double(place) / rate
             let value = Double(samples[frame * channels]) / 32768
-            highest = max(highest, abs(value))
             sine += value * sin(angle)
             cosine += value * cos(angle)
         }
@@ -122,7 +120,6 @@ private func pitchLevel(reader: AVAssetReader, output: AVAssetReaderOutput, hert
     guard rate > 0 else {
         throw SoundReadingError(description: "no samples in the window")
     }
-    if peak { return highest }
     return 2 * (sine * sine + cosine * cosine).squareRoot() / (window.duration.seconds * rate)
 }
 #endif

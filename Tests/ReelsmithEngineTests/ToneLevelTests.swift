@@ -48,7 +48,7 @@ final class ToneLevelTests: XCTestCase {
     /// The same composition and the same mix, read with no export.
     @MainActor
     func testTheSameLevelsComeThroughTheMixWithNoExport() async throws {
-        let made = try await twoTonesUnderAMix(noRamp: true)
+        let made = try await twoTonesUnderAMix()
         let asset = made.composition
         let first = try await mixedToneLevel(
             of: asset, mix: made.mix, hertz: 440, from: Time(ticks: 1200), to: Time(ticks: 1800))
@@ -111,7 +111,7 @@ final class ToneLevelTests: XCTestCase {
     /// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolume(_:at:)
     /// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolumeramp(fromstartvolume:toendvolume:timerange:)
     @MainActor
-    private func twoTonesUnderAMix(noRamp: Bool = false) async throws
+    private func twoTonesUnderAMix() async throws
         -> (composition: AVMutableComposition, videoComposition: AVVideoComposition, mix: AVAudioMix) {
         let clip = TestClip.blue
         _ = try await writeTestClip(clip, to: Self.folder)
@@ -148,13 +148,9 @@ final class ToneLevelTests: XCTestCase {
         held.setVolume(1, at: .zero)
         let rising = AVMutableAudioMixInputParameters()
         rising.trackID = soundTracks[1].trackID
-        if noRamp {
-            rising.setVolume(0.5, at: .zero)
-        } else {
-            rising.setVolumeRamp(
-                fromStartVolume: 0, toEndVolume: 0.5,
-                timeRange: CMTimeRange(start: .zero, duration: CMTime(value: 600, timescale: 600)))
-        }
+        rising.setVolumeRamp(
+            fromStartVolume: 0, toEndVolume: 0.5,
+            timeRange: CMTimeRange(start: .zero, duration: CMTime(value: 600, timescale: 600)))
         let mix = AVMutableAudioMix()
         mix.inputParameters = [held, rising]
         return (composition, videoComposition, mix)
