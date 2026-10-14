@@ -24,8 +24,9 @@ struct SoundPanel: View {
 
     @State private var part: Part = .music
 
-    /// The least height under the row: what levels will need, a label and four sound sliders of 31 points, 8 apart.
-    private let partHeight: CGFloat = 176
+    /// The least height under the row: what levels needs, a label and four sound sliders of about 31 points, 8 apart,
+    /// which the simulator measured a third of a point above 176, with room.
+    private let partHeight: CGFloat = 184
 
     var body: some View {
         VStack(spacing: 8) {
@@ -46,6 +47,7 @@ struct SoundPanel: View {
             }
             if part == .levels {
                 // slot: levels
+                MusicLevels(store: store)
                 // end slot: levels
             }
             if part == .clips {

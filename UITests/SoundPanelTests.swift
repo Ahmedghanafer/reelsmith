@@ -3,8 +3,8 @@ import XCTest
 // The sound button, the sound region and the sound panel, on the seeds music-wide (the clips of two-clips-wide,
 // blue 3 seconds and red 4 on the landscape canvas, under the long test tone, the panel open at the start),
 // two-clips-wide, text-wide and empty. The sound of the project is read from `editor.soundInfo` and never by a
-// word. The parts of the panel are empty slots here, so nothing shows under the row of its part buttons. The
-// picture is read through the probe `share(of:in:)`. No test listens.
+// word. What each part shows under the row of the part buttons is held by the tests of that part. The picture is
+// read through the probe `share(of:in:)`. No test listens.
 //
 // https://developer.apple.com/documentation/xctest/xcuielement/tap()
 // https://developer.apple.com/documentation/xctest/xcuielement/coordinate(withnormalizedoffset:)
@@ -13,7 +13,6 @@ import XCTest
 // https://developer.apple.com/documentation/xctest/xcuielementattributes/frame
 // https://developer.apple.com/documentation/xctest/xcuielementattributes/isselected
 // https://developer.apple.com/documentation/xctest/xcuielementattributes/isenabled
-// https://developer.apple.com/documentation/xctest/xcuielementquery/allelementsboundbyindex
 // https://developer.apple.com/documentation/foundation/thread/sleep(fortimeinterval:)
 @MainActor
 final class SoundPanelTests: XCTestCase {
@@ -27,9 +26,6 @@ final class SoundPanelTests: XCTestCase {
     private let expectedFrame = 3.0
 
     private let tabs = ["sound.tab.music", "sound.tab.levels", "sound.tab.clips"]
-    /// The part buttons whose slot is still empty, so nothing shows under the row while their part shows.
-    /// A story that fills a slot takes its button out of this list.
-    private let emptyParts = ["sound.tab.levels"]
     private let tools = ["editor.split", "editor.delete", "editor.addText", "editor.sound"]
     private let withMusic = "100 . 0+4200 100 0 0"
 
@@ -75,7 +71,7 @@ final class SoundPanelTests: XCTestCase {
         XCTAssertEqual(soundInfo(app), withMusic)
     }
 
-    func testEachPartButtonSelectsItsPartAndNothingShowsUnderTheRow() {
+    func testEachPartButtonSelectsItsPartAndNoPartMovesTheRow() {
         let app = startSound(seed: "music-wide")
         waitForThePanel(app, "the sound region at the start on music-wide")
         let row = element(app, "sound.tab.music").frame
@@ -90,9 +86,6 @@ final class SoundPanelTests: XCTestCase {
             // word is wider.
             let now = element(app, "sound.tab.music").frame
             XCTAssertEqual([now.minY, now.maxY], [row.minY, row.maxY], tab)
-            if emptyParts.contains(tab) {
-                assertNothingUnderTheRow(app, tab)
-            }
             XCTAssertEqual(soundInfo(app), withMusic, tab)
         }
     }
@@ -282,15 +275,6 @@ final class SoundPanelTests: XCTestCase {
     private func openSound(_ app: XCUIApplication) {
         element(app, "editor.sound").tap()
         waitForThePanel(app, "the sound region after the tap on the sound button, every button in its row")
-    }
-
-    /// No element of the sound region lies below the row of its part buttons.
-    private func assertNothingUnderTheRow(_ app: XCUIApplication, _ when: String) {
-        let row = element(app, "sound.done").frame
-        let inside = element(app, "editor.soundRegion").descendants(matching: .any).allElementsBoundByIndex
-        let below = inside.filter { $0.frame.minY >= row.maxY }
-        print("sound-panel: after the tap on \(when) the region holds \(inside.count) elements, \(below.count) under the row")
-        XCTAssertTrue(below.isEmpty, when)
     }
 
     /// The four buttons of the tools row lie whole inside the width of the screen and no two of their frames overlap.

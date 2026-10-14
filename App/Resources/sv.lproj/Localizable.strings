@@ -103,6 +103,11 @@
 /* end slot: add-music */
 
 /* slot: music-levels */
+"music.volume" = "Musikvolym";
+"music.start" = "Börjar vid";
+"music.fadeIn" = "Intoning";
+"music.fadeOut" = "Uttoning";
+"music.none" = "Ingen musik än";
 /* end slot: music-levels */
 
 /* slot: music-video */
