@@ -136,12 +136,20 @@ final class DraftListTests: XCTestCase {
 
         for identifier in ["drafts.row.1", "drafts.row.2"] {
             let frame = element(app, identifier).frame
-            let side = min(64, frame.height)
-            let trailing = darkShare(in: CGRect(x: frame.maxX - side, y: frame.minY, width: side, height: side))
-            let leading = darkShare(in: CGRect(x: frame.minX, y: frame.minY, width: side, height: side))
-            print("project-list: \(identifier) dark share \(trailing) at its right end and \(leading) at its left")
-            XCTAssertGreaterThan(trailing, 0.6, identifier + ": the cover box at the right end")
-            XCTAssertLessThan(leading, 0.3, identifier + ": nothing dark at the left end")
+            // The band of 64 points in the middle of the row's height, where the box stands. A column of the box
+            // is all black or picture, a column of the date or the length is mostly white.
+            let band = CGRect(x: frame.minX, y: frame.midY - 32, width: frame.width, height: 64)
+            let columns = notWhiteColumns(in: band)
+            let box = columns.filter { $0.share > 0.9 }.map { $0.x }
+            let leftEnd = columns.filter { $0.x < Double(frame.minX) + 64 }.map { $0.share }
+            let leading = leftEnd.isEmpty ? 1 : leftEnd.reduce(0, +) / Double(leftEnd.count)
+            let boxLeft = box.min() ?? 0
+            let boxRight = box.max() ?? 0
+            print("project-list: \(identifier) in \(frame): columns more than 0.9 not white from x \(boxLeft) to \(boxRight), share not white \(leading) in the 64 points at its left end")
+            XCTAssertFalse(box.isEmpty, identifier + ": no cover box")
+            XCTAssertGreaterThan(boxLeft, Double(frame.midX), identifier + ": the cover box in the right half of the row")
+            XCTAssertEqual(boxRight - boxLeft, 64, accuracy: 3, identifier + ": the box 64 points wide")
+            XCTAssertLessThan(leading, 0.1, identifier + ": nothing but the white of the list at the left end")
         }
         screenshot("project-list-01-list-ar")
     }
@@ -221,10 +229,11 @@ final class DraftListTests: XCTestCase {
         app.descendants(matching: .any)[identifier]
     }
 
-    /// The share, from 0 to 1, of the pixels of a square of the screen that are black or blue: red and green
-    /// both at most 48 of 255. The cover box is black with the picture of blue fitted in it, the list around it
-    /// is light. Every fourth pixel of every fourth row is read, as the probe of `share(of:in:)` reads.
-    private func darkShare(in rect: CGRect) -> Double {
+    /// For each column of a rectangle of the screen, its x in points and the share, from 0 to 1, of its pixels
+    /// that are not white: some channel more than 48 below 255. The cover box is black with the picture fitted
+    /// in it, the list around it is white. Every fourth pixel column and every fourth row is read, as the probe
+    /// of `share(of:in:)` reads.
+    private func notWhiteColumns(in rect: CGRect) -> [(x: Double, share: Double)] {
         let picture = XCUIScreen.main.screenshot().image
         guard let image = picture.cgImage, picture.size.width > 0,
             let space = CGColorSpace(name: CGColorSpace.sRGB),
@@ -234,12 +243,12 @@ final class DraftListTests: XCTestCase {
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else {
             XCTFail("the probe could not make its bitmap")
-            return 0
+            return []
         }
         context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
         guard let data = context.data else {
             XCTFail("the probe could not read its bitmap")
-            return 0
+            return []
         }
         let bytes = data.assumingMemoryBound(to: UInt8.self)
         let scale = Double(image.width) / Double(picture.size.width)
@@ -247,22 +256,25 @@ final class DraftListTests: XCTestCase {
         let right = min(image.width, Int((Double(rect.maxX) * scale).rounded(.down)))
         let top = max(0, Int((Double(rect.minY) * scale).rounded(.up)))
         let bottom = min(image.height, Int((Double(rect.maxY) * scale).rounded(.down)))
-        var read = 0
-        var dark = 0
-        for y in stride(from: top, to: bottom, by: 4) {
-            for x in stride(from: left, to: right, by: 4) {
+        var columns: [(x: Double, share: Double)] = []
+        for x in stride(from: left, to: right, by: 4) {
+            var read = 0
+            var notWhite = 0
+            for y in stride(from: top, to: bottom, by: 4) {
                 let offset = y * context.bytesPerRow + x * 4
                 read += 1
-                if Int(bytes[offset]) <= 48 && Int(bytes[offset + 1]) <= 48 {
-                    dark += 1
+                if Int(bytes[offset]) < 207 || Int(bytes[offset + 1]) < 207 || Int(bytes[offset + 2]) < 207 {
+                    notWhite += 1
                 }
             }
+            if read > 0 {
+                columns.append((x: Double(x) / scale, share: Double(notWhite) / Double(read)))
+            }
         }
-        guard read > 0 else {
-            XCTFail("the probe found no pixel of the square on the screen")
-            return 0
+        if columns.isEmpty {
+            XCTFail("the probe found no pixel of the rectangle on the screen")
         }
-        return Double(dark) / Double(read)
+        return columns
     }
 
     /// No element says when the frame is drawn, so the share is asked again until it is more than wanted.
