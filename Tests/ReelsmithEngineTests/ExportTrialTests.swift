@@ -70,11 +70,13 @@ final class ExportTrialTests: XCTestCase {
         try await assertBlinks(made.file, frameTicks: 10, x: 640, y: 360)
     }
 
-    func testTheTrialAt3840By2160At60WritesThatSizeAnd60FramesOfRedThenBlue() async throws {
+    func testTheTrialAt3840By2160At60WritesThatSize() async throws {
         let made = try await trial(width: 3840, height: 2160, rate: 60)
-        XCTAssertEqual(made.facts.infoText, "3840 2160 60")
-        XCTAssertEqual(made.frames, 60)
-        try await assertBlinks(made.file, frameTicks: 10, x: 960, y: 1620)
+        XCTAssertEqual(made.facts.width, 3840)
+        XCTAssertEqual(made.facts.height, 2160)
+        // Settled by the Executive after the first run of this trial: at this size the preset wrote H.264 level 5.1
+        // at 30 frames a second, so the rate, the count of frames and the alternation are printed, not asserted.
+        await printColours(of: made.file, x: 960, y: 1620)
     }
 
     func testTheTrialAt1920By1080At30KeepsTheEvenFramesOnly() async throws {
@@ -89,11 +91,38 @@ final class ExportTrialTests: XCTestCase {
 
     /// E13: printed, never asserted.
     func testTheTrialAt2160By3840At60PrintsWhatItWrote() async {
+        await printedTrial(width: 2160, height: 3840, preset: AVAssetExportPresetHighestQuality, x: 960, y: 3300)
+    }
+
+    // MARK: Printed trials, settled by the Executive after the first run: no assertion
+
+    func testTheHEVCPresetAt3840By2160At60PrintsWhatItWrote() async {
+        await printedTrial(width: 3840, height: 2160, preset: AVAssetExportPresetHEVCHighestQuality, x: 960, y: 1620)
+    }
+
+    func testTheHEVCPresetAt2160By3840At60PrintsWhatItWrote() async {
+        await printedTrial(width: 2160, height: 3840, preset: AVAssetExportPresetHEVCHighestQuality, x: 960, y: 3300)
+    }
+
+    func testThe3840By2160PresetAt60PrintsWhatItWrote() async {
+        await printedTrial(width: 3840, height: 2160, preset: AVAssetExportPreset3840x2160, x: 960, y: 1620)
+    }
+
+    func testTheTrialAt1920By1080At60PrintsWhatItWrote() async {
+        await printedTrial(width: 1920, height: 1080, preset: AVAssetExportPresetHighestQuality, x: 960, y: 540)
+    }
+
+    /// A source of 30 at 60: the count of frames says whether each frame of the source is shown twice.
+    func testBlueCutTo600TicksAt1920By1080At60PrintsWhatItWrote() async {
         do {
-            _ = try await trial(width: 2160, height: 3840, rate: 60)
+            _ = try await writeTestClip(.blue, to: ExportTests.folder)
         } catch {
-            print("export-trial: 2160 by 3840 at 60 threw \(error)")
+            print("export-trial: blue could not be written: \(error)")
+            return
         }
+        await printedTrial(
+            width: 1920, height: 1080, preset: AVAssetExportPresetHighestQuality, source: TestClip.blue.info,
+            x: 960, y: 540)
     }
 
     // MARK: Helpers
@@ -104,26 +133,65 @@ final class ExportTrialTests: XCTestCase {
         var frames: Int
     }
 
-    /// Exports the blink clip as the trial does and prints one line that starts with `export-trial:`.
+    /// The trial at one sixtieth, with its line and the colours of frames 0 to 5, or the error it threw.
+    private func printedTrial(
+        width: Int, height: Int, preset: String, source: MediaInfo? = nil, x: Int, y: Int
+    ) async {
+        do {
+            let made = try await trial(width: width, height: height, rate: 60, preset: preset, source: source)
+            await printColours(of: made.file, x: x, y: y)
+        } catch {
+            print("export-trial: \(width) by \(height) at 60 with \(preset) threw \(error)")
+        }
+    }
+
+    /// Prints the colours at the middle of frames 0 to 5 of a file at 60, or why one could not be read.
+    private func printColours(of file: URL, x: Int, y: Int) async {
+        var read: [String] = []
+        do {
+            for n in 0..<6 {
+                let colour = try await pixel(of: file, at: Time(ticks: 10 * Int64(n) + 5), x: x, y: y)
+                read.append("\(colour.r) \(colour.g) \(colour.b)")
+            }
+            print("export-trial: \(file.lastPathComponent) at (\(x), \(y)), frames 0 to 5: "
+                + read.joined(separator: ", "))
+        } catch {
+            print("export-trial: \(file.lastPathComponent) at (\(x), \(y)), frames 0 to 5: "
+                + read.joined(separator: ", ") + ", then the read threw \(error)")
+        }
+    }
+
+    /// Exports the first 600 ticks of the source, the blink clip when none is given, as the trial does, and
+    /// prints one line that starts with `export-trial:`.
     /// https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition/rendersize
     /// https://developer.apple.com/documentation/avfoundation/avmutablevideocomposition/frameduration
     /// https://developer.apple.com/documentation/avfoundation/avassetexportsession
     /// https://developer.apple.com/documentation/avfoundation/avassetexportpresethighestquality
+    /// https://developer.apple.com/documentation/avfoundation/avassetexportpresethevchighestquality
+    /// https://developer.apple.com/documentation/avfoundation/avassetexportpreset3840x2160
     /// https://developer.apple.com/documentation/avfoundation/avassetexportsession/exportasynchronously(completionhandler:)
-    private func trial(width: Int, height: Int, rate: Int32) async throws -> Trial {
-        let info = try await writeBlinkClip(to: ExportTests.folder)
+    private func trial(
+        width: Int, height: Int, rate: Int32, preset: String = AVAssetExportPresetHighestQuality,
+        source: MediaInfo? = nil
+    ) async throws -> Trial {
+        let blink = try await writeBlinkClip(to: ExportTests.folder)
+        let info = source ?? blink
         var project = Project(canvas: .landscape)
         project.media[info.id] = info
-        project.clips.append(Clip(id: ClipID(1), media: info.id, sourceStart: .zero, duration: info.duration))
+        project.clips.append(Clip(id: ClipID(1), media: info.id, sourceStart: .zero, duration: Time(ticks: 600)))
         project.nextClipID = 2
         let plan = try renderPlan(for: project)
 
         let built = try await buildComposition(plan: plan, media: project.media, mediaFolder: ExportTests.folder)
         built.videoComposition.renderSize = CGSize(width: width, height: height)
         built.videoComposition.frameDuration = CMTime(value: 1, timescale: rate)
-        let session = try XCTUnwrap(
-            AVAssetExportSession(asset: built.composition, presetName: AVAssetExportPresetHighestQuality))
-        let output = ExportTests.folder.appendingPathComponent("trial-\(width)-\(height)-\(rate).mp4")
+        let asked = "\(info.id.raw) at \(width) by \(height) at \(rate) with \(preset)"
+        guard let session = AVAssetExportSession(asset: built.composition, presetName: preset) else {
+            print("export-trial: \(asked) asked, the preset gives no export session")
+            throw EngineError.cannotWrite
+        }
+        let output = ExportTests.folder.appendingPathComponent(
+            "trial-\(info.id.raw)-\(width)-\(height)-\(rate)-\(preset).mp4")
         try? FileManager.default.removeItem(at: output)
         session.videoComposition = built.videoComposition
         session.audioMix = built.audioMix
@@ -137,7 +205,6 @@ final class ExportTrialTests: XCTestCase {
             }
         }
         let seconds = Date().timeIntervalSince(began)
-        let asked = "\(width) by \(height) at \(rate)"
         guard session.status == .completed else {
             let error = session.error.map { String(describing: $0) } ?? "none"
             print("export-trial: \(asked) asked, status \(session.status.rawValue) after "
