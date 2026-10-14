@@ -88,6 +88,8 @@
 /* end slot: sound-panel */
 
 /* slot: sound-clips */
+"sound.clipVolume" = "Klippens ljud";
+"sound.clipsMuted" = "Tysta klippen";
 /* end slot: sound-clips */
 
 /* slot: add-music */

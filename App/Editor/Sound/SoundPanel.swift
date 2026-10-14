@@ -45,6 +45,7 @@ struct SoundPanel: View {
             }
             if part == .clips {
                 // slot: clips
+                SoundClips(store: store)
                 // end slot: clips
             }
         }
