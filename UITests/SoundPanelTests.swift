@@ -78,6 +78,7 @@ final class SoundPanelTests: XCTestCase {
     func testEachPartButtonSelectsItsPartAndNothingShowsUnderTheRow() {
         let app = startSound(seed: "music-wide")
         waitForThePanel(app, "the sound region at the start on music-wide")
+        let row = element(app, "sound.tab.music").frame
 
         for tab in [tabs[1], tabs[2], tabs[0]] {
             element(app, tab).tap()
@@ -85,6 +86,10 @@ final class SoundPanelTests: XCTestCase {
                 selectedTabs(app) == [tab] && inOneRow(app, tabs + ["sound.done"])
             }
             XCTAssertEqual(selectedTabs(app), [tab])
+            // The area under the row has one height, so no part moves the row. Only the height is read: a bold
+            // word is wider.
+            let now = element(app, "sound.tab.music").frame
+            XCTAssertEqual([now.minY, now.maxY], [row.minY, row.maxY], tab)
             if emptyParts.contains(tab) {
                 assertNothingUnderTheRow(app, tab)
             }
