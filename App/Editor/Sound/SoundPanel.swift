@@ -36,6 +36,7 @@ struct SoundPanel: View {
             .frame(minHeight: 44)
             if part == .music {
                 // slot: music
+                MusicPart(store: store)
                 // end slot: music
             }
             if part == .levels {

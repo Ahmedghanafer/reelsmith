@@ -91,6 +91,13 @@
 /* end slot: sound-clips */
 
 /* slot: add-music */
+"music.add" = "Add music from Files";
+"music.replace" = "Choose another file";
+"music.remove" = "Remove the music";
+"music.copying" = "Adding the music";
+"music.notReadable" = "This file cannot be used as music.";
+"music.protected" = "This file is protected and cannot go into an exported video. Music without protection works.";
+"music.ok" = "OK";
 /* end slot: add-music */
 
 /* slot: music-levels */
