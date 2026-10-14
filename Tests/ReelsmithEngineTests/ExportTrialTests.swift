@@ -1,4 +1,4 @@
-#if canImport(CoreText)
+#if canImport(AVFoundation)
 import AVFoundation
 import CoreGraphics
 import CoreMedia

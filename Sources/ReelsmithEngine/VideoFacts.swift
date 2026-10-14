@@ -30,6 +30,8 @@ public struct VideoFacts: Equatable, Sendable {
 /// https://developer.apple.com/documentation/avfoundation/avassettrack/naturalsize
 public func readVideoFacts(of file: URL) async throws -> VideoFacts {
     let asset = AVURLAsset(url: file)
+    // A track does not keep its asset alive.
+    defer { withExtendedLifetime(asset) {} }
     do {
         guard let track = try await asset.loadTracks(withMediaType: .video).first else { throw EngineError.cannotRead }
         let (size, rate) = try await track.load(.naturalSize, .nominalFrameRate)
