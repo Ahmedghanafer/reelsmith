@@ -9,10 +9,9 @@ import ReelsmithCore
 
 /// Reads the picture with its orientation applied, scales it so its long side is at most 3840 pixels and both sides
 /// are even, and writes it as a still movie `<folder>/<id raw>.mov`: one picture track with the 709 colour
-/// properties, H.264 while the picture has at most 36864 blocks of 16 by 16 and HEVC above or when the H.264
-/// write fails, of photoLongest, that
-/// holds the picture twice, at zero and one frame of 30 before the end. It gives the MediaInfo of that movie: kind
-/// photo, the upright size, quarterTurns 0, hasSound false, duration photoLongest.
+/// properties, of photoLongest. It is H.264 while the picture has at most 36864 blocks of 16 by 16, and HEVC above
+/// or when the H.264 write fails. It holds the picture twice, at zero and one frame of 30 before the end. It gives
+/// the MediaInfo of that movie: kind photo, the upright size, quarterTurns 0, hasSound false, duration photoLongest.
 /// Throws cannotRead when it is no picture, cannotWrite when the movie cannot be written. Leaves nothing written
 /// when it throws: the movie is written under a temporary name beside it, then renamed.
 ///
@@ -55,7 +54,7 @@ public func importPhoto(from source: URL, id: MediaID, into folder: URL) async t
         let codec: AVVideoCodecType = blocks <= 36864 ? .h264 : .hevc
         do {
             try await writeStill(frame, codec: codec, width: width, height: height, to: temporary)
-        } catch where codec == .h264 {
+        } catch where codec == .h264 && !(error is CancellationError) {
             try? FileManager.default.removeItem(at: temporary)
             try await writeStill(frame, codec: .hevc, width: width, height: height, to: temporary)
         }
