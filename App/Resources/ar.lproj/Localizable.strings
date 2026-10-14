@@ -149,6 +149,9 @@
 /* end slot: project-list */
 
 /* slot: draft-delete */
+"drafts.delete" = "حذف";
+"drafts.deleteQuestion" = "حذف هذه المسودة؟";
+"drafts.deleteCancel" = "إلغاء";
 /* end slot: draft-delete */
 
 /* slot: draft-path */

@@ -149,6 +149,9 @@
 /* end slot: project-list */
 
 /* slot: draft-delete */
+"drafts.delete" = "Radera";
+"drafts.deleteQuestion" = "Radera det här utkastet?";
+"drafts.deleteCancel" = "Avbryt";
 /* end slot: draft-delete */
 
 /* slot: draft-path */
