@@ -29,7 +29,7 @@ final class SoundPanelTests: XCTestCase {
     private let tabs = ["sound.tab.music", "sound.tab.levels", "sound.tab.clips"]
     /// The part buttons whose slot is still empty, so nothing shows under the row while their part shows.
     /// A story that fills a slot takes its button out of this list.
-    private let emptyParts = ["sound.tab.music", "sound.tab.levels", "sound.tab.clips"]
+    private let emptyParts = ["sound.tab.levels", "sound.tab.clips"]
     private let tools = ["editor.split", "editor.delete", "editor.addText", "editor.sound"]
     private let withMusic = "100 . 0+4200 100 0 0"
 
