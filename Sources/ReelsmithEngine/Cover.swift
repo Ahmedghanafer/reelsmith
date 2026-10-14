@@ -14,13 +14,22 @@ import ReelsmithCore
 /// A frame the generator cannot give throws `cannotRead`. The JPEG is written under a temporary name beside the
 /// file and renamed when it is whole.
 ///
+/// https://developer.apple.com/documentation/avfoundation/avassetimagegenerator/init(asset:)
 /// https://developer.apple.com/documentation/avfoundation/avassetimagegenerator/image(at:)
 /// https://developer.apple.com/documentation/avfoundation/avassetimagegenerator/videocomposition
 /// https://developer.apple.com/documentation/avfoundation/avassetimagegenerator/requestedtimetolerancebefore
 /// https://developer.apple.com/documentation/avfoundation/avassetimagegenerator/requestedtimetoleranceafter
 /// https://developer.apple.com/documentation/coreimage/ciimage/init(cgimage:)
 /// https://developer.apple.com/documentation/coreimage/ciimage/transformed(by:)
+/// https://developer.apple.com/documentation/coreimage/cicontext/init()
 /// https://developer.apple.com/documentation/coreimage/cicontext/writejpegrepresentation(of:to:colorspace:options:)
+/// https://developer.apple.com/documentation/corefoundation/cgaffinetransform/init(scalex:y:)
+/// https://developer.apple.com/documentation/coregraphics/cgcolorspace/init(name:)
+/// https://developer.apple.com/documentation/coregraphics/cgcolorspace/srgb
+/// https://developer.apple.com/documentation/foundation/filemanager/iswritablefile(atpath:)
+/// https://developer.apple.com/documentation/foundation/filemanager/fileexists(atpath:)
+/// https://developer.apple.com/documentation/foundation/filemanager/removeitem(at:)
+/// https://developer.apple.com/documentation/foundation/filemanager/moveitem(at:to:)
 public func writeCover(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: URL, to file: URL) async throws {
     guard !plan.segments.isEmpty else { throw EngineError.nothingToExport }
     let folder = file.deletingLastPathComponent()
