@@ -12,7 +12,7 @@ import ReelsmithCore
 /// Writes nothing when it throws.
 ///
 /// A frame the generator cannot give throws `cannotRead`. The JPEG is written under a temporary name beside the
-/// file and renamed when it is whole.
+/// file, then moved to the file, or put in place of a file that is there by `replaceItemAt`.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avassetimagegenerator/init(asset:)
 /// https://developer.apple.com/documentation/avfoundation/avassetimagegenerator/image(at:)
@@ -21,6 +21,7 @@ import ReelsmithCore
 /// https://developer.apple.com/documentation/avfoundation/avassetimagegenerator/requestedtimetoleranceafter
 /// https://developer.apple.com/documentation/coreimage/ciimage/init(cgimage:)
 /// https://developer.apple.com/documentation/coreimage/ciimage/transformed(by:highqualitydownsample:)
+/// https://developer.apple.com/documentation/coreimage/ciimage/clampedtoextent()
 /// https://developer.apple.com/documentation/coreimage/ciimage/cropped(to:)
 /// https://developer.apple.com/documentation/coreimage/cicontext/init()
 /// https://developer.apple.com/documentation/coreimage/cicontext/writejpegrepresentation(of:to:colorspace:options:)
@@ -50,8 +51,10 @@ public func writeCover(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolde
     }
 
     let scale = min(1, 360 / CGFloat(max(frame.width, frame.height)))
-    // Cropped to whole pixels, so no edge row of the JPEG is half covered.
+    // Clamped so the edges are not blended with the clear outside, and cropped to whole pixels, so no edge row
+    // of the JPEG comes out dark.
     let small = CIImage(cgImage: frame)
+        .clampedToExtent()
         .transformed(by: CGAffineTransform(scaleX: scale, y: scale), highQualityDownsample: true)
         .cropped(to: CGRect(
             x: 0, y: 0, width: (CGFloat(frame.width) * scale).rounded(.down),
