@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift` and `CoverTests.swift`, which sit inside `#if canImport(CoreText)`. That is 414 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 570 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 174 UI tests in twenty-eight classes.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift` and `CoverTests.swift`, which sit inside `#if canImport(CoreText)`. That is 416 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 572 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 179 UI tests in twenty-nine classes.
 
 What comes back from the simulator run:
 
@@ -180,7 +180,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 - `Tests/ReelsmithCoreTests/DraftTests.swift` runs on Linux and compares every value with no tolerance. A draft of each of the seven seeds at `startChoice` comes back equal through `encodeDraft` and `decodeDraft`, at version 1, with the Arabic line and the line breaks of `text-wide` scalar by scalar. A text at x 3.857142857142857 with size 64.1 comes back exact, and so do 4K at 60 and the date. "not json", `{"a":1}` and the draft of `two-clips-wide` at version 2 throw `unreadable`. It holds `fileNames` of three seeds and of `music-wide` after red is deleted through `reduce`, `keepingFiles` with three sets of names, the summary of `text-wide` and of an unreadable draft, `dateText` in UTC, a draft whose undo history of three steps, read back and opened through `Editing(state:history:)` with its run ended, undoes the same three, and `draftsInfo` of none, of the example of its comment and of an unreadable draft.
 - `Tests/ReelsmithCoreTests/DraftVersionOneTests.swift` holds a JSON text of version 1 written in the test, the draft of `music-wide` at 4K and 60 on 2026-10-14 at 21:05:09 in UTC as `encodeDraft` wrote it, and that it decodes to that draft. The text is never changed: a change to a stored type keeps this test green.
 - `Tests/ReelsmithCoreTests/LaunchDraftsTests.swift`: `-drafts` with `fresh`, `kept`, another value and no value, `showsInfo` with a seed, with drafts, with both and with neither, and both places of `draftsFolder`.
-- `Tests/ReelsmithCoreTests/DraftSlotsTests.swift`: in each word file the last ten marks of groups are those of `undo`, `draft-saving`, `project-list`, `draft-delete` and `draft-path`, in that order, and the last four lines that are not blank are the marks alone, so each group after `project-list` is empty. `ExportSlotsTests.swift` holds that the two groups of export follow the end of `sound-path`.
+- `Tests/ReelsmithCoreTests/DraftSlotsTests.swift`: in each word file the last ten marks of groups are those of `undo`, `draft-saving`, `project-list`, `draft-delete` and `draft-path`, in that order, and the last two lines that are not blank are the marks alone, so the group `draft-path` is empty. `ExportSlotsTests.swift` holds that the two groups of export follow the end of `sound-path`.
 
 ### Tests of the draft shelf
 
@@ -379,6 +379,19 @@ Screenshots: `draft-saving-01-start`, `draft-saving-01-start-ar`, `draft-saving-
 Screenshots: `project-list-01-list`, `project-list-01-list-ar`, `project-list-01-list-sv` (the list of one draft, of two in Arabic and in Swedish), `project-list-02-reopened` (blue fills the wide area), `project-list-03-row`, `project-list-03-row-ar`, `project-list-03-row-sv` (the six controls of the row of play at the width of the phone). This file sets no mark.
 
 `Tests/ReelsmithCoreTests/DraftListWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `project-list` of the English, the Arabic or the Swedish file holds anything but `editor.projects`, `drafts.title`, `drafts.row` and `drafts.unreadable` in that order, or an empty text, when the English texts are not "Projects", "Projects", "Project of %1$@, %2$@ long" and "This project cannot be opened", and when the row label of a language lacks `%1$@` or `%2$@` or another of the four holds a placeholder.
+
+### UI tests of deleting a draft
+
+`UITests/DraftDeleteTests.swift` holds the delete from the list in five tests. Each makes two drafts: a start on `two-clips-wide` with `-drafts fresh`, back, the app ended, a start on `text-wide` with `-drafts kept`, back, so the line `start.draftsInfo` reads `2 2+4200+1+1080x30+c 2+4200+0+1080x30+c` and `drafts.row.2` is the draft of `two-clips-wide`. Back and the line are as in "UI tests of the project list". The wait for `drafts.delete` after a swipe expects a third of 10 seconds and fails above 10 (E17). Every wait reads an effect, prints the seconds it took and fails only above three times the expected seconds.
+
+- A confirmed delete: `swipeLeft()` on `drafts.row.2` shows `drafts.delete`. A tap on it, then on `drafts.deleteConfirm` in the alert, leaves one row and the line `1 2+4200+1+1080x30+c`. The same on `drafts.row.1` leaves the line `0`, no row, and the title, `start.newProject` enabled and the two shapes with landscape chosen, as the start screen of M1 shows them.
+- Cancel: after the swipe and the tap on `drafts.delete`, a tap on `drafts.deleteCancel` closes the alert, and the row and the two drafts stay.
+- A tap on `drafts.row.1` after the swipe on `drafts.row.2` deletes nothing: when it opened the editor the test goes back first, and the line names the two drafts.
+- Arabic, `swipeRight()` on `drafts.row.2`, and Swedish, `swipeLeft()`: each shows `drafts.delete`.
+
+Screenshots: `draft-delete-01-swiped`, `draft-delete-01-swiped-ar`, `draft-delete-01-swiped-sv` (the button after the swipe), `draft-delete-02-deleted` (one row left). This file sets no mark.
+
+`Tests/ReelsmithCoreTests/DraftDeleteWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `draft-delete` of a language holds anything but `drafts.delete`, `drafts.deleteQuestion` and `drafts.deleteCancel` in that order, or an empty text, and when the texts are not "Delete", "Delete this project?" and "Cancel" in English, "حذف", "حذف هذا المشروع؟" and "إلغاء" in Arabic, and "Radera", "Radera det här projektet?" and "Avbryt" in Swedish.
 
 ### The preview
 

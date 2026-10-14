@@ -7,7 +7,8 @@ import SwiftUI
 /// summaries of the drafts on the shelf, read when it appears. `open` gets the store the editor opens with.
 /// A new project is a new draft: made first, the videos copied into its media folder, then written.
 /// Under New project, while there are drafts, the title `drafts.title` and the list of them, where a tap on a row
-/// opens that draft again.
+/// opens that draft again, and a delete confirmed in the list removes the draft and reads the list again, also
+/// when the delete throws.
 ///
 /// https://developer.apple.com/documentation/swiftui/view/sheet(ispresented:ondismiss:content:)
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityaddtraits(_:)
@@ -74,7 +75,9 @@ struct StartScreen: View {
                 Text("drafts.title")
                     .font(.headline)
                 // While a new project is copied no other draft opens, so the copy's own open is the only one.
-                DraftList(summaries: summaries, shelf: shelf, open: { openDraft($0) })
+                DraftList(
+                    summaries: summaries, shelf: shelf, open: { openDraft($0) },
+                    delete: { try? shelf.delete($0); summaries = shelf.list() })
                     .disabled(state != .idle)
             }
             if options.drafts != nil {
