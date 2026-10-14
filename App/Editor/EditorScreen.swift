@@ -75,12 +75,14 @@ struct EditorScreen: View {
         .transaction { $0.animation = nil }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("editor.root")
-        // The draft is written when the app leaves the active phase, a run that is still open included.
+        // The draft is written when the app leaves the active phase, a run that is still open included, and its
+        // cover is made in a task the system may suspend: a cover that does not finish is made at the next leave.
         // https://developer.apple.com/documentation/swiftui/environmentvalues/scenephase
         // https://developer.apple.com/documentation/swiftui/view/onchange(of:initial:_:)-4psgg
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
                 store.writeNow()
+                Task { await store.makeCover() }
             }
         }
     }

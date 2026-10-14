@@ -142,6 +142,10 @@
 /* end slot: draft-saving */
 
 /* slot: project-list */
+"editor.projects" = "Projects";
+"drafts.title" = "Projects";
+"drafts.row" = "Project of %1$@, %2$@ long";
+"drafts.unreadable" = "This project cannot be opened";
 /* end slot: project-list */
 
 /* slot: draft-delete */
