@@ -756,7 +756,6 @@ final class SoundGuardTests: XCTestCase {
         }
         for kind in SoundKind.allCases {
             XCTAssertGreaterThan(counts[kind, default: 0], 0, "the runs never drew: \(kind.rawValue)")
-            print("sound-guard count: \(kind.rawValue): \(counts[kind, default: 0])")
         }
     }
 }
