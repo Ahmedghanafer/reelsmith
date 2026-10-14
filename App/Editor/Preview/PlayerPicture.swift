@@ -25,6 +25,7 @@ struct PlayerPicture: UIViewRepresentable {
 /// A black area whose layer shows the player. The player follows the state: its item is built again
 /// when the footage of the project changes and refreshed when only the texts change, it seeks when the
 /// playhead changes while not playing, and it starts from the playhead when `isPlaying` turns true.
+/// A new item goes in with one seek to the playhead, and a state that rests there sends no other.
 /// While playing it reports its time with `movePlayhead`, which never makes it seek, and at the end
 /// it sends `pause`. Never mirrored.
 ///
@@ -89,6 +90,11 @@ final class PlayerPictureView: UIView {
     /// in flight has ended. Nil when the player is not known to stand on a playhead of the state: a
     /// new item, a seek that did not finish, from a start on.
     private var target: Time?
+    /// The playhead that went into the player with the newest item, by the seek with no completion
+    /// handler. Nil from the first seek with a handler on. While the state rests on it no second
+    /// seek goes out: the player answers a seek to the time it is already sent to at once, with no
+    /// frame of its own, and ends the first one as cancelled, after which it can keep a wrong frame.
+    private var sent: Time?
     /// True while one seek is in flight. A newer playhead waits in `target` until it lands.
     private var isSeeking = false
     private var timeObserver: Any?
@@ -231,11 +237,13 @@ final class PlayerPictureView: UIView {
         player.replaceCurrentItem(with: item)
         // The first playhead goes with the item, so the player gets ready on that frame and not on
         // the first one. A seek with no completion handler may be sent before the item is ready.
-        // Nothing says when it lands, so the player does not count as standing there: at ready it is
-        // sought to the playhead of that moment with a handler, and rests or starts when that landed.
+        // Nothing says when it lands, so a start does not count the player as standing there: it
+        // seeks to the playhead with a handler and begins when that landed. A state that rests on
+        // this playhead at ready sends no second seek, so nothing cancels this one.
         let first: Time = store.state.playhead
         target = nil
-        player.seekExactly(to: first)
+        sent = first
+        player.seekExactly(to: frameTime(of: first))
         // A seek with a completion handler needs an item that is ready, so the player waits for it.
         // The change can come on any thread.
         statusObservation = item?.observe(\.status, options: [.initial, .new]) { [weak self] _, _ in
@@ -342,7 +350,7 @@ final class PlayerPictureView: UIView {
             if isPlaying {
                 stop()
             }
-            if target != state.playhead {
+            if target != state.playhead, sent != state.playhead {
                 seek(to: state.playhead)
             }
         }
@@ -352,6 +360,7 @@ final class PlayerPictureView: UIView {
     /// to the newest one when the seek in flight has landed.
     private func seek(to playhead: Time) {
         target = playhead
+        sent = nil
         if !isSeeking {
             seekToTarget()
         }
@@ -363,9 +372,19 @@ final class PlayerPictureView: UIView {
         }
         isSeeking = true
         let number = build
-        player.seekExactly(to: wanted) { [weak self] finished in
+        player.seekExactly(to: frameTime(of: wanted)) { [weak self] finished in
             self?.seekEnded(wanted, finished: finished, build: number)
         }
+    }
+
+    /// The time the player is sent to for a playhead: at the very end of the project the last frame,
+    /// the length less one frame. A text is drawn in a frame before its end. Sent to the time of the
+    /// end itself the player shows that same last frame with no text in it.
+    private func frameTime(of playhead: Time) -> Time {
+        guard let length: Time = project?.duration, playhead >= length else {
+            return playhead
+        }
+        return length - Time.frame
     }
 
     private func seekEnded(_ sought: Time, finished: Bool, build number: Int) {
