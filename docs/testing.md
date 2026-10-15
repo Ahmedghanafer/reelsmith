@@ -533,6 +533,21 @@ Screenshots: `text-gestures-01-selected` (the three white lines in the middle of
 
 Whether the simulator performs a scripted pinch or twist as two fingers on an area this small is told only by the printed fields. That each report sends a whole value from the start of the gesture, that `pause` goes first and that a tap picks the nearer of two texts cannot be seen in these tests: the first two are read in the file, the third is held on Linux by `TextEditsTests.swift`. That a twist which ends at most 3 degrees from straight comes back to 0 is held there too and by no test here: the simulator turned a scripted twist of 0.02 radians by 12 degrees, and a twist that small cannot be scripted. As a gesture it is on the list for the phone.
 
+### UI tests of punch in
+
+`UITests/PunchInTests.swift` holds the pinch and the drag on the picture that zoom and move the selected clip, in six tests on `two-clips`, the 9:16 canvas, where blue stands fitted between black bars. Each test starts with `-drafts fresh -seed two-clips`, at `-playhead 600` but where it says otherwise, and a tap on `editor.clip.1`. The framing of the selected clip is read from `clip.frameInfo`, field 3 the zoom times 100 and field 4 the offset times 1000 as "x,y". The picture is read through the probe `share(of:in:)` and a build through the count in the value of `editor.picture`. A pinch is `pinch(withScale:velocity:)` on `editor.picture` in about a second, and before and after each the test prints the info in a line that starts with `punch: clip.frameInfo before a pinch`. A scripted pinch reaches about the scale asked, so a test reads a direction and a limit. After a gesture the test reads until the effect holds, expected within 1 second and failing only above 3, and where it reads the picture it asks for the share of blue until it is above the limit, expected within 3 seconds and given up above 9. Each wait prints a line that starts with `punch: waited`.
+
+- The pinch, the drag and their undo: blue's share is below 0.4 before. A pinch with scale 2 gives a zoom above 150, a share of blue more than 0.1 above the one before and the count of builds of before. A drag of 60 points upward from the middle gives a y below 0 and keeps the zoom above 150. One undo brings back the info of after the pinch, with a y of 0, a second the standard "fit black 100 0,0", and `editor.undo` is then disabled.
+- A pinch with scale 0.3 on the standard framing leaves "fit black 100 0,0" and `editor.undo` disabled.
+- With `-playhead 2400`, inside red, and blue tapped at 0.85 of its width, a pinch with scale 2 leaves blue at "fit black 100 0,0", and red reads the same once tapped.
+- The zoom of a pinch is kept: after the app ended, `-drafts kept`, `drafts.row.1` and a tap on blue, the info reads the one printed before the relaunch.
+- In Arabic and in Swedish a pinch with scale 2 gives a zoom above 150 and more blue than before.
+- A level first: after `clip.volume` is moved to its lowest, a pinch with scale 2 still gives a zoom above 150, more blue than before and no build.
+
+Screenshots: `punch-01-zoomed` (blue larger than its fitted size, the bars above and under it smaller, the clip panel open), `punch-01-zoomed-ar` and `punch-01-zoomed-sv` (the same in Arabic and in Swedish, the picture not mirrored). Marks: `punch-01-pinch`, where the recording shows the picture grow during the pinch before the fingers lift, and `punch-02-drag`, where it moves up with the finger.
+
+That a gesture sends `pause` first, sends its values as drag steps and ends the run at its end and at a cancel is read in the file. Whether a scripted pinch lands as a pinch on a picture this small is told only by the printed info.
+
 ### The timeline strip
 
 `UITests/TimelineTests.swift` holds the timeline strip on the seed `three-clips` (blue 3 seconds, red 4, green 2). Every test waits for the editor after a start with `waitForTheEditor`. The strip has no Linux test of its own: its positions and times are `TimelineScale`, held by `TimelineGeometryTests.swift` and `TimelineScaleTests.swift`.
