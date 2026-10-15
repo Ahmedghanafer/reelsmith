@@ -249,9 +249,21 @@ private final class ClipGains {
     static func gain(in pieces: [Piece], at seconds: Double) -> Float {
         pieces.first { seconds >= $0.start && seconds < $0.end }?.gain ?? 1
     }
+
+    /// A sample pressed toward full scale: straight up to a size of 0.5, then 0.5 plus half the tanh of twice its
+    /// size less 1, with its sign, which meets the straight line with the same slope at 0.5 and never reaches 1. It reads the
+    /// sample alone, so it keeps no state between calls.
+    static func limited(_ sample: Float) -> Float {
+        let size = abs(sample)
+        guard size > 0.5 else { return sample }
+        let bent = 0.5 + 0.5 * tanh((size - 0.5) / 0.5)
+        return sample < 0 ? -bent : bent
+    }
 }
 
-/// The tap of the clip track: each sample of the track times the gain of its segment, held between minus 1 and 1.
+/// The tap of the clip track: each sample of the track times the gain of its segment. Where the gain is above 1
+/// the sample is pressed toward full scale by `limited`, so a loud clip raised past 100 percent is bent near full
+/// scale and never cut flat. Where it is 1 the sample is held between minus 1 and 1, as before.
 /// The time of a sample is read from the time range of the source audio of each call. The tap holds the gains
 /// and lets them go when the platform ends it. Nil when the platform makes no tap.
 ///
@@ -293,7 +305,8 @@ private func clipGainTap(_ gains: ClipGains) -> MTAudioProcessingTap? {
                 for index in 0..<total {
                     let seconds = start + length * Double(index / channels) / Double(count)
                     let gain = ClipGains.gain(in: pieces, at: seconds)
-                    samples[index] = min(max(samples[index] * gain, -1), 1)
+                    samples[index] = gain > 1
+                        ? ClipGains.limited(samples[index] * gain) : min(max(samples[index] * gain, -1), 1)
                 }
             }
         })
