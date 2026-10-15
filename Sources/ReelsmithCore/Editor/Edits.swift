@@ -56,7 +56,7 @@ func split(_ state: EditorState) -> EditorState {
     next.project.clips.insert(
         Clip(
             id: ClipID(next.project.nextClipID), media: clip.media, sourceStart: clip.sourceStart + left,
-            duration: clip.duration - left, volume: clip.volume),
+            duration: clip.duration - left, volume: clip.volume, framing: clip.framing),
         at: index + 1)
     next.project.nextClipID += 1
     next.isPlaying = false

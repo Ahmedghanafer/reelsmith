@@ -25,4 +25,6 @@ public enum EditorAction: Equatable, Sendable {
     case pause
     case text(TextAction)
     case sound(SoundAction)
+    /// Nothing for an unknown id or a value that is not finite.
+    case frame(FrameAction)
 }

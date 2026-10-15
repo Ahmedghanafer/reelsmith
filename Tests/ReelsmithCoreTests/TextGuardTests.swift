@@ -132,6 +132,7 @@ private func clipKind(of action: EditorAction, in state: EditorState) -> ClipKin
     case .moveClip: return nil
     case .cutBefore: return nil
     case .cutAfter: return nil
+    case .frame: return nil
     }
 }
 
