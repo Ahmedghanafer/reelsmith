@@ -410,7 +410,7 @@ The edit buttons, in the folder `App/Editor/Tools/`.
 She adds videos and photos to an open project with the button at the trailing end of the tools row.
 
 - `App/Editor/Tools/AddClips.swift`: `AddClips`, with `let store: EditorStore`, the last button of `ToolsRow`. It is `editor.addClips`, a `plus` symbol of 44 by 44 points with the accessibility label of the key `tools.add`. A tap shows `VideoPicker` with `photos: true` and no limit as a sheet, so she chooses videos and photos in the order she wants. A picker closed with nothing chosen changes nothing.
-- The copy: `copyPicked(_:into:)` of "The start screen" into `store.mediaFolder`, the media folder of the open draft, so her media is copied and never referenced. When it gives facts, one `addClips` with them goes to the store in a transaction with animations off, and the clips stand at the end of the project, a photo for 3 seconds. A copy that gives nothing sends no action.
+- The copy: `copyPicked(_:into:)` of "The start screen" into `store.mediaFolder`, the media folder of the open draft, so her media is copied and never referenced. When it gives facts, one `addClips` with them goes to the store in a transaction with animations off, and the clips stand at the end of the project, a photo for 3 seconds. A copy that gives nothing, or that ends after the editor closed (`store.isOpen` false), sends no action.
 - The button is disabled while a copy runs and on no other state, so a second pick cannot start beside it.
 - Its one word key stands in the group `add-clips` of the three word files: `tools.add`.
 
