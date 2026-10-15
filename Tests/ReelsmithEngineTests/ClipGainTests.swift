@@ -74,6 +74,25 @@ final class ClipGainTests: XCTestCase {
         assertLevel(two, near: 4 * half, "red at 2 against red at 0.5 through the mix")
     }
 
+    // A refresh keeps the tap the item has, since the player prepares its item again when the tap changes (QA of
+    // run 38715394801), and that same tap reads the new gain: with the clips at 0.5, red at 1 then at 2 reads twice.
+    @MainActor
+    func testARefreshKeepsTheTapOfTheItemAndTheLevelFollowsTheNewGain() async throws {
+        var project = Seed.twoClipsWide.project
+        project.clipVolume = 0.5
+        let item = try await self.item(of: try renderPlan(for: project))
+        let before = try XCTUnwrap(item.audioMix?.inputParameters.first?.audioTapProcessor, "no tap after the build")
+        let one = try await mixedToneLevel(of: item.asset, mix: item.audioMix, hertz: 440, from: redStart, to: redEnd)
+
+        project.clips[1].volume = 2
+        try refreshSound(of: item, plan: try renderPlan(for: project))
+        let after = try XCTUnwrap(item.audioMix?.inputParameters.first?.audioTapProcessor, "no tap after the refresh")
+        XCTAssertTrue(after === before, "the refresh gave the clip track another tap")
+        let two = try await mixedToneLevel(of: item.asset, mix: item.audioMix, hertz: 440, from: redStart, to: redEnd)
+        print("clip gain: the kept tap reads red at 1 at \(one) and at 2 at \(two) through the mix")
+        assertLevel(two, near: 2 * one, "red at 2 against red at 1 through the mix, the tap kept")
+    }
+
     /// What one plan reads over blue and red, in its exported file and through the mix of its player item, printed
     /// with the largest sample of red's window in each.
     struct Reads {
