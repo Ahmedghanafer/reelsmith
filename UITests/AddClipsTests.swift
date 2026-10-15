@@ -73,9 +73,13 @@ final class AddClipsTests: XCTestCase {
             XCTAssertEqual(draftsInfo(app), "1 4+8400+0+1080x30+.")
             element(app, "drafts.row.1").tap()
             waitForTheEditor(app)
-            waitUntil("4 clips, 4 files in editor.seedInfo of the reopened draft") {
-                app.staticTexts["editor.seedInfo"].label == "4 clips, 4 files"
+            // editor.seedInfo is in the words of the language, so the reopened draft is read by its blocks.
+            waitUntil("the photo third and red fourth in the reopened draft") {
+                self.value(app, "editor.clip.3").hasSuffix("0+1800 100 p")
+                    && self.value(app, "editor.clip.4").hasSuffix("0+2400 100 v")
+                    && !self.element(app, "editor.clip.5").exists
             }
+            print("add-clips: editor.seedInfo of the reopened draft reads " + app.staticTexts["editor.seedInfo"].label)
             let order = ["editor.split", "editor.delete", "editor.addText", "editor.sound", "editor.addClips"]
             assertTheRow(app, leftToRight: language == "ar" ? Array(order.reversed()) : order)
             screenshot("add-clips-01-added-" + language)
