@@ -9,6 +9,8 @@ struct TimelineStrip: UIViewRepresentable {
     let state: EditorState
     /// Where the files of the media are, for the frames on the blocks.
     let mediaFolder: URL
+    /// The blocks are thin and show no frames.
+    let folded: Bool
     let send: @MainActor (EditorAction) -> Void
 
     func makeUIView(context: Context) -> TimelineStripView {
@@ -20,6 +22,7 @@ struct TimelineStrip: UIViewRepresentable {
     func updateUIView(_ view: TimelineStripView, context: Context) {
         view.send = send
         view.mediaFolder = mediaFolder
+        view.folded = folded
         view.state = state
     }
 }
@@ -39,11 +42,6 @@ struct TimelineStrip: UIViewRepresentable {
 /// https://developer.apple.com/documentation/objectivec/nsobject/accessibilitytraits
 /// https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier
 final class TimelineStripView: UIView {
-    /// The row of clips: 56 points high from y 8.
-    static let clipRow: (y: CGFloat, height: CGFloat) = (y: 8, height: 56)
-    /// The row of texts under it: 24 points high from y 72.
-    static let textRow: (y: CGFloat, height: CGFloat) = (y: 72, height: 24)
-
     var send: @MainActor (EditorAction) -> Void = { _ in }
 
     /// The state that is drawn. Setting it draws it.
@@ -95,6 +93,12 @@ final class TimelineStripView: UIView {
     private var tiles: [FrameTiles] = []
     /// The container of each block, in the order of `blocks`. Held here, since a view does not hold its superview.
     private var containers: [UIView] = []
+    /// The blocks are thin and show no frames. Set by `TimelineStrip` before `state`, whose setting draws it.
+    var folded = false
+    /// Every row of the strip, read by the blocks, the trim handles, the text row and the music row.
+    var rows: StripRows {
+        StripRows.of(folded: folded, textSelected: state.selectedText != nil)
+    }
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -117,7 +121,6 @@ final class TimelineStripView: UIView {
             container.addSubview(tile)
             let block = UILabel()
             block.semanticContentAttribute = .forceLeftToRight
-            block.numberOfLines = 2
             block.textAlignment = .center
             block.font = UIFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium)
             // White with a dark shadow, readable on any frame.
@@ -131,13 +134,14 @@ final class TimelineStripView: UIView {
         }
 
         let middle = bounds.width / 2
+        let rows: StripRows = self.rows
         strip.frame = CGRect(
             x: middle - CGFloat(scale.x(of: state.playhead)),
-            y: Self.clipRow.y,
+            y: CGFloat(rows.clipY),
             width: CGFloat(scale.width(of: state.project.duration)),
-            height: Self.clipRow.height
+            height: CGFloat(rows.clipHeight)
         )
-        let side = Self.clipRow.height
+        let side = CGFloat(rows.clipHeight)
         for (place, clip) in clips.enumerated() {
             let block = blocks[place]
             let tile = tiles[place]
@@ -149,17 +153,24 @@ final class TimelineStripView: UIView {
             container.frame = CGRect(x: CGFloat(scale.x(of: start)), y: 0, width: width, height: side)
             block.frame = CGRect(x: 0, y: 0, width: width, height: side)
             tile.frame = block.frame
-            var images: [CGImage?] = []
-            if let media: MediaInfo = state.project.media[clip.media], let folder: URL = mediaFolder {
-                let made = frames.frames(of: media, in: folder)
-                for index in 0..<BlockFrames.tileCount(width: Double(width), tile: Double(side)) {
-                    let time = BlockFrames.frameTime(of: clip, media: media, tile: index, tile: Double(side), scale: scale)
-                    images.append(made?[time])
+            // A folded block shows no frames and asks for none, and its tiles are no element.
+            tile.isHidden = folded
+            if !folded {
+                var images: [CGImage?] = []
+                if let media: MediaInfo = state.project.media[clip.media], let folder: URL = mediaFolder {
+                    let made = frames.frames(of: media, in: folder)
+                    for index in 0..<BlockFrames.tileCount(width: Double(width), tile: Double(side)) {
+                        let time = BlockFrames.frameTime(
+                            of: clip, media: media, tile: index, tile: Double(side), scale: scale)
+                        images.append(made?[time])
+                    }
                 }
+                tile.show(images, side: side, made: frames.madeCount)
             }
-            tile.show(images, side: side, made: frames.madeCount)
             tile.accessibilityIdentifier = "editor.frames." + String(position)
-            block.text = String(position) + "\n" + clip.duration.clockText
+            // One line of words on a folded block, two on a block with frames.
+            block.numberOfLines = folded ? 1 : 2
+            block.text = String(position) + (folded ? " " : "\n") + clip.duration.clockText
             block.accessibilityIdentifier = "editor.clip." + String(position)
             block.accessibilityValue = state.project.clipInfo(clip.id)
             block.accessibilityTraits = selected ? [.staticText, .selected] : .staticText

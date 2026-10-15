@@ -186,4 +186,5 @@
 /* end slot: guide */
 
 /* slot: fold-frames */
+"tools.frames" = "Bildrutor";
 /* end slot: fold-frames */

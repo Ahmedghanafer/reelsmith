@@ -41,8 +41,13 @@ struct EditorScreen: View {
             ZStack {
                 // slot: timeline
                 // A wrapped UIKit view takes all the height it is offered, so the strip fixes its own.
-                TimelineStrip(state: store.state, mediaFolder: store.mediaFolder, send: { action in store.send(action) })
-                    .frame(height: MusicBar.stripHeight(for: store.state))
+                TimelineStrip(
+                    state: store.state, mediaFolder: store.mediaFolder, folded: store.framesFolded,
+                    send: { action in store.send(action) }
+                )
+                .frame(
+                    height: CGFloat(
+                        StripRows.of(folded: store.framesFolded, textSelected: store.state.selectedText != nil).height))
                 // end slot: timeline
             }
             .region("editor.timelineRegion")
