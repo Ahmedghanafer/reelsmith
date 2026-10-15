@@ -23,7 +23,8 @@ struct SoundClips: View {
         VStack(spacing: 8) {
             SoundSlider(
                 identifier: "sound.clipVolume", label: "sound.clipVolume", value: project.clipVolume, range: 0...1,
-                step: 0.05, send: { store.send(.sound(.setClipVolume($0))) })
+                step: 0.05, send: { store.sendDragStep(.sound(.setClipVolume($0))) }, follows: true,
+                ended: { store.endDrag() })
             HStack {
                 // Read at the call, so two quick taps turn it twice. The change is made with animations off, so
                 // the toggle shows it in the same frame as the line of the sound.

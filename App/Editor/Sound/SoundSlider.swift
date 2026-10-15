@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// The slider of a sound value: its word, then the slider, from leading to trailing. It shows `value` while it
-/// is not dragged and its own value during a drag, and calls `send` once, when the drag ends. A change with no
-/// drag, as an accessibility step makes it, is sent at once. A level refreshes the mix of the player item and the
-/// start of the music builds a new item, so a drag must not send at every step. It holds no limit: Core does.
+/// is not dragged and its own value during a drag. Without `follows` it calls `send` once, when the drag ends, and
+/// a change with no drag, as an accessibility step makes it, is sent at once: the start of the music builds a new
+/// item, so its drag must not send at every step. With `follows` it calls `send` at every change of a drag and
+/// `ended` when the drag ends, and after a change with no drag calls `send` then `ended`: a level refreshes the mix
+/// of the player item, so she hears it follow her finger. It holds no limit: Core does.
 ///
 /// https://developer.apple.com/documentation/swiftui/slider/init(value:in:step:label:oneditingchanged:)
 /// https://developer.apple.com/documentation/swiftui/binding/init(get:set:)
@@ -17,13 +19,16 @@ struct SoundSlider: View {
     private let range: ClosedRange<Double>
     private let step: Double
     private let send: @MainActor (Double) -> Void
+    private let follows: Bool
+    private let ended: @MainActor () -> Void
 
     /// The value of the slider while it is dragged, nil while it is not.
     @State private var dragged: Double?
 
     init(
         identifier: String, label: LocalizedStringKey, value: Double, range: ClosedRange<Double>, step: Double,
-        send: @escaping @MainActor (Double) -> Void
+        send: @escaping @MainActor (Double) -> Void, follows: Bool = false,
+        ended: @escaping @MainActor () -> Void = {}
     ) {
         self.identifier = identifier
         self.label = label
@@ -31,6 +36,8 @@ struct SoundSlider: View {
         self.range = range
         self.step = step
         self.send = send
+        self.follows = follows
+        self.ended = ended
     }
 
     var body: some View {
@@ -42,8 +49,14 @@ struct SoundSlider: View {
                     set: { moved in
                         if dragged == nil {
                             send(moved)
+                            if follows {
+                                ended()
+                            }
                         } else {
                             dragged = moved
+                            if follows {
+                                send(moved)
+                            }
                         }
                     }
                 ),
@@ -53,9 +66,13 @@ struct SoundSlider: View {
                 onEditingChanged: { editing in
                     if editing {
                         dragged = dragged ?? value
-                    } else if let ended = dragged {
+                    } else if let last = dragged {
                         dragged = nil
-                        send(ended)
+                        if follows {
+                            ended()
+                        } else {
+                            send(last)
+                        }
                     }
                 }
             )

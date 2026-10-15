@@ -9,10 +9,12 @@ extension Project {
     }
 }
 
-/// A row of actions on one text of one kind, which together are one step.
+/// A row of actions on one text of one kind, or the steps of one drag, which together are one step.
 public enum EditRun: Equatable, Codable, Sendable {
     case typing(TextID)
     case shaping(TextID)
+    /// Opened only by Editing.afterDragStep, never by of(_:on:).
+    case drag
 
     /// typing for text(.setString(id, _)). shaping for text(.move(id, ...)), text(.turn(id, _)), and a
     /// text(.setStyle(id, style)) whose style equals the stored style of id in every member but size and
@@ -119,13 +121,30 @@ public struct Editing: Equatable, Sendable {
     }
 
     public func after(_ action: EditorAction) -> Editing {
+        stepped(action, run: EditRun.of(action, on: state))
+    }
+
+    /// As after(_:), with the run drag: the steps of one drag that change the project are one step.
+    public func afterDragStep(_ action: EditorAction) -> Editing {
+        stepped(action, run: .drag)
+    }
+
+    /// Run nil, all else kept.
+    public func endingRun() -> Editing {
+        var next = self
+        next.history.endRun()
+        return next
+    }
+
+    /// An action that changes nothing ends a run of another kind, but never a drag run: the player reports its
+    /// time while playing with such an action every frame.
+    private func stepped(_ action: EditorAction, run k: EditRun?) -> Editing {
         var next = self
         next.state = reduce(state, action)
         let b = state.project.withoutBlankTexts
         let a = next.state.project.withoutBlankTexts
-        let k = EditRun.of(action, on: state)
         if !oneStepApart(a, b) {
-            if k != history.run {
+            if k != history.run && history.run != .drag {
                 next.history.endRun()
             }
         } else if k != nil && k == history.run {
