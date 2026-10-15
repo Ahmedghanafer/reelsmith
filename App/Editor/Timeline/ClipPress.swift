@@ -29,6 +29,10 @@ final class ClipPress: UILongPressGestureRecognizer, UIGestureRecognizerDelegate
     private var fingerStartX: Double = 0
     /// The one finger scrub of the strip view.
     private weak var scrub: UIPanGestureRecognizer?
+    /// The pressed clip and the x in `strip` of the left end its block is drawn at: its left end at the press
+    /// moved by the finger. Set at each step of a press, nil at the end and at a cancel. The slot `reorder`
+    /// of the strip view draws that block lifted there.
+    private(set) var lifted: (clip: ClipID, left: Double)?
 
     /// Called from the slot `recognizers` of the strip view, with its scrub.
     static func add(to view: TimelineStripView, beside scrub: UIPanGestureRecognizer) {
@@ -89,6 +93,7 @@ final class ClipPress: UILongPressGestureRecognizer, UIGestureRecognizerDelegate
             return
         }
         let moved = Double(location(in: view.strip).x) - fingerStartX
+        lifted = state == .began || state == .changed ? (clip: clip, left: blockStartX + moved) : nil
         let time: Time = view.scale.time(atX: blockStartX + moved)
         guard let position = start.project.dropPosition(of: clip, at: time) else {
             return

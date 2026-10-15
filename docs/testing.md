@@ -6,7 +6,7 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 - On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 493 tests on Linux.
 - On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 682 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 225 UI tests in forty classes.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 227 UI tests in forty-one classes.
 
 What comes back from the simulator run:
 
@@ -572,6 +572,15 @@ Screenshots: `zoom-01-in`, `zoom-01-in-ar`, `zoom-01-in-sv`, `zoom-02-out`. Mark
 - Arabic and Swedish: the same move gives blue, green, red, touching from the left.
 
 Screenshots: `reorder-01-moved`, `reorder-01-moved-ar`, `reorder-01-moved-sv`. Mark: `reorder-01-press`. Whether half a second feels right under her finger, whether she finds the press, and the drag in Arabic are judged on the phone.
+
+### UI tests of the lifted block
+
+`UITests/LiftTests.swift` holds what stands after a press, on `three-clips` at 3300 ticks with `-drafts fresh`. No UI test can read the screen while a press runs, so that the pressed block follows the finger is read by the QA pass on the frames of the recording after the mark `lift-01-walk`, and judged on the phone. Each wait prints a line that starts with `lift: waited`, expected within 1 second and failing only above 3 unless said, and each read of the blocks prints their frames.
+
+- The walk: green pressed at its middle for 0.6 seconds and dragged to 4 points right of the left end of `editor.clip.2` with `press(forDuration:thenDragTo:withVelocity:thenHoldForDuration:)` at 200 points a second (296 points in about 1.5 seconds) and held 1 second. `editor.clip.2` is read until it is green, failing at 10. The values then read blue, green, red, and every block is 56 high and as wide as its clip at 60 points a second within 1, so no block stays lifted.
+- A press of green held still for 1 second and lifted: every block at its size, the values blue, red, green and `editor.undo` disabled.
+
+Screenshot: `lift-01-dropped`. Mark: `lift-01-walk`.
 
 ### The trim handles
 

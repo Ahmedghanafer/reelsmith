@@ -421,7 +421,7 @@ How many points a second the strip shows. It is no part of the state of the edit
 - `Sources/ReelsmithCore/Editor/TimelineGeometry.swift`: `TimelineScale`, Equatable and Sendable, with `pointsPerSecond` held between `TimelineScale.least`, 10, and `TimelineScale.most`, 240, by its initialiser. `TimelineScale.standard` is 60. `zoomed(by:)` gives the scale times a factor, held, and the scale unchanged for a factor that is not finite or not above 0. `x(of:)`, `time(atX:)` (rounded down to a frame, never below zero), `width(of:)` and `trimAmount(forDragOf:)` (whole frames, signed, rounded toward zero) work at its points a second. The static functions of `TimelineGeometry` are those of `standard`, unchanged.
 - `TimelineStripView` holds `var scale: TimelineScale`, `.standard` when it is made. Each editor makes a strip view of its own, so every editor opens at 60 points a second. Every x, width and trim amount of `TimelineView.swift`, `TrimHandles.swift` and `TextBars.swift` reads it. The writing of a text bar is still placed by `TimelineGeometry.writing`, which takes points and no time.
 - A `UIPinchGestureRecognizer` on the strip view keeps the scale it had when the pinch began and sets `scale` to that scale `zoomed(by:)` the recognizer's scale on every step, then lays the view out again. It sends no action: the playhead stays in the middle of the view on its time, and the strip is laid around it. The scrub takes one finger only, so a pinch never scrubs.
-- Three slots follow: `recognizers` at the end of `init`, after the tap, which adds the press that moves a clip ("Moving a clip on the strip"), and `reorder` and `music-row` in `layoutSubviews()`, after the slot `handles` and before the text row. `reorder` is empty, and `music-row` lays out the music row ("The music row").
+- Three slots follow: `recognizers` at the end of `init`, after the tap, which adds the press that moves a clip ("Moving a clip on the strip"), and `reorder` and `music-row` in `layoutSubviews()`, after the slot `handles` and before the text row. `reorder` draws the block of a running press lifted ("The lifted block"), and `music-row` lays out the music row ("The music row").
 
 ### Frames on the blocks
 
@@ -443,6 +443,14 @@ The press and drag that moves a clip, in `App/Editor/Timeline/ClipPress.swift`. 
 - At its start it sends `pause` and keeps the paused state of that moment, the pressed clip, the x of the left end of its block and the x of the finger. On every step it sets `state` of the strip view to `reduce` of the kept state with `moveClip(id, to: p)`, `p` being `dropPosition(of:at:)` of the kept project at the time of that left end moved by the finger since the start, at the scale of the strip view. The time under the finger itself is not used: a press held still on the right part of a block followed by a shorter one would then move it. Read from the left end, a press held still keeps its place, and a block moves when its left end passes the middle of a neighbour as the row stands with the block taken out. On release it sends that one action, so a move is one step of undo and one write of the draft. A cancelled press sets `state` back to the kept state and sends nothing.
 - The scrub does not begin while the press is in its began or changed state. A press of less than half a second that moves is a scrub as before, since the press fails once the finger moves before it began.
 - A move keeps the playhead and the texts at their times and selects the moved clip (`moveClip` of Core). The strip never mirrors, so a block is dragged the same way in every language.
+
+### The lifted block
+
+While a press runs, the pressed block follows the finger. It decides nothing: the place is still read as "Moving a clip on the strip" says.
+
+- `ClipPress` holds `private(set) var lifted: (clip: ClipID, left: Double)?`: the pressed clip and the x in `strip` of the left end of its block at the press moved by the finger since then. It is set at the start and at each step of a press, and nil at the end and at a cancel.
+- The slot `reorder` of `layoutSubviews()` reads it from the recognizers of the strip view. It draws the container of that clip's block, its tiles and its label with it, at that left end, above the other blocks (`zPosition` 1), scaled by 1.08 about its middle with a shadow, and not cut at its edges. The other blocks stand where `reduce` of the kept state with the move puts them, so they make room as the block passes.
+- Every container is first set with no transform and its frame set again in the slot, since a frame set on a view with a transform is not its frame. With no press every block is drawn at its place, 56 high and as wide as its clip.
 
 ### The trim handles
 
