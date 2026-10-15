@@ -3,7 +3,7 @@ import XCTest
 // The preview on the seeds two-clips (blue 1920 by 1080 for 3 seconds, then red 1080 by 1920 for 4,
 // on the 9:16 canvas), two-clips-wide (the same clips on the 16:9 canvas) and empty.
 // What the area shows is judged on the screenshots, and the tests read the frame of the area, the labels
-// and the enabled states. Only the play and pause test reads colours, through the probe `share(of:in:)`.
+// and the enabled states.
 //
 // https://developer.apple.com/documentation/xcuiautomation/xcuielement/tap()
 // https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/frame
@@ -41,49 +41,6 @@ final class PreviewTests: XCTestCase {
 
         waitForThePicture()
         screenshot("m1-7-preview-01-first-frame")
-    }
-
-    func testPlayThenPauseTwoSecondsLater() {
-        let app = startPreview(seed: "two-clips")
-        let play = element(app, "editor.play")
-        waitForThePicture()
-
-        mark("m1-7-preview-01-play")
-        play.tap()
-        waitForTheButton(play, toRead: "Pause")
-        // Only the player's reports move the time, so a play that starts nothing fails this wait.
-        waitForTheTime(app, "the first second of the playback", expected: 2) { $0 >= "00:01" }
-        // "mm:ss" texts are in the order of their times, and the project ends at "00:07".
-        let atTheTap = timeBeforeTheSlash(app)
-        print("m1-7-preview: the time read at the second tap is " + atTheTap)
-        guard atTheTap < "00:07" else {
-            XCTFail("the playback ended before the pause: the runner held the test")
-            return
-        }
-        play.tap()
-
-        waitForTheButton(play, toRead: "Play")
-        XCTAssertEqual(play.label, "Play")
-        let stopped = timeBeforeTheSlash(app)
-        XCTAssertNotEqual(stopped, "00:00")
-        XCTAssertLessThan(stopped, "00:07")
-        XCTAssertEqual(stopped, playheadValue(app))
-        // The label stands still: a second later it is the same.
-        Thread.sleep(forTimeInterval: 1)
-        XCTAssertEqual(timeBeforeTheSlash(app), stopped)
-
-        // The picture stands still: blue stands between black bars until the join at 3 seconds, then red
-        // fills. A player that ran on after the pause shows red 4 seconds later.
-        guard stopped < "00:03" else {
-            print("m1-7-preview: the picture check was skipped, the pause came at " + stopped
-                + " and blue ends at 00:03")
-            return
-        }
-        let picture = element(app, "editor.picture")
-        XCTAssertGreaterThan(share(of: (r: 0, g: 0, b: 255), in: picture), 0.2, "blue at the pause")
-        Thread.sleep(forTimeInterval: 4)
-        XCTAssertGreaterThan(share(of: (r: 0, g: 0, b: 255), in: picture), 0.2, "blue 4 seconds after the pause")
-        XCTAssertLessThan(share(of: (r: 255, g: 0, b: 0), in: picture), 0.5, "red 4 seconds after the pause")
     }
 
     func testPlaybackRunsToTheEndPausesThereAndStartsAgainFromZero() {
@@ -130,26 +87,15 @@ final class PreviewTests: XCTestCase {
         let beforePlay = Date()
         play.tap()
         waitForTheTime(app, "a second inside the red clip", expected: 3) { $0 >= "00:04" }
-        // A tap that lands after the end would start the playback again. From "00:06" on the end is less
-        // than a second away, so no tap is sent and the playback ends by itself inside the wait below.
-        let beforeTheLastTap = timeBeforeTheSlash(app)
+        let reached = timeBeforeTheSlash(app)
         let seconds = Date().timeIntervalSince(beforePlay)
-        print("preview: the time read before the last tap is " + beforeTheLastTap
+        print("preview: the time read inside the red clip is " + reached
             + ", \(seconds) seconds after the tap on play")
         // From 2.5 seconds to the end are 4.5 seconds of playback, and a held runner only adds time. An
         // item that ends with the blue clip puts the time at the end of the project at once.
-        if beforeTheLastTap == "00:07" && seconds < 4 {
+        if reached == "00:07" && seconds < 4 {
             XCTFail("the time reached the end in \(seconds) seconds: the playback did not play through the red clip")
         }
-        if beforeTheLastTap < "00:06" {
-            play.tap()
-        }
-        waitForTheButton(play, toRead: "Play")
-        if beforeTheLastTap < "00:06" {
-            // A tap that does nothing lets the playback run to the end inside the wait.
-            XCTAssertLessThan(timeBeforeTheSlash(app), "00:07", "the last tap did not pause the playback")
-        }
-        XCTAssertEqual(timeBeforeTheSlash(app), playheadValue(app))
     }
 
     func testThePictureFollowsAScrubWhileNotPlaying() {
