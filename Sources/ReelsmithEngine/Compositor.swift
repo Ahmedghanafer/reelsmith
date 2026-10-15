@@ -76,8 +76,9 @@ func pieceTexts(
     return (texts, drawn)
 }
 
-/// One for each segment of the plan: the track that holds its picture, where that picture goes, and the texts
-/// of the plan whose time overlaps its range, each with its picture.
+/// One for each segment of the plan: the track that holds its picture, where that picture goes, where its blurred
+/// copy goes when the segment has a backdrop, and the texts of the plan whose time overlaps its range, each with
+/// its picture.
 /// It answers true for `containsTweening`, so every frame of its range is asked for by its own time.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avvideocompositioninstructionprotocol
@@ -127,6 +128,7 @@ final class PieceInstruction: NSObject, AVVideoCompositionInstructionProtocol {
 /// https://developer.apple.com/documentation/coreimage/cicontext/init(options:)
 /// https://developer.apple.com/documentation/coreimage/cicontextoption/workingcolorspace
 /// https://developer.apple.com/documentation/coreimage/cicontextoption/outputcolorspace
+/// https://developer.apple.com/documentation/coreimage/cicontextoption/cacheintermediates
 final class Compositor: NSObject, AVVideoCompositing {
     /// The source frames, as 32 bit BGRA with the IOSurface key. They reach this class and never a layer.
     /// https://developer.apple.com/documentation/avfoundation/avvideocompositing/sourcepixelbufferattributes
@@ -142,7 +144,10 @@ final class Compositor: NSObject, AVVideoCompositing {
         kCVPixelBufferIOSurfacePropertiesKey as String: [String: String](),
     ]
 
-    private let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+    /// No intermediate is kept: the blur makes some for every frame, and no frame of a video comes twice.
+    private let context = CIContext(options: [
+        .workingColorSpace: NSNull(), .outputColorSpace: NSNull(), .cacheIntermediates: false,
+    ])
 
     /// Nothing is kept from a render context: each request brings its own.
     /// https://developer.apple.com/documentation/avfoundation/avvideocompositing/rendercontextchanged(_:)

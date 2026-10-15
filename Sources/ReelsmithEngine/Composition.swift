@@ -198,7 +198,8 @@ private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, mus
 }
 
 /// The video composition of a plan, for a new item, an export and a refresh alike: one instruction per segment
-/// that puts its upright picture at its place on the canvas and holds the texts whose time overlaps it. It names
+/// that puts its upright picture at its place on the canvas, its blurred copy at the segment's backdrop when it
+/// has one, and holds the texts whose time overlaps it. It names
 /// `Compositor`, which draws every frame from those instructions. `tracks` names the picture track of each
 /// segment. `kept` holds the texts of the video composition before it, whose pictures are used again.
 ///

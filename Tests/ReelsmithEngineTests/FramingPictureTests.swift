@@ -78,12 +78,13 @@ final class FramingPictureTests: XCTestCase {
         print("framing picture: halves blurred, the first row at x 108 \(edge)")
         XCTAssertGreaterThan(edge.r, 127.5, "red in the first row at x 108")
 
-        let middle = try mean(in: blurred, x: 540, y: 960)
-        let middleAtBlack = try mean(in: plain, x: 540, y: 960)
-        print("framing picture: the middle blurred \(middle), black \(middleAtBlack)")
-        XCTAssertEqual(middle.r, middleAtBlack.r, accuracy: 24, "the middle, red")
-        XCTAssertEqual(middle.g, middleAtBlack.g, accuracy: 24, "the middle, green")
-        XCTAssertEqual(middle.b, middleAtBlack.b, accuracy: 24, "the middle, blue")
+        // The picture stands over the backdrop: its sharp seam of red and blue at (540, 960) matches the plain
+        // frame pixel by pixel. The blurred seam of the backdrop at (540, 300) is printed with the same reading.
+        let middle = try matching(blurred, x: 540, y: 960, plain, x: 540, y: 960)
+        let blurredSeam = try matching(blurred, x: 540, y: 300, plain, x: 540, y: 960)
+        print("framing picture: the seam in the middle matches the plain frame at \(middle), "
+            + "the blurred seam of the backdrop at \(blurredSeam)")
+        XCTAssertGreaterThan(middle, 0.9, "the middle as at black, pixel by pixel")
 
         for (x, y) in [(108, 300), (972, 300)] {
             XCTAssertGreaterThan(try share(of: black, in: plain, x: x, y: y), 0.9, "black at (\(x), \(y))")
@@ -213,6 +214,31 @@ private func share(of colour: RGB, in image: CGImage, x: Int, y: Int) throws -> 
             let worst = max(
                 abs(Int(read.bytes[offset]) - Int(colour.r)), abs(Int(read.bytes[offset + 1]) - Int(colour.g)),
                 abs(Int(read.bytes[offset + 2]) - Int(colour.b)))
+            if worst <= 24 {
+                near += 1
+            }
+            all += 1
+        }
+    }
+    return Double(near) / Double(all)
+}
+
+/// The share of the pixels of the square around a point of one picture within 24 per channel of the pixel at
+/// the same place in the square around a point of the other.
+private func matching(
+    _ image: CGImage, x: Int, y: Int, _ other: CGImage, x otherX: Int, y otherY: Int
+) throws -> Double {
+    let read = try pixels(of: image)
+    let otherRead = try pixels(of: other)
+    var near = 0
+    var all = 0
+    for row in -5..<5 {
+        for column in -5..<5 {
+            let offset = (y + row) * read.rowBytes + (x + column) * 4
+            let otherOffset = (otherY + row) * otherRead.rowBytes + (otherX + column) * 4
+            let worst = (0..<3).map {
+                abs(Int(read.bytes[offset + $0]) - Int(otherRead.bytes[otherOffset + $0]))
+            }.max() ?? 0
             if worst <= 24 {
                 near += 1
             }
