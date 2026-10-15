@@ -5,7 +5,7 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 ## What runs where
 
 - On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 479 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 654 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 660 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
 - UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 213 UI tests in thirty-six classes.
 
 What comes back from the simulator run:
@@ -330,6 +330,15 @@ Both files run with `swift test` on macOS, write every file into a folder of the
 - `refreshPicture` of an item of `photo-wide` with a text added at the top succeeds and the item still shows magenta in the photo's place.
 - The import: an uncompressed TIFF written in the test, stored 400 by 300, red on its left half and green on its right, with the orientation 6, imports at 300 by 400 with red at the top of the first frame of the movie and green at the bottom. A JPEG of 6000 by 4000 imports at 3840 by 2560. Each movie has that stored size and one picture track of at least 108000 ticks, H.264 for the first and HEVC for the second, and the cover of the second is green in its middle, and each `MediaInfo` has kind photo, no turn, no sound and 108000 ticks. A file of words throws `cannotRead` and its folder stays empty. Each import prints lines that start with `photo import:` with the bytes written and the seconds.
 - `writeTestPhoto(.magenta, to:)` makes a missing folder and writes `magenta.png` of 1080 by 1440, magenta whole within 6 per channel, and keeps a file that is there. `testLeavesBlueAndRedInTheClipFolder` of `TestClipMakerTests.swift` also writes `magenta.png` under `REELSMITH_CLIP_DIR`.
+
+### Tests of framing in the picture
+
+- `Tests/ReelsmithEngineTests/FramingPictureTests.swift` runs on the hosted Mac with the other Engine tests, 6 tests, in the folder of `ExportTests` and through its `exported`. Every plan is on the portrait canvas at 1080p and 30, made by `renderPlan(for:)` from `two-clips` with blue's framing set in the test, or from halves: a clip of 1920 by 1080 written in the test, red on its left half and blue on its right, no sound, 1800 ticks, twice from its start, fitted. A frame is read at 1 second. A share is the part of the pixels of the 10 by 10 square around a point within 24 per channel of a colour, and a mean is that of each channel over the square.
+- Blue at fill reads blue above 0.9 at (540, 100) and (540, 1820), where the standard framing reads black there. Blue at a zoom of 1.5 reads black at (540, 450) and blue at (540, 560), and at a zoom of 2 moved up by 0.18 blue at (540, 20).
+- Halves blurred has a mean at (108, 300), in the top bar, whose red is its largest channel and above half of full, and at (972, 300) the same for blue, and the first row of the canvas at x 103 to 113 has a red above half of full. The 10 by 10 square of the middle (540, 960), on the seam of red and blue, matches halves with black bars pixel by pixel, more than 0.9 of it within 24 per channel, and the same reading of the blurred seam of the backdrop at (540, 300) is printed, where both points read black.
+- The cover of halves blurred has a top tenth whose mean over the three channels is above 0.2 of full.
+- `refreshPicture` of an item of `two-clips` with blue at fill succeeds, and the first instruction, read with `@testable import`, puts the source frame on the place of the plan counted from the bottom left.
+- The seconds of the two exports of halves, blurred and black, are printed in a line that starts with `framing picture: an export of halves`. Blurred is expected at twice black and fails at six times black (rule 17).
 
 ### Tests of the sound mix
 

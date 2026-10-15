@@ -76,8 +76,9 @@ func pieceTexts(
     return (texts, drawn)
 }
 
-/// One for each segment of the plan: the track that holds its picture, where that picture goes, and the texts
-/// of the plan whose time overlaps its range, each with its picture.
+/// One for each segment of the plan: the track that holds its picture, where that picture goes, where its blurred
+/// copy goes when the segment has a backdrop, and the texts of the plan whose time overlaps its range, each with
+/// its picture.
 /// It answers true for `containsTweening`, so every frame of its range is asked for by its own time.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avvideocompositioninstructionprotocol
@@ -93,17 +94,22 @@ final class PieceInstruction: NSObject, AVVideoCompositionInstructionProtocol {
     let track: CMPersistentTrackID
     /// From the source frame to the canvas, both counted from the bottom left as Core Image counts.
     let placing: CGAffineTransform
+    /// From the source frame to the place of its blurred copy under the picture, counted as `placing` is. Nil when
+    /// the segment has no backdrop.
+    let backdrop: CGAffineTransform?
     /// In drawing order, the later one on top.
     let texts: [PieceText]
     /// How many times a text picture was asked for when this instruction was built.
     let drawn: Int
 
     init(
-        timeRange: CMTimeRange, track: CMPersistentTrackID, placing: CGAffineTransform, texts: [PieceText], drawn: Int
+        timeRange: CMTimeRange, track: CMPersistentTrackID, placing: CGAffineTransform,
+        backdrop: CGAffineTransform?, texts: [PieceText], drawn: Int
     ) {
         self.timeRange = timeRange
         self.track = track
         self.placing = placing
+        self.backdrop = backdrop
         self.texts = texts
         self.drawn = drawn
         requiredSourceTrackIDs = [NSNumber(value: track)]
@@ -111,16 +117,18 @@ final class PieceInstruction: NSObject, AVVideoCompositionInstructionProtocol {
     }
 }
 
-/// Draws every frame of the picture, for the player item and for the export alike: black, then the frame of
-/// the segment at its place, then each text of the instruction whose time holds the frame, the later one on
-/// top. A time at which the track has no frame stays black under the texts. It changes no colour: Core
-/// Image takes the numbers of a source frame and of a text picture as they are and writes them as they are,
-/// with no colour space on the way in, in the middle or on the way out.
+/// Draws every frame of the picture, for the player item and for the export alike: black, then the blurred
+/// backdrop when the segment has one, then the frame of the segment at its place, then each text of the
+/// instruction whose time holds the frame, the later one on top. A time at which the track has no frame stays
+/// black under the texts. It changes no colour: Core Image takes the numbers of a source frame and of a text
+/// picture as they are and writes them as they are, with no colour space on the way in, in the middle or on the
+/// way out.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avvideocompositing
 /// https://developer.apple.com/documentation/coreimage/cicontext/init(options:)
 /// https://developer.apple.com/documentation/coreimage/cicontextoption/workingcolorspace
 /// https://developer.apple.com/documentation/coreimage/cicontextoption/outputcolorspace
+/// https://developer.apple.com/documentation/coreimage/cicontextoption/cacheintermediates
 final class Compositor: NSObject, AVVideoCompositing {
     /// The source frames, as 32 bit BGRA with the IOSurface key. They reach this class and never a layer.
     /// https://developer.apple.com/documentation/avfoundation/avvideocompositing/sourcepixelbufferattributes
@@ -136,7 +144,10 @@ final class Compositor: NSObject, AVVideoCompositing {
         kCVPixelBufferIOSurfacePropertiesKey as String: [String: String](),
     ]
 
-    private let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+    /// No intermediate is kept: the blur makes some for every frame, and no frame of a video comes twice.
+    private let context = CIContext(options: [
+        .workingColorSpace: NSNull(), .outputColorSpace: NSNull(), .cacheIntermediates: false,
+    ])
 
     /// Nothing is kept from a render context: each request brings its own.
     /// https://developer.apple.com/documentation/avfoundation/avvideocompositing/rendercontextchanged(_:)
@@ -158,6 +169,10 @@ final class Compositor: NSObject, AVVideoCompositing {
     /// https://developer.apple.com/documentation/coreimage/ciimage/transformed(by:)
     /// https://developer.apple.com/documentation/coreimage/ciimage/composited(over:)
     /// https://developer.apple.com/documentation/coreimage/cicontext/render(_:to:bounds:colorspace:)
+    /// https://developer.apple.com/documentation/coreimage/ciimage/clampedtoextent()
+    /// https://developer.apple.com/documentation/coreimage/ciimage/applyingfilter(_:parameters:)
+    /// https://developer.apple.com/documentation/coreimage/cigaussianblur
+    /// https://developer.apple.com/documentation/coreimage/ciimage/cropped(to:)
     func startRequest(_ request: AVAsynchronousVideoCompositionRequest) {
         guard let piece = request.videoCompositionInstruction as? PieceInstruction,
               let frame = request.renderContext.newPixelBuffer()
@@ -169,6 +184,18 @@ final class Compositor: NSObject, AVVideoCompositing {
         var picture = CIImage.black
         if let buffer = request.sourceFrame(byTrackID: piece.track) {
             let source = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: NSNull()])
+            if let backdrop = piece.backdrop {
+                // Blurred at an eighth of the size, which is cheap, and clamped so its edges do not fade to clear.
+                // It is cut only at the canvas, so the row where the fill meets the canvas edge is not darkened.
+                let eighth = CGAffineTransform(scaleX: 0.125, y: 0.125)
+                let blurred = source.clampedToExtent()
+                    .transformed(by: eighth)
+                    .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 8])
+                    .transformed(by: eighth.inverted())
+                    .transformed(by: backdrop)
+                    .cropped(to: canvas)
+                picture = blurred.composited(over: picture)
+            }
             picture = source.transformed(by: piece.placing).composited(over: picture)
         }
         let time = request.compositionTime

@@ -198,7 +198,8 @@ private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, mus
 }
 
 /// The video composition of a plan, for a new item, an export and a refresh alike: one instruction per segment
-/// that puts its upright picture at its place on the canvas and holds the texts whose time overlaps it. It names
+/// that puts its upright picture at its place on the canvas, its blurred copy at the segment's backdrop when it
+/// has one, and holds the texts whose time overlaps it. It names
 /// `Compositor`, which draws every frame from those instructions. `tracks` names the picture track of each
 /// segment. `kept` holds the texts of the video composition before it, whose pictures are used again.
 ///
@@ -215,13 +216,16 @@ private func videoComposition(
             start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
             duration: CMTime(value: segment.duration.ticks, timescale: 600))
         // The transform counts both pictures from the top left, the compositor from the bottom left.
-        let placing = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(info.height))
-            .concatenating(transform(for: segment.placement, width: info.width, height: info.height))
-            .concatenating(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(plan.height)))
+        func onCanvas(_ placement: Placement) -> CGAffineTransform {
+            CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(info.height))
+                .concatenating(transform(for: placement, width: info.width, height: info.height))
+                .concatenating(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(plan.height)))
+        }
         let made = pieceTexts(of: plan, in: range, kept: kept)
         kept += made.texts
         instructions.append(PieceInstruction(
-            timeRange: range, track: track, placing: placing, texts: made.texts, drawn: made.drawn))
+            timeRange: range, track: track, placing: onCanvas(segment.placement),
+            backdrop: segment.backdrop.map(onCanvas), texts: made.texts, drawn: made.drawn))
     }
 
     // Standard range colour properties, so a high dynamic range source is converted for preview and export alike.
