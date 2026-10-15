@@ -162,9 +162,12 @@ final class WholeClipPathTests: XCTestCase {
             red.isHittable && screen.minX + 10 < red.frame.midX && red.frame.midX < screen.maxX - 10
         }
         select(app, "editor.clip.3")
-        raiseRed(app)
+        // Each drag that changes the value is one step, so one undo gives the value before the last drag: 100 when
+        // the first drag reached the end.
+        let raisedFrom = raiseRed(app)
         tapOn(app, "editor.undo")
-        waitUntil("editor.clip.3 ending 100 v after one undo") { self.value(app, "editor.clip.3").hasSuffix(" 100 v") }
+        waitUntil("editor.clip.3 reading " + raisedFrom + " after one undo") { self.value(app, "editor.clip.3") == raisedFrom }
+        XCTAssertTrue(value(app, "editor.clip.3").hasSuffix(" 100 v"), "one undo: " + value(app, "editor.clip.3"))
         print("clip-path: after one undo editor.clip.3 reads " + value(app, "editor.clip.3"))
         tapOn(app, "editor.redo")
         waitUntil("editor.clip.3 ending 200 v after the redo") { self.value(app, "editor.clip.3").hasSuffix(" 200 v") }
@@ -262,7 +265,9 @@ final class WholeClipPathTests: XCTestCase {
             print("clip-path: the export failed, export.words reads " + element(app, "export.words").label)
         }
         XCTAssertTrue(done.exists, "the saved panel")
-        XCTAssertEqual(element(app, "export.fileInfo").label, "1920 1080 30")
+        if done.exists {
+            XCTAssertEqual(element(app, "export.fileInfo").label, "1920 1080 30")
+        }
         screenshot("clip-path-02-saved")
         let panel = done.exists ? "export.done" : "export.close"
         tapOn(app, panel)
@@ -377,6 +382,9 @@ final class WholeClipPathTests: XCTestCase {
         let began = Date()
         let opened = element(app, "editor.root").waitForExistence(timeout: 3 * expectedCopy)
         print("clip-path: waited \(Date().timeIntervalSince(began)) seconds for editor.root after the picker, expected \(expectedCopy), limit \(3 * expectedCopy)")
+        // A pick that was confirmed and opens no editor is a fault of the product, not of the picker: the test fails,
+        // and the walk still goes on from the seed.
+        XCTAssertTrue(opened, "editor.root after the confirmed pick")
         guard opened else {
             return "the editor did not open within \(3 * expectedCopy) seconds of the tap on the right of the picker's bar"
         }
@@ -407,14 +415,17 @@ final class WholeClipPathTests: XCTestCase {
         if let info {
             XCTAssertTrue(line.hasPrefix(info), line)
         }
-        element(app, "drafts.row.1").tap()
+        waitUntil("drafts.row.1 on the start screen") { self.element(app, "drafts.row.1").exists }
+        tapOn(app, "drafts.row.1")
         waitForTheEditor(app)
         return app
     }
 
-    /// Drags the strip from the middle of its height until the condition holds, at most four drags, each bringing
-    /// the x that `target` reads to the playhead line. The pan of the strip begins after about 10 points, which its
-    /// translation leaves out, so each drag is 10 points longer. A drag is held to 340 points to stay on the screen.
+    /// Drags the strip from the middle of its text row (y 84, no text in the walk) until the condition holds, at most
+    /// four drags, each bringing the x that `target` reads to the playhead line. The text row holds no trim handle,
+    /// so a drag that begins near the edge of the screen never trims the selected clip. The pan of the strip begins
+    /// after about 10 points, which its translation leaves out, so each drag is 10 points longer. A drag is held to
+    /// 340 points to stay on the screen.
     private func scrub(_ app: XCUIApplication, _ what: String, toX target: () -> CGFloat, until reached: () -> Bool) {
         let region = element(app, "editor.timelineRegion")
         let line = element(app, "editor.playhead")
@@ -425,7 +436,7 @@ final class WholeClipPathTests: XCTestCase {
             distance = max(-340, min(340, distance))
             let x = distance < 0 ? region.frame.maxX - 20 : region.frame.minX + 20
             let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
-                .withOffset(CGVector(dx: x, dy: region.frame.midY))
+                .withOffset(CGVector(dx: x, dy: region.frame.minY + 84))
             print("clip-path: a scrub of \(distance) points from x \(x) at the playhead " + playhead(app))
             from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: distance, dy: 0)))
             drags += 1
@@ -450,8 +461,10 @@ final class WholeClipPathTests: XCTestCase {
         }
     }
 
-    /// Drags the thumb of `clip.volume` past its higher end, as `ClipGainTests` does, until red reads 200.
-    private func raiseRed(_ app: XCUIApplication) {
+    /// Drags the thumb of `clip.volume` past its higher end, as `ClipGainTests` does, until red reads 200. Gives the
+    /// value of red before the last drag that changed it.
+    private func raiseRed(_ app: XCUIApplication) -> String {
+        var raisedFrom = value(app, "editor.clip.3")
         let slider = app.sliders["clip.volume"]
         waitUntil("the slider clip.volume") { slider.exists }
         let width = slider.frame.width
@@ -471,8 +484,12 @@ final class WholeClipPathTests: XCTestCase {
                 self.value(app, "editor.clip.3") != before
             }
             print("clip-path: after drag \(moves) editor.clip.3 reads " + value(app, "editor.clip.3"))
+            if value(app, "editor.clip.3") != before {
+                raisedFrom = before
+            }
         }
         XCTAssertTrue(value(app, "editor.clip.3").hasSuffix(" 200 v"), value(app, "editor.clip.3"))
+        return raisedFrom
     }
 
     /// Taps a control of the framing row and waits until `clip.frameInfo` reads the line.
