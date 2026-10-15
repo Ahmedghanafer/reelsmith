@@ -63,6 +63,22 @@ final class DragRunTests: XCTestCase {
         XCTAssertEqual(sent.history.past.count, 2)
     }
 
+    /// A drag that ends where it began, as a pinch that zooms a clip above 1 and back to 1, leaves no step.
+    func testADragThatEndsOnTheProjectItBeganWithLeavesNoStep() {
+        let start = playing().afterDragStep(.sound(.setClipVolume(0.5))).endingRun()
+        XCTAssertEqual(start.history.past.count, 1)
+
+        let back = dragged(start, [0.4, 0.5], from: 0).endingRun()
+        XCTAssertEqual(back.state.project, start.state.project)
+        XCTAssertEqual(back.history.past, start.history.past)
+        XCTAssertNil(back.history.run)
+        XCTAssertEqual(back.undone().state.project.clipVolume, 1)
+
+        // A drag that changes the project keeps its one step.
+        let moved = dragged(start, [0.4, 0.3], from: 0).endingRun()
+        XCTAssertEqual(moved.history.past.count, 2)
+    }
+
     func testADraftWithAnOpenDragRunRoundTripsAndOpensWithNoRun() throws {
         let editing = playing().afterDragStep(.sound(.setClipVolume(0.5)))
         XCTAssertEqual(editing.history.run, .drag)
