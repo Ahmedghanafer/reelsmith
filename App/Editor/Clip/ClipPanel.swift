@@ -31,7 +31,7 @@ struct ClipPanel: View {
             .frame(minHeight: 44)
             if let clip {
                 SoundSlider(
-                    identifier: "clip.volume", label: "clip.volume", value: clip.volume, range: 0...1, step: 0.05,
+                    identifier: "clip.volume", label: "clip.volume", value: clip.volume, range: 0...2, step: 0.05,
                     send: { store.send(.sound(.setVolumeOfClip(clip.id, $0))) }
                 )
                 // Made anew for each clip, so a drag begun on one clip is never sent to the next one selected.

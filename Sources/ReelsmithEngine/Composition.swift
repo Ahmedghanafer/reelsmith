@@ -3,6 +3,8 @@ import AVFoundation
 import CoreGraphics
 import CoreMedia
 import Foundation
+import MediaToolbox
+import os
 import ReelsmithCore
 
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/init(asset:)
@@ -43,8 +45,11 @@ public func refreshPicture(of item: AVPlayerItem, plan: RenderPlan, media: [Medi
 
 /// Gives an item `makePlayerItem` made the audio mix of the plan, made by the same function as at a build. The
 /// sound tracks of the item's composition, in the order of their ids, are the clip track when a segment has sound,
-/// then the music track when the plan has music. Throws `cannotRead` when the item is not a composition of ours or
-/// its tracks do not match the plan. After a throw the item has the mix it had. Reads no file.
+/// then the music track when the plan has music, the same in number whatever the volumes. The new mix keeps the tap
+/// the item's clip track has and gives it the gains of the plan, since a player prepares its item again when the tap
+/// changes (reason `AudioProcessingTapChanged` in the simulator log of run 38715394801). Throws `cannotRead` when
+/// the item is not a composition of ours or its tracks do not match the plan. After a throw the item has the mix
+/// it had. Reads no file.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/audiomix
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/asset
@@ -56,13 +61,14 @@ public func refreshSound(of item: AVPlayerItem, plan: RenderPlan) throws {
     let clipSound = plan.segments.contains { $0.hasSound }
     let music = plan.sound.music != nil
     guard ids.count == (clipSound ? 1 : 0) + (music ? 1 : 0) else { throw EngineError.cannotRead }
-    item.audioMix = audioMix(
-        for: plan, clipTrack: clipSound ? ids.first : nil, musicTrack: music ? ids.last : nil)
+    let clipTrack = clipSound ? ids.first : nil
+    let kept = item.audioMix?.inputParameters.first { $0.trackID == clipTrack }?.audioTapProcessor
+    item.audioMix = audioMix(for: plan, clipTrack: clipTrack, musicTrack: music ? ids.last : nil, keeping: kept)
 }
 
 /// The one builder for the player item and for the export. One picture track, one sound track when a segment
-/// has sound, one more sound track when the plan has music, the video composition of the plan, and the audio mix
-/// with one set of parameters for each sound track.
+/// has sound, one more sound track when the plan has music, whatever the volumes, the video composition of the
+/// plan, and the audio mix with one set of parameters for each sound track and a tap on the clip track.
 /// Throws `sourceMissing` when a file is not in the media folder and `cannotRead` when a file cannot be used.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avmutablecomposition
@@ -144,8 +150,10 @@ private func addMusic(_ layer: MusicLayer, to composition: AVMutableComposition,
 }
 
 /// The whole mix of a plan, for a new item and an export alike, made from the plan and the ids of its sound
-/// tracks and reading no file. The clip track holds `clipVolume` times the volume of each segment that has sound,
-/// from its start to its end in the order of the plan, so 0 while the clips are muted. The music track rises from 0 to the
+/// tracks and reading no file. What is heard of each segment that has sound is `clipVolume` times its volume, from
+/// its start to its end in the order of the plan, so 0 while the clips are muted: the clip track holds it up to 1
+/// and its tap multiplies by what lies above. A tap given as `kept` gets the gains of the plan and stays the tap of
+/// the clip track, otherwise a new tap is made. The music track rises from 0 to the
 /// music's `volume` over the first `fadeIn`, stands at it up to the last `fadeOut` and falls to 0 over it. A fade
 /// of zero sets no ramp. A track id that is nil gets no parameters.
 ///
@@ -153,8 +161,10 @@ private func addMusic(_ layer: MusicLayer, to composition: AVMutableComposition,
 /// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters
 /// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolume(_:at:)
 /// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolumeramp(fromstartvolume:toendvolume:timerange:)
-private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, musicTrack: CMPersistentTrackID?)
-    -> AVAudioMix {
+private func audioMix(
+    for plan: RenderPlan, clipTrack: CMPersistentTrackID?, musicTrack: CMPersistentTrackID?,
+    keeping kept: MTAudioProcessingTap? = nil
+) -> AVAudioMix {
     var parameters: [AVMutableAudioMixInputParameters] = []
     if let track = clipTrack {
         let clips = AVMutableAudioMixInputParameters()
@@ -162,13 +172,27 @@ private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, mus
         // Between two volumes set with setVolume the platform ramps from one to the other (blue at 1 then red
         // at 0.5 read blue at 0.375 in compile check run 38658994782), so each segment holds its volume from its
         // start to its end with a ramp that does not change.
+        // A volume above 1 is never set on the track: the track holds the volume up to 1, and the tap
+        // multiplies each sample by what lies above it.
+        var gains: [ClipGains.Piece] = []
         for segment in plan.segments where segment.hasSound {
-            let volume = Float(plan.sound.clipVolume * segment.volume)
+            let volume = plan.sound.clipVolume * segment.volume
+            let held = Float(min(volume, 1))
             clips.setVolumeRamp(
-                fromStartVolume: volume, toEndVolume: volume,
+                fromStartVolume: held, toEndVolume: held,
                 timeRange: CMTimeRange(
                     start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
                     duration: CMTime(value: segment.duration.ticks, timescale: 600)))
+            gains.append(ClipGains.Piece(
+                start: Double(segment.timelineStart.ticks) / 600,
+                end: Double(segment.timelineStart.ticks + segment.duration.ticks) / 600,
+                gain: Float(max(volume, 1))))
+        }
+        if let tap = kept {
+            Unmanaged<ClipGains>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue().pieces = gains
+            clips.audioTapProcessor = tap
+        } else {
+            clips.audioTapProcessor = clipGainTap(ClipGains(pieces: gains))
         }
         parameters.append(clips)
     }
@@ -195,6 +219,92 @@ private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, mus
     let mix = AVMutableAudioMix()
     mix.inputParameters = parameters
     return mix
+}
+
+/// The gain of each segment with sound past the volume its track holds, from its start to its end on the timeline
+/// in seconds: 1 up to a volume of 1, the volume above it.
+/// A refresh replaces the pieces whole under a lock while the audio thread may read them, so a read never meets a
+/// half written array.
+///
+/// https://developer.apple.com/documentation/os/osallocatedunfairlock
+private final class ClipGains {
+    struct Piece {
+        let start: Double
+        let end: Double
+        let gain: Float
+    }
+
+    private let held: OSAllocatedUnfairLock<[Piece]>
+
+    init(pieces: [Piece]) {
+        held = OSAllocatedUnfairLock(initialState: pieces)
+    }
+
+    var pieces: [Piece] {
+        get { held.withLock { $0 } }
+        set { held.withLock { $0 = newValue } }
+    }
+
+    /// The gain at a time of the timeline in the pieces, 1 outside every piece.
+    static func gain(in pieces: [Piece], at seconds: Double) -> Float {
+        pieces.first { seconds >= $0.start && seconds < $0.end }?.gain ?? 1
+    }
+}
+
+/// The tap of the clip track: each sample of the track times the gain of its segment, held between minus 1 and 1.
+/// The time of a sample is read from the time range of the source audio of each call. The tap holds the gains
+/// and lets them go when the platform ends it. Nil when the platform makes no tap.
+///
+/// https://developer.apple.com/documentation/mediatoolbox/mtaudioprocessingtapcreate(_:_:_:_:)
+/// https://developer.apple.com/documentation/mediatoolbox/mtaudioprocessingtapcallbacks
+/// https://developer.apple.com/documentation/mediatoolbox/mtaudioprocessingtapgetsourceaudio(_:_:_:_:_:_:)
+/// https://developer.apple.com/documentation/mediatoolbox/mtaudioprocessingtapgetstorage(_:)
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/audiotapprocessor
+private func clipGainTap(_ gains: ClipGains) -> MTAudioProcessingTap? {
+    let held = Unmanaged.passRetained(gains).toOpaque()
+    var callbacks = MTAudioProcessingTapCallbacks(
+        version: kMTAudioProcessingTapCallbacksVersion_0,
+        clientInfo: held,
+        init: { _, clientInfo, storage in
+            storage.pointee = clientInfo
+        },
+        finalize: { tap in
+            Unmanaged<ClipGains>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).release()
+        },
+        prepare: nil,
+        unprepare: nil,
+        process: { tap, frames, _, buffers, framesOut, flagsOut in
+            var range = CMTimeRange()
+            guard MTAudioProcessingTapGetSourceAudio(tap, frames, buffers, flagsOut, &range, framesOut) == noErr
+            else { return }
+            // The pieces of this moment, read once for the whole call.
+            let pieces = Unmanaged<ClipGains>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue()
+                .pieces
+            let count = Int(framesOut.pointee)
+            guard count > 0 else { return }
+            let start = range.start.seconds
+            let length = range.duration.seconds
+            // The tap's format is float samples, one buffer per channel unless a buffer says it holds more.
+            for buffer in UnsafeMutableAudioBufferListPointer(buffers) {
+                guard let data = buffer.mData else { continue }
+                let channels = max(Int(buffer.mNumberChannels), 1)
+                let samples = data.assumingMemoryBound(to: Float.self)
+                let total = min(Int(buffer.mDataByteSize) / MemoryLayout<Float>.size, count * channels)
+                for index in 0..<total {
+                    let seconds = start + length * Double(index / channels) / Double(count)
+                    let gain = ClipGains.gain(in: pieces, at: seconds)
+                    samples[index] = min(max(samples[index] * gain, -1), 1)
+                }
+            }
+        })
+    var tap: MTAudioProcessingTap?
+    guard MTAudioProcessingTapCreate(
+        kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PostEffects, &tap) == noErr
+    else {
+        Unmanaged<ClipGains>.fromOpaque(held).release()
+        return nil
+    }
+    return tap
 }
 
 /// The video composition of a plan, for a new item, an export and a refresh alike: one instruction per segment
