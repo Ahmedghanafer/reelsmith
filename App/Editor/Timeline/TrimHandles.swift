@@ -46,7 +46,8 @@ final class TrimHandle: UIView, UIGestureRecognizerDelegate {
     }
 
     /// Called from the slot `handles` on every layout of the strip view. The two handles are made once,
-    /// below the playhead line, and then only moved, shown or hidden.
+    /// below the playhead line, and then only moved, shown or hidden. While a block is lifted by a press
+    /// both are hidden, so no handle is drawn over the block under the finger.
     static func layout(in view: TimelineStripView, below playhead: UIView) {
         var handles: [TrimHandle] = view.subviews.compactMap { $0 as? TrimHandle }
         if handles.isEmpty {
@@ -57,7 +58,8 @@ final class TrimHandle: UIView, UIGestureRecognizerDelegate {
         }
 
         let state: EditorState = view.state
-        guard let selection = state.selection,
+        let lifted: Bool = view.gestureRecognizers?.contains { ($0 as? ClipPress)?.lifted != nil } ?? false
+        guard !lifted, let selection = state.selection,
             let clip = state.project.clips.first(where: { $0.id == selection }),
             let start = state.project.start(of: selection)
         else {

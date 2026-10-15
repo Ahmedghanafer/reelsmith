@@ -40,6 +40,30 @@ final class LiftTests: XCTestCase {
         screenshot("lift-01-dropped")
     }
 
+    /// Green selected first, then the same walk. While green is lifted no trim handle is shown, which only the
+    /// recording shows. After the drop green is still selected and both handles are at its new ends.
+    func testTheHandlesOfASelectedBlockComeBackAtItsNewEnds() {
+        let app = startLift()
+        let greenBlock = element(app, "editor.clip.3")
+        greenBlock.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5)).tap()
+        waitUntil("both handles at the ends of green after the tap") { self.handlesAreAtTheEnds(app, of: greenBlock) }
+        let redBlock = element(app, "editor.clip.2")
+        print("lift: editor.clip.3 frame at the press \(greenBlock.frame), editor.clip.2 frame \(redBlock.frame)")
+        let from = greenBlock.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let to = redBlock.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5)).withOffset(CGVector(dx: 4, dy: 0))
+
+        mark("lift-02-selected-walk")
+        from.press(forDuration: 0.6, thenDragTo: to, withVelocity: XCUIGestureVelocity(rawValue: 200), thenHoldForDuration: 1)
+        waitUntil("editor.clip.2 reading green after the walk", expected: 1, limit: 10) {
+            self.value(app, 2) == self.green
+        }
+        XCTAssertEqual(values(app), [blue, green, red])
+        waitUntil("both handles at the new ends of green after the drop") {
+            self.handlesAreAtTheEnds(app, of: self.element(app, "editor.clip.2"))
+        }
+        screenshot("lift-02-handles-back")
+    }
+
     /// A press held still for 1 second and lifted moves nothing and leaves no block lifted.
     func testAPressHeldStillAndLiftedMovesNothing() {
         let app = startLift()
@@ -70,6 +94,19 @@ final class LiftTests: XCTestCase {
             }
         }
         return all
+    }
+
+    /// Whether both handles are shown, the start handle ending where the block starts and the end handle starting
+    /// where it ends, within 1 point.
+    private func handlesAreAtTheEnds(_ app: XCUIApplication, of block: XCUIElement) -> Bool {
+        let start = element(app, "editor.trim.start")
+        let end = element(app, "editor.trim.end")
+        guard start.exists, end.exists else {
+            print("lift: a handle is not shown, the block's frame \(block.frame)")
+            return false
+        }
+        print("lift: handles \(start.frame) and \(end.frame), the block's frame \(block.frame)")
+        return abs(start.frame.maxX - block.frame.minX) <= 1 && abs(end.frame.minX - block.frame.maxX) <= 1
     }
 
     private func startLift() -> XCUIApplication {
