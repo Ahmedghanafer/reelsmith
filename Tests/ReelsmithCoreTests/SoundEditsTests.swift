@@ -206,11 +206,11 @@ final class SoundEditsTests: XCTestCase {
 
     // The volume of the clips
 
-    func testSetClipVolumeStoresTheVolumeAndPauses() {
+    func testSetClipVolumeStoresTheVolumeAndPlaysOn() {
         let next = sendSound(playing(music), .setClipVolume(0.5))
 
         XCTAssertEqual(next.project.clipVolume, 0.5)
-        XCTAssertFalse(next.isPlaying)
+        XCTAssertTrue(next.isPlaying)
     }
 
     func testSetClipVolumeIsHeldBetweenZeroAndOne() {
@@ -250,7 +250,7 @@ final class SoundEditsTests: XCTestCase {
         let muted = sendSound(playing(half), .muteClips(true))
         XCTAssertTrue(muted.project.clipsMuted)
         XCTAssertEqual(muted.project.clipVolume, 0.5)
-        XCTAssertFalse(muted.isPlaying)
+        XCTAssertTrue(muted.isPlaying)
         XCTAssertEqual(try renderPlan(for: muted.project).sound.clipVolume, 0)
 
         let unmuted = sendSound(muted, .muteClips(false))
@@ -311,7 +311,7 @@ final class SoundEditsTests: XCTestCase {
     func testSetMusicVolumeStoresTheVolumeHeldBetweenZeroAndOne() {
         let quarter = sendSound(playing(music), .setMusicVolume(0.25))
         XCTAssertEqual(quarter.project.music?.volume, 0.25)
-        XCTAssertFalse(quarter.isPlaying)
+        XCTAssertTrue(quarter.isPlaying)
 
         XCTAssertEqual(sendSound(quarter, .setMusicVolume(2)).project.music?.volume, 1)
         XCTAssertEqual(sendSound(quarter, .setMusicVolume(-1)).project.music?.volume, 0)
@@ -440,7 +440,7 @@ final class SoundEditsTests: XCTestCase {
         }
     }
 
-    func testEveryActionOnTheMusicThatChangesItPauses() {
+    func testEveryActionOnTheMusicThatChangesItPausesButALevel() {
         let actions: [SoundAction] = [
             .removeMusic, .setMusicVolume(0.5), .setMusicStart(ticks(1200)), .setFadeIn(ticks(600)),
             .setFadeOut(ticks(600)),
@@ -448,7 +448,7 @@ final class SoundEditsTests: XCTestCase {
         for action in actions {
             let next = sendSound(changed, action)
             XCTAssertNotEqual(next.project, changed.project, "\(action) changed nothing")
-            XCTAssertFalse(next.isPlaying, "\(action)")
+            XCTAssertEqual(next.isPlaying, ![SoundAction.removeMusic, .setMusicStart(ticks(1200))].contains(action), "\(action)")
         }
     }
 
