@@ -55,19 +55,26 @@ final class FoldTests: XCTestCase {
         var app = startFold(seed: "music-wide")
         let region = element(app, "editor.timelineRegion")
         let blue = element(app, "editor.clip.1")
+        // The 32 points go to the region the picture stands in. The picture itself keeps the shape of the canvas and
+        // never gets wider than the screen, so on the landscape canvas of music-wide it grows only to 226 (402 by 9/16).
+        let previewRegion = element(app, "editor.previewRegion")
         let picture = element(app, "editor.picture")
         let music = element(app, "editor.music")
         XCTAssertTrue(element(app, "editor.frames.1").exists)
-        let before = picture.frame.height
-        print("fold: before the fold the strip is \(region.frame.height) high, editor.picture \(before)")
+        let before = previewRegion.frame.height
+        let pictureBefore = picture.frame.height
+        print("fold: before the fold the strip is \(region.frame.height) high, editor.previewRegion \(before), editor.picture \(pictureBefore)")
 
         fold(app)
         assertFolded(app, textSelected: false)
         print("fold: folded editor.clip.1 is \(blue.frame.height) high, editor.music at y \(music.frame.minY - region.frame.minY)")
         XCTAssertEqual(music.frame.minY - region.frame.minY, 68, accuracy: 1)
-        waitUntil("editor.picture 32 points higher after the fold") { abs(picture.frame.height - before - 32) <= 2 }
-        print("fold: folded editor.picture is \(picture.frame.height) high, \(picture.frame.height - before) more")
-        XCTAssertEqual(picture.frame.height - before, 32, accuracy: 2)
+        waitUntil("editor.previewRegion 32 points higher after the fold") {
+            abs(previewRegion.frame.height - before - 32) <= 2
+        }
+        print("fold: folded editor.previewRegion is \(previewRegion.frame.height) high, \(previewRegion.frame.height - before) more, editor.picture \(picture.frame.height), \(picture.frame.height - pictureBefore) more")
+        XCTAssertEqual(previewRegion.frame.height - before, 32, accuracy: 2)
+        XCTAssertGreaterThan(picture.frame.height, pictureBefore)
         screenshot("fold-01-folded")
 
         element(app, "editor.frames").tap()
