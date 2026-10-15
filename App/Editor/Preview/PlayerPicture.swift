@@ -162,10 +162,12 @@ final class PlayerPictureView: UIView {
         // item is built.
         let sameTracks: Bool = project?.sameTracks(as: state.project) ?? false
         let sameTexts: Bool = project?.texts == state.project.texts
+        // A level and a framing changed at once: the picture is refreshed too, as for other texts.
+        let sameFramings: Bool = project?.clips.map(\.framing) == state.project.clips.map(\.framing)
         project = state.project
         if !sameFootage, sameTracks, !isBuilding, let standing = item,
             (try? refreshSound(of: standing, plan: renderPlan(for: state.project))) != nil {
-            if sameTexts || refresh(standing, to: state.project) {
+            if (sameTexts && sameFramings) || refresh(standing, to: state.project) {
                 if isReady {
                     bring(to: state)
                 }

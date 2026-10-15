@@ -79,6 +79,11 @@ public struct UndoHistory: Equatable, Codable, Sendable {
         run = nil
     }
 
+    /// The last of past taken out, all else kept.
+    mutating func dropLastStep() {
+        _ = past.popLast()
+    }
+
     /// The last of past, with the current project put at the end of future. Nil when past is empty.
     mutating func undo(from current: Project) -> Project? {
         guard let project = past.popLast() else {
@@ -129,9 +134,13 @@ public struct Editing: Equatable, Sendable {
         stepped(action, run: .drag)
     }
 
-    /// Run nil, all else kept.
+    /// Run nil, all else kept. A drag run that ends on the project it began with leaves no step: its step is taken
+    /// out of past, so an undo after it is not one that changes nothing. The future it cleared stays cleared.
     public func endingRun() -> Editing {
         var next = self
+        if history.run == .drag, history.past.last == state.project.withoutBlankTexts {
+            next.history.dropLastStep()
+        }
         next.history.endRun()
         return next
     }
