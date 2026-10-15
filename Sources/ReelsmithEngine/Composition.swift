@@ -250,17 +250,22 @@ private final class ClipGains {
         pieces.first { seconds >= $0.start && seconds < $0.end }?.gain ?? 1
     }
 
-    /// A sample times its gain, pressed toward full scale. The raised sample is bent: straight up to a size of 0.5,
-    /// then 0.5 plus 0.4 times the tanh of what lies past 0.5 over 0.4. That meets the straight line with the same
-    /// slope at 0.5 and never reaches 0.9, which leaves room for the AAC encoder of an export, whose peaks rose 3
-    /// percent over the mix (compile check run 38747732578). The result is the larger of the bent sample and the
-    /// sample held at 1, with its sign, so raising a clip never makes a sample quieter than at 100 percent, and at
-    /// a gain of 1 it is the sample held between minus 1 and 1, as before. It reads the sample alone, so it keeps
-    /// no state between calls.
+    /// A sample times its gain, pressed toward full scale through one curve: straight up to a knee, then the knee
+    /// plus the room up to a ceiling times the tanh of what lies past the knee over that room. The curve meets the
+    /// line with the same slope and never reaches its ceiling, so the output is smooth in the sample and every
+    /// raised sample, a loud clip's own peaks too, ends under the ceiling.
+    /// At a gain of 1 it is the sample held between minus 1 and 1, as before. Up to a gain of 1.2 the knee moves
+    /// from 1 down to 0.7 and the ceiling from 1 down to 0.9, in step with the gain, so 101 percent is the old
+    /// clamp all but exactly. From 1.2 on the curve stands still and the output rises with the gain.
+    /// The ceiling of 0.9 leaves room for the AAC encoder of an export, whose peaks rose 3 percent over the mix
+    /// (compile check run 38747732578). It reads the sample and its gain alone, so it keeps no state between calls.
     static func limited(_ sample: Float, by gain: Float) -> Float {
-        let size = abs(sample * gain)
-        let bent = size > 0.5 ? 0.5 + 0.4 * tanh((size - 0.5) / 0.4) : size
-        let held = max(bent, min(abs(sample), 1))
+        guard gain > 1 else { return min(max(sample, -1), 1) }
+        let share = min((gain - 1) / 0.2, 1)
+        let knee = 1 - 0.3 * share
+        let room = 0.2 * share
+        let raised = abs(sample) * gain
+        let held = raised <= knee ? raised : knee + room * tanh((raised - knee) / room)
         return sample < 0 ? -held : held
     }
 }
