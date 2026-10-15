@@ -249,9 +249,29 @@ private final class ClipGains {
     static func gain(in pieces: [Piece], at seconds: Double) -> Float {
         pieces.first { seconds >= $0.start && seconds < $0.end }?.gain ?? 1
     }
+
+    /// A sample times its gain, pressed toward full scale through one curve: straight up to a knee, then the knee
+    /// plus the room up to a ceiling times the tanh of what lies past the knee over that room. The curve meets the
+    /// line with the same slope and never reaches its ceiling, so the output is smooth in the sample and every
+    /// raised sample, a loud clip's own peaks too, ends under the ceiling.
+    /// At a gain of 1 it is the sample held between minus 1 and 1, as before. Up to a gain of 1.2 the knee moves
+    /// from 1 down to 0.7 and the ceiling from 1 down to 0.9, in step with the gain, so 101 percent is the old
+    /// clamp all but exactly. From 1.2 on the curve stands still and the output rises with the gain.
+    /// The ceiling of 0.9 leaves room for the AAC encoder of an export, whose peaks rose 3 percent over the mix
+    /// (compile check run 38747732578). It reads the sample and its gain alone, so it keeps no state between calls.
+    static func limited(_ sample: Float, by gain: Float) -> Float {
+        guard gain > 1 else { return min(max(sample, -1), 1) }
+        let share = min((gain - 1) / 0.2, 1)
+        let knee = 1 - 0.3 * share
+        let room = 0.2 * share
+        let raised = abs(sample) * gain
+        let held = raised <= knee ? raised : knee + room * tanh((raised - knee) / room)
+        return sample < 0 ? -held : held
+    }
 }
 
-/// The tap of the clip track: each sample of the track times the gain of its segment, held between minus 1 and 1.
+/// The tap of the clip track: each sample of the track times the gain of its segment, pressed toward full scale by
+/// `ClipGains.limited`, so a loud clip raised past 100 percent is bent near full scale and never cut flat.
 /// The time of a sample is read from the time range of the source audio of each call. The tap holds the gains
 /// and lets them go when the platform ends it. Nil when the platform makes no tap.
 ///
@@ -293,7 +313,7 @@ private func clipGainTap(_ gains: ClipGains) -> MTAudioProcessingTap? {
                 for index in 0..<total {
                     let seconds = start + length * Double(index / channels) / Double(count)
                     let gain = ClipGains.gain(in: pieces, at: seconds)
-                    samples[index] = min(max(samples[index] * gain, -1), 1)
+                    samples[index] = ClipGains.limited(samples[index], by: gain)
                 }
             }
         })
