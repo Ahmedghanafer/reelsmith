@@ -41,6 +41,22 @@ final class ReorderTests: XCTestCase {
         XCTAssertEqual(draftsInfo(startApp(seed: nil, drafts: "kept")), "1 3+5400+0+1080x30+.")
     }
 
+    /// Red pressed on its right part and held still: the time under the finger would be after the middle of
+    /// green, so a move read from the finger would put red last. Read from red's left end it keeps its place.
+    func testAPressHeldStillOnTheRightPartOfABlockMovesNothing() {
+        let app = startReorder(drafts: "fresh")
+        let undo = element(app, "editor.undo")
+        XCTAssertFalse(undo.isEnabled)
+
+        element(app, "editor.clip.2").coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).press(forDuration: 1)
+        // A tap after the press has an effect to wait for, and is handled after the press.
+        let greenBlock = element(app, "editor.clip.3")
+        greenBlock.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5)).tap()
+        waitUntil("editor.clip.3 selected after the tap that follows the press") { greenBlock.isSelected }
+        XCTAssertEqual(values(app), [blue, red, green])
+        XCTAssertFalse(undo.isEnabled)
+    }
+
     func testAShortPressAndDragScrubsAndMovesNoBlock() {
         let app = startApp(seed: "three-clips", drafts: "fresh")
         waitForTheEditor(app)
