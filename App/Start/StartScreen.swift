@@ -2,10 +2,11 @@ import Foundation
 import ReelsmithCore
 import SwiftUI
 
-/// The start screen: the title, the choice of the shape, and "New project", which opens the system picker for videos.
+/// The start screen: the title, the choice of the shape, and "New project", which opens the system picker for
+/// videos and photos.
 /// It draws a `StartState`, which only `StartState.after(_:)` moves. Its own state is the chosen shape and the
 /// summaries of the drafts on the shelf, read when it appears. `open` gets the store the editor opens with.
-/// A new project is a new draft: made first, the videos copied into its media folder, then written.
+/// A new project is a new draft: made first, what she picked copied into its media folder, then written.
 /// Under New project, while there are drafts, the title `drafts.title` and the list of them, where a tap on a row
 /// opens that draft again, and a delete confirmed in the list removes the draft and reads the list again, also
 /// when the delete throws.
@@ -92,7 +93,7 @@ struct StartScreen: View {
             summaries = shelf.list()
         }
         .sheet(isPresented: $picking) {
-            VideoPicker(closed: pickerClosed)
+            VideoPicker(closed: pickerClosed, photos: true)
                 .ignoresSafeArea()
         }
     }

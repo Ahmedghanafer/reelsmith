@@ -200,7 +200,7 @@ final class WholeDraftPathTests: XCTestCase {
     /// editor opened, else the step that found nothing.
     private func drivePicker(_ app: XCUIApplication) -> String? {
         element(app, "start.newProject").tap()
-        if let stopped = chooseInThePhotoPicker(app, fromTheEnd: [1, 2], confirms: true, picture: nil) {
+        if let stopped = chooseInThePhotoPicker(app, fromTheEnd: [1, 2], confirms: true, picture: nil, photos: true) {
             return stopped
         }
         let began = Date()

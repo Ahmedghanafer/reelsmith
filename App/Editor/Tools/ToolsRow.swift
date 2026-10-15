@@ -1,8 +1,9 @@
 import ReelsmithCore
 import SwiftUI
 
-/// The row of the two edit buttons, the text button and the sound button. It decides nothing: Core says whether a button is enabled,
-/// and a tap sends one action. A row of SwiftUI lays out from leading to trailing, so Arabic mirrors it.
+/// The row of the two edit buttons, the text button, the sound button and, at its trailing end, the button that adds
+/// clips. It decides nothing: Core says whether a button is enabled, and a tap sends one action. A row of SwiftUI lays
+/// out from leading to trailing, so Arabic mirrors it.
 ///
 /// https://developer.apple.com/documentation/swiftui/button
 /// https://developer.apple.com/documentation/swiftui/hstack
@@ -11,10 +12,10 @@ import SwiftUI
 /// https://developer.apple.com/documentation/swiftui/withtransaction(_:_:)
 /// https://developer.apple.com/documentation/swiftui/transaction/disablesanimations
 struct ToolsRow: View {
-    let state: EditorState
-    let send: @MainActor (EditorAction) -> Void
+    let store: EditorStore
 
     var body: some View {
+        let state: EditorState = store.state
         HStack(spacing: 32) {
             Button("tools.split") { sendStill(.split) }
                 .disabled(!state.canSplit)
@@ -28,6 +29,7 @@ struct ToolsRow: View {
             Button("tools.sound") { sendStill(.sound(.open)) }
                 .disabled(!state.canOpenSound)
                 .accessibilityIdentifier("editor.sound")
+            AddClips(store: store)
         }
     }
 
@@ -36,6 +38,6 @@ struct ToolsRow: View {
     private func sendStill(_ action: EditorAction) {
         var still = Transaction()
         still.disablesAnimations = true
-        withTransaction(still) { send(action) }
+        withTransaction(still) { store.send(action) }
     }
 }

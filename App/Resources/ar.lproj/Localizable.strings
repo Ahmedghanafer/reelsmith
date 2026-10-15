@@ -7,8 +7,8 @@
 "start.newProject" = "مشروع جديد";
 "start.landscape" = "أفقي 16:9";
 "start.portrait" = "عمودي 9:16";
-"start.copying" = "جارٍ نسخ الفيديوهات";
-"start.noneReadable" = "تعذّر استخدام أي من الفيديوهات.";
+"start.copying" = "جارٍ نسخ المقاطع";
+"start.noneReadable" = "تعذّر استخدام أي من المقاطع.";
 "start.ok" = "موافق";
 /* end slot: m1-6b-new-project */
 
@@ -158,6 +158,7 @@
 /* end slot: draft-path */
 
 /* slot: add-clips */
+"tools.add" = "إضافة";
 /* end slot: add-clips */
 
 /* slot: clip-panel */
