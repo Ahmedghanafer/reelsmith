@@ -108,7 +108,7 @@ final class TimelineStripView: UIView {
             container.semanticContentAttribute = .forceLeftToRight
             container.isUserInteractionEnabled = false
             container.clipsToBounds = true
-            container.backgroundColor = UIColor.systemGray3
+            container.backgroundColor = UIColor.systemGray
             let tile = FrameTiles()
             container.addSubview(tile)
             let block = UILabel()
