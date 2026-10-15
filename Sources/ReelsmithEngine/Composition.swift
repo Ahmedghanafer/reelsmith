@@ -55,7 +55,7 @@ public func refreshSound(of item: AVPlayerItem, plan: RenderPlan) throws {
     let ids = composition.tracks.filter { $0.mediaType == .audio }.map { $0.trackID }.sorted()
     let clipSound = plan.segments.contains { $0.hasSound }
     let music = plan.sound.music != nil
-    guard ids.count == (clipSound ? 1 : 0) + (music ? 1 : 0) else { throw EngineError.cannotRead }
+    guard ids.count == (clipSound ? 2 : 0) + (music ? 1 : 0) else { throw EngineError.cannotRead }
     item.audioMix = audioMix(
         for: plan, clipTrack: clipSound ? ids.first : nil, musicTrack: music ? ids.last : nil)
 }
@@ -98,9 +98,16 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
                     if sound == nil {
                         sound = composition.addMutableTrack(
                             withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+                        // The lift, the same sound once more under the id after the clip track's: what is heard of
+                        // a clip above 1 beyond the clip track (seam AM, way 1).
+                        if let clips = sound {
+                            _ = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: clips.trackID + 1)
+                        }
                     }
-                    guard let track = sound else { throw EngineError.cannotRead }
+                    guard let track = sound, let lift = composition.track(withTrackID: track.trackID + 1)
+                    else { throw EngineError.cannotRead }
                     try track.insertTimeRange(range, of: sourceSound, at: start)
+                    try lift.insertTimeRange(range, of: sourceSound, at: start)
                 }
             }
         } catch {
@@ -162,15 +169,19 @@ private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, mus
         // Between two volumes set with setVolume the platform ramps from one to the other (blue at 1 then red
         // at 0.5 read blue at 0.375 in compile check run 38658994782), so each segment holds its volume from its
         // start to its end with a ramp that does not change.
+        let lift = AVMutableAudioMixInputParameters()
+        lift.trackID = track + 1
         for segment in plan.segments where segment.hasSound {
-            let volume = Float(plan.sound.clipVolume * segment.volume)
-            clips.setVolumeRamp(
-                fromStartVolume: volume, toEndVolume: volume,
-                timeRange: CMTimeRange(
-                    start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
-                    duration: CMTime(value: segment.duration.ticks, timescale: 600)))
+            let range = CMTimeRange(
+                start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
+                duration: CMTime(value: segment.duration.ticks, timescale: 600))
+            let held = Float(plan.sound.clipVolume * min(segment.volume, 1))
+            let above = Float(min(plan.sound.clipVolume * max(segment.volume - 1, 0), 1))
+            clips.setVolumeRamp(fromStartVolume: held, toEndVolume: held, timeRange: range)
+            lift.setVolumeRamp(fromStartVolume: above, toEndVolume: above, timeRange: range)
         }
         parameters.append(clips)
+        parameters.append(lift)
     }
     if let track = musicTrack, let layer = plan.sound.music {
         let volume = Float(layer.volume)
