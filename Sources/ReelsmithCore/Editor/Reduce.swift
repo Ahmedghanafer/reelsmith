@@ -16,6 +16,12 @@ private func step(_ state: EditorState, _ action: EditorAction) -> EditorState {
         return trimEnd(state, clip, by: amount)
     case .deleteSelected:
         return deleteSelected(state)
+    case .moveClip(let clip, let position):
+        return moveClip(state, clip, to: position)
+    case .cutBefore:
+        return cutBefore(state)
+    case .cutAfter:
+        return cutAfter(state)
     case .select(let clip):
         if state.project.position(of: clip) != nil {
             next.selection = clip

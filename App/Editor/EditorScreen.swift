@@ -12,10 +12,11 @@ import SwiftUI
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityidentifier(_:)
 struct EditorScreen: View {
     let store: EditorStore
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(spacing: 0) {
-            if store.options.seed != nil {
+            if store.options.showsInfo {
                 Text(text(seedInfo))
                     .font(.footnote)
                     .accessibilityIdentifier("editor.seedInfo")
@@ -74,9 +75,19 @@ struct EditorScreen: View {
         .transaction { $0.animation = nil }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("editor.root")
+        // The draft is written when the app leaves the active phase, a run that is still open included, and its
+        // cover is made in a task the system may suspend: a cover that does not finish is made at the next leave.
+        // https://developer.apple.com/documentation/swiftui/environmentvalues/scenephase
+        // https://developer.apple.com/documentation/swiftui/view/onchange(of:initial:_:)-4psgg
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                store.writeNow()
+                Task { await store.makeCover() }
+            }
+        }
     }
 
-    /// Shown on a seed start only: the clips of the project, and how many of its media files are in the media folder,
+    /// Shown on a seed start and on a launch with -drafts only: the clips of the project, and how many of its media files are in the media folder,
     /// the file of its music among them. A half written file under another name does not count.
     private var seedInfo: Words {
         let project: Project = store.state.project

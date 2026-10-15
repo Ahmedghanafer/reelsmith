@@ -131,3 +131,40 @@
 
 /* slot: export-path */
 /* end slot: export-path */
+
+/* slot: undo */
+"editor.undo" = "Ångra";
+"editor.redo" = "Gör om";
+/* end slot: undo */
+
+/* slot: draft-saving */
+"draft.save" = "Spara";
+/* end slot: draft-saving */
+
+/* slot: project-list */
+"editor.projects" = "Projekt";
+"drafts.title" = "Projekt";
+"drafts.row" = "Projekt från %1$@, %2$@ långt";
+"drafts.unreadable" = "Det här projektet kan inte öppnas";
+/* end slot: project-list */
+
+/* slot: draft-delete */
+"drafts.delete" = "Radera";
+"drafts.deleteQuestion" = "Radera det här projektet?";
+"drafts.deleteCancel" = "Avbryt";
+/* end slot: draft-delete */
+
+/* slot: draft-path */
+/* end slot: draft-path */
+
+/* slot: add-clips */
+/* end slot: add-clips */
+
+/* slot: clip-panel */
+/* end slot: clip-panel */
+
+/* slot: music-row */
+/* end slot: music-row */
+
+/* slot: clip-path */
+/* end slot: clip-path */

@@ -1,4 +1,4 @@
-public struct Time: Hashable, Comparable, Sendable {
+public struct Time: Hashable, Comparable, Codable, Sendable {
     /// 600 ticks are one second.
     public var ticks: Int64
 

@@ -131,3 +131,40 @@
 
 /* slot: export-path */
 /* end slot: export-path */
+
+/* slot: undo */
+"editor.undo" = "تراجع";
+"editor.redo" = "إعادة";
+/* end slot: undo */
+
+/* slot: draft-saving */
+"draft.save" = "حفظ";
+/* end slot: draft-saving */
+
+/* slot: project-list */
+"editor.projects" = "المشاريع";
+"drafts.title" = "المشاريع";
+"drafts.row" = "مشروع بتاريخ %1$@، مدته %2$@";
+"drafts.unreadable" = "لا يمكن فتح هذا المشروع";
+/* end slot: project-list */
+
+/* slot: draft-delete */
+"drafts.delete" = "حذف";
+"drafts.deleteQuestion" = "حذف هذا المشروع؟";
+"drafts.deleteCancel" = "إلغاء";
+/* end slot: draft-delete */
+
+/* slot: draft-path */
+/* end slot: draft-path */
+
+/* slot: add-clips */
+/* end slot: add-clips */
+
+/* slot: clip-panel */
+/* end slot: clip-panel */
+
+/* slot: music-row */
+/* end slot: music-row */
+
+/* slot: clip-path */
+/* end slot: clip-path */

@@ -1,4 +1,4 @@
-public struct TextID: Hashable, Sendable {
+public struct TextID: Hashable, Codable, Sendable {
     public let raw: Int
 
     public init(_ raw: Int) {
@@ -6,7 +6,7 @@ public struct TextID: Hashable, Sendable {
     }
 }
 
-public enum TextFont: String, CaseIterable, Equatable, Sendable {
+public enum TextFont: String, CaseIterable, Equatable, Codable, Sendable {
     /// Amiri Regular. `allCases` is naskh, naskhBold, system, the order on screen.
     case naskh = "naskh"
     /// Amiri Bold.
@@ -29,13 +29,13 @@ public enum TextFont: String, CaseIterable, Equatable, Sendable {
 }
 
 /// A side of the picture, the same in every language.
-public enum TextAlign: String, CaseIterable, Equatable, Sendable {
+public enum TextAlign: String, CaseIterable, Equatable, Codable, Sendable {
     case left = "left"
     case centre = "centre"
     case right = "right"
 }
 
-public struct TextStyle: Equatable, Sendable {
+public struct TextStyle: Equatable, Codable, Sendable {
     public var font: TextFont
     /// The font size in canvas pixels.
     public var size: Double
@@ -72,7 +72,7 @@ public struct TextStyle: Equatable, Sendable {
     ]
 }
 
-public struct TextRange: Equatable, Sendable {
+public struct TextRange: Equatable, Codable, Sendable {
     /// Timeline time, a whole frame.
     public var start: Time
     /// Whole frames.
@@ -84,13 +84,13 @@ public struct TextRange: Equatable, Sendable {
     }
 }
 
-public enum TextSpan: Equatable, Sendable {
+public enum TextSpan: Equatable, Codable, Sendable {
     /// From zero to the end of the project, whatever its length becomes.
     case whole
     case range(TextRange)
 }
 
-public struct TextItem: Equatable, Sendable {
+public struct TextItem: Equatable, Codable, Sendable {
     public var id: TextID
     /// As typed. A line break is "\n".
     public var string: String

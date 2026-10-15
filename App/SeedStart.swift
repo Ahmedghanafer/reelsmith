@@ -6,10 +6,13 @@ import ReelsmithEngine
 /// that is already there, and gives the store the editor opens with, the sound panel open when the seed says so.
 /// Nil when the launch names no seed. A clip or a tone that cannot be written leaves its file missing: the file
 /// count of `editor.seedInfo` shows it and the error is logged.
+/// With -drafts the seed's project becomes a new draft on the shelf: each file it names is copied from
+/// `<caches>/Seeds/` into the draft's media folder, and the store writes to the draft.
 ///
 /// https://developer.apple.com/documentation/foundation/filemanager/urls(for:in:)
+/// https://developer.apple.com/documentation/foundation/filemanager/copyitem(at:to:)
 @MainActor
-func seedStart(_ options: LaunchOptions) async -> EditorStore? {
+func seedStart(_ options: LaunchOptions, shelf: DraftShelf) async -> EditorStore? {
     guard let seed: Seed = options.seed else { return nil }
     let folder = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("Seeds")
@@ -34,5 +37,23 @@ func seedStart(_ options: LaunchOptions) async -> EditorStore? {
     if let playhead: Time = options.playhead {
         state = reduce(state, .movePlayhead(playhead))
     }
-    return EditorStore(state: state, mediaFolder: folder, options: options)
+    guard options.drafts != nil else {
+        return EditorStore(state: state, mediaFolder: folder, options: options)
+    }
+    let draft: OpenDraft
+    do {
+        draft = try shelf.create(Draft(project: project, exportSettings: .startChoice, changed: Date()))
+    } catch {
+        NSLog("%@", "seed start: no draft was made, the editor opens on the seed folder: \(error)")
+        return EditorStore(state: state, mediaFolder: folder, options: options)
+    }
+    for name in project.fileNames {
+        do {
+            try FileManager.default.copyItem(
+                at: folder.appendingPathComponent(name), to: draft.mediaFolder.appendingPathComponent(name))
+        } catch {
+            NSLog("%@", "seed start: " + name + " was not copied into the draft: \(error)")
+        }
+    }
+    return EditorStore(state: state, mediaFolder: draft.mediaFolder, options: options, draft: draft)
 }

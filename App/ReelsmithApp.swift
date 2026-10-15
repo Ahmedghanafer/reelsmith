@@ -8,38 +8,55 @@ struct ReelsmithApp: App {
     // and the app goes on with the category it has.
     // https://developer.apple.com/documentation/avfaudio/avaudiosession/setcategory(_:)
     // https://developer.apple.com/documentation/avfaudio/avaudiosession/category-swift.struct/playback
+    //
+    // The shelf of drafts is made here, before any view reads it, and on -drafts fresh its folder is emptied
+    // once, which logs a line when the folder is not there yet.
+    // https://developer.apple.com/documentation/foundation/filemanager/urls(for:in:)
     init() {
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback)
         } catch {
             NSLog("%@", "audio session: the category playback was not set: \(error)")
         }
+        // The debug guard of the launch values: only a debug build reads the process arguments.
+        #if DEBUG
+        let options = LaunchOptions(arguments: ProcessInfo.processInfo.arguments)
+        #else
+        let options = LaunchOptions(arguments: [])
+        #endif
+        let manager = FileManager.default
+        let shelf = DraftShelf(
+            folder: options.draftsFolder(
+                applicationSupport: manager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0],
+                caches: manager.urls(for: .cachesDirectory, in: .userDomainMask)[0]))
+        if options.drafts == .fresh {
+            try? shelf.removeAll()
+        }
+        self.options = options
+        self.shelf = shelf
     }
 
-    // The debug guard of the launch values: only a debug build reads the process arguments.
-    #if DEBUG
-    private let options = LaunchOptions(arguments: ProcessInfo.processInfo.arguments)
-    #else
-    private let options = LaunchOptions(arguments: [])
-    #endif
+    private let options: LaunchOptions
+    private let shelf: DraftShelf
 
-    // The editor is opened by setting this store, by the seed start and by the start screen alike.
+    // The editor is opened by setting this store, by the seed start and by the start screen alike, and the
+    // start screen shows again once the store is closed.
     @State private var store: EditorStore?
 
     var body: some Scene {
         WindowGroup {
             // A stack and no Group: a Group would hand the task to each branch and so run the seed start twice.
             ZStack {
-                if let store {
+                if let store, store.isOpen {
                     EditorScreen(store: store)
                 } else {
                     // slot: start
-                    StartScreen(options: options, open: { store = $0 })
+                    StartScreen(options: options, shelf: shelf, open: { store = $0 })
                     // end slot: start
                 }
             }
             .task {
-                if let seeded = await seedStart(options), store == nil {
+                if let seeded = await seedStart(options, shelf: shelf), store == nil {
                     store = seeded
                 }
             }

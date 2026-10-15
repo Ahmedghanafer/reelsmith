@@ -1,4 +1,4 @@
-public struct RGB: Equatable, Sendable {
+public struct RGB: Equatable, Codable, Sendable {
     public var r: UInt8
     public var g: UInt8
     public var b: UInt8

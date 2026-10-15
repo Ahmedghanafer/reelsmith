@@ -28,7 +28,8 @@ func addClips(_ state: EditorState, _ media: [MediaInfo]) -> EditorState {
         if let stored = next.project.media[given.id], next.project.clips.contains(where: { $0.media == given.id }) {
             info = stored
         }
-        let duration = info.duration.roundedDownToFrame
+        // A photo comes in for photoLength, and its trims reach up to its media duration.
+        let duration = info.kind == .photo ? MediaInfo.photoLength : info.duration.roundedDownToFrame
         if duration < TimelineGeometry.minimumClip {
             continue
         }
@@ -55,7 +56,7 @@ func split(_ state: EditorState) -> EditorState {
     next.project.clips.insert(
         Clip(
             id: ClipID(next.project.nextClipID), media: clip.media, sourceStart: clip.sourceStart + left,
-            duration: clip.duration - left),
+            duration: clip.duration - left, volume: clip.volume),
         at: index + 1)
     next.project.nextClipID += 1
     next.isPlaying = false

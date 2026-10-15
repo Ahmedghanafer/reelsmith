@@ -155,10 +155,13 @@ final class WholePathTests: XCTestCase {
         screenshot("m1-12-whole-path-07-saved")
         done.tap()
 
-        // The relaunch: nothing of the edit and no project to reopen.
+        // The relaunch: the start screen, with the project left as a draft.
         app.terminate()
         app = startApp(seed: nil)
         assertTheStartScreen(app)
+        if stopped == nil {
+            waitUntil("drafts.row.1 after the relaunch", expected: 1) { element(app, "drafts.row.1").exists }
+        }
         screenshot("m1-12-whole-path-08-relaunch")
 
         // The chosen shape reaches the editor, only when the picker was driven above.

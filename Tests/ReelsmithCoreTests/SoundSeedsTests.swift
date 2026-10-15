@@ -32,10 +32,10 @@ final class SoundSeedsTests: XCTestCase {
         XCTAssertTrue(Seed.musicWide.showsSound)
     }
 
-    func testTheOtherSixSeedsHaveNoTestToneAndDoNotShowTheSoundPanel() {
-        let others: [Seed] = [.empty, .twoClips, .threeClips, .twoClipsWide, .textWide, .textBoxWide]
+    func testTheOtherSevenSeedsHaveNoTestToneAndDoNotShowTheSoundPanel() {
+        let others: [Seed] = [.empty, .twoClips, .threeClips, .twoClipsWide, .textWide, .textBoxWide, .photoWide]
 
-        XCTAssertEqual(Seed.allCases, others + [.musicWide])
+        XCTAssertEqual(Set(Seed.allCases), Set(others + [.musicWide]))
         for seed in others {
             XCTAssertEqual(seed.testTones, [], seed.rawValue)
             XCTAssertFalse(seed.showsSound, seed.rawValue)

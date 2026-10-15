@@ -1,5 +1,5 @@
 /// The size of an exported video, by its short side.
-public enum ExportSize: CaseIterable, Equatable, Sendable {
+public enum ExportSize: CaseIterable, Equatable, Codable, Sendable {
     /// `allCases` is hd720, hd1080, uhd4K, the order on screen.
     case hd720
     case hd1080
@@ -43,7 +43,7 @@ public enum ExportSize: CaseIterable, Equatable, Sendable {
 }
 
 /// The frames a second of an exported video.
-public enum ExportRate: CaseIterable, Equatable, Sendable {
+public enum ExportRate: CaseIterable, Equatable, Codable, Sendable {
     /// `allCases` is thirty, sixty.
     case thirty
     case sixty
@@ -72,7 +72,7 @@ public enum ExportRate: CaseIterable, Equatable, Sendable {
 }
 
 /// The size and the rate of one export.
-public struct ExportSettings: Equatable, Sendable {
+public struct ExportSettings: Equatable, Codable, Sendable {
     public var size: ExportSize
     public var rate: ExportRate
 

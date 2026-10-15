@@ -24,8 +24,15 @@ public struct Segment: Equatable, Sendable {
     public var duration: Time
     public var placement: Placement
     public var hasSound: Bool
+    /// True when the media's kind is photo.
+    public var isStill: Bool
+    /// The clip's own volume as stored. What is heard of the segment is sound.clipVolume times it.
+    public var volume: Double
 
-    public init(clip: ClipID, media: MediaID, sourceStart: Time, timelineStart: Time, duration: Time, placement: Placement, hasSound: Bool) {
+    public init(
+        clip: ClipID, media: MediaID, sourceStart: Time, timelineStart: Time, duration: Time, placement: Placement,
+        hasSound: Bool, isStill: Bool = false, volume: Double = 1
+    ) {
         self.clip = clip
         self.media = media
         self.sourceStart = sourceStart
@@ -33,6 +40,8 @@ public struct Segment: Equatable, Sendable {
         self.duration = duration
         self.placement = placement
         self.hasSound = hasSound
+        self.isStill = isStill
+        self.volume = volume
     }
 }
 
@@ -186,7 +195,8 @@ public func renderPlan(for project: Project, settings: ExportSettings) throws ->
             width: width, height: height)
         segments.append(Segment(
             clip: clip.id, media: clip.media, sourceStart: clip.sourceStart, timelineStart: start,
-            duration: clip.duration, placement: placement, hasSound: info.hasSound))
+            duration: clip.duration, placement: placement, hasSound: info.hasSound, isStill: info.kind == .photo,
+            volume: clip.volume))
         start = start + clip.duration
     }
     var texts: [TextLayer] = []

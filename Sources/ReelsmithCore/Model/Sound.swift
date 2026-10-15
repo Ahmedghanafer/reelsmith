@@ -1,4 +1,4 @@
-public struct MusicFile: Equatable, Sendable {
+public struct MusicFile: Equatable, Codable, Sendable {
     /// A test tone uses its name, a picked file a new UUID string.
     public var id: MediaID
     /// The file's name inside the media folder, with its extension.
@@ -16,7 +16,7 @@ public struct MusicFile: Equatable, Sendable {
     }
 }
 
-public struct Music: Equatable, Sendable {
+public struct Music: Equatable, Codable, Sendable {
     public var file: MusicFile
     /// The place in the file where the music begins. A whole frame.
     public var start: Time
