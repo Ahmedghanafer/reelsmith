@@ -52,6 +52,19 @@ final class EditorStore {
         }
     }
 
+    /// One step of a drag: with the steps before it in the same run one undo step. It writes nothing.
+    func sendDragStep(_ action: EditorAction) {
+        editing = editing.afterDragStep(action)
+    }
+
+    /// The end of a drag: the run ends, and the draft is written when something is not written yet.
+    func endDrag() {
+        editing = editing.endingRun()
+        if editing.writesNow {
+            write()
+        }
+    }
+
     /// Writes the project without its blank texts, the export choice, the time and the history to the draft,
     /// whatever `unsaved` says. A throw is logged and leaves `unsaved` as it was, so the next write tries again.
     func write() {

@@ -4,7 +4,8 @@ import SwiftUI
 /// The clip panel of the selected clip: one row with Delete before and Delete after the playhead, then, only while
 /// the clip's media has sound, the slider of the clip's volume, then the framing row. It holds no state: Core says
 /// whether a button is enabled and whether the slider shows, a tap sends one action, and the slider sends
-/// `setVolumeOfClip` once, when its drag ends. It lays out from leading to trailing, so Arabic mirrors it.
+/// `setVolumeOfClip` at each value of a drag, the whole drag one step of undo. It lays out from leading to
+/// trailing, so Arabic mirrors it.
 ///
 /// https://developer.apple.com/documentation/swiftui/button
 /// https://developer.apple.com/documentation/swiftui/hstack
@@ -32,7 +33,8 @@ struct ClipPanel: View {
             if let clip {
                 SoundSlider(
                     identifier: "clip.volume", label: "clip.volume", value: clip.volume, range: 0...2, step: 0.05,
-                    send: { store.send(.sound(.setVolumeOfClip(clip.id, $0))) }
+                    send: { store.sendDragStep(.sound(.setVolumeOfClip(clip.id, $0))) }, follows: true,
+                    ended: { store.endDrag() }
                 )
                 // Made anew for each clip, so a drag begun on one clip is never sent to the next one selected.
                 // https://developer.apple.com/documentation/swiftui/view/id(_:)

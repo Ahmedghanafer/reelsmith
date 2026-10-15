@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 490 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 679 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 221 UI tests in thirty-nine classes.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 493 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 682 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 228 UI tests in forty classes.
 
 What comes back from the simulator run:
 
@@ -184,6 +184,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 - `Tests/ReelsmithCoreTests/UndoHistoryTests.swift` runs on Linux. Each test starts from `Editing(state:)` of a seed's project with the seed's selected text and sound panel. It holds a delete undone and redone on `two-clips-wide`, eight typed strings as one step that write only after the run ends, a drag, a pinch and a twist of text 1 of `text-wide` as one step each with a `pause` between, two toggles and a font as steps of their own, a text added and left blank as no step with the next id kept, what an undo and a redo keep of the selection, the playhead, playing and the sound panel, the limit of 50 steps, and `unsaved` against `written()`.
 - `Tests/ReelsmithCoreTests/UndoGuardTests.swift` runs on Linux. It walks every sequence of four actions from a menu of twelve written in the file, 20736 sequences from `text-wide`, and draws nothing at random. After each, undo until `canUndo` is false must give the start project without blank texts (compared with `nextTextID` left out, as one step compares), and redo until `canRedo` is false the project before the first undo. It prints the count of sequences and the seconds, and names the first five sequences that fail.
+- `Tests/ReelsmithCoreTests/DragRunTests.swift` runs on Linux. From `music-wide` playing, three drag steps of `setClipVolume` with a `movePlayhead` between each two are one step, `unsaved` with `writesNow` false, and `endingRun()` makes `writesNow` true. An undo gives 1 back, and a second drag after the end is a second step. During an open drag run a `select` and a `movePlayhead` leave it open, while a mute, a level sent by `after(_:)`, an undo and a redo end it. A draft whose history has the run `drag` round trips, and `Editing(state:history:)` opens it with no run.
 
 ### The canvas
 
@@ -744,7 +745,7 @@ Screenshots: `sound-clips-01-clips` (the part `clips` under the part row: the wo
 
 `Tests/ReelsmithCoreTests/SoundClipsWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `sound-clips` of the English, the Arabic or the Swedish file holds anything but the two keys `sound.clipVolume` and `sound.clipsMuted` in that order or a line with an empty text, and when their English texts are not "Clip sound" and "Mute the clips".
 
-That the slider runs from 0 to 1 in steps of 0.05, that it sends once when a drag ends and at once with no drag, and that the audio session is set once at the start are read in the diff and held by no test here.
+That the slider runs from 0 to 1 in steps of 0.05, that it sends each value of a drag and ends the run at the end of the drag and after a change with no drag, and that the audio session is set once at the start are read in the diff and held by no test here.
 
 ### UI tests of the clip panel
 
@@ -763,7 +764,7 @@ Screenshots: `clip-panel-01-selected` (the panel under the tools with the two cu
 
 `Tests/ReelsmithCoreTests/ClipPanelWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `clip-panel` of the English, the Arabic or the Swedish file holds anything but the three keys `clip.cutBefore`, `clip.cutAfter` and `clip.volume` in that order, and when their texts are not "Delete before", "Delete after" and "Volume" in English, "حذف ما قبل", "حذف ما بعد" and "مستوى الصوت" in Arabic, and "Radera före", "Radera efter" and "Volym" in Swedish.
 
-That the panel holds no state, that its buttons send in a transaction with animations off and that the slider sends once when a drag ends are read in the diff and held by no test here.
+That the panel holds no state, that its buttons send in a transaction with animations off and that the slider sends each value of a drag and ends the run at its end are read in the diff and held by no test here.
 
 ### UI tests of the framing row
 
@@ -805,11 +806,24 @@ Screenshots: `add-music-01-with-music` (the part with the title, the times and b
 - No music, on `two-clips-wide`: after a tap on `editor.sound` and on `sound.tab.levels` the part shows `sound.noMusic` reading "No music yet", and there is no `sound.levelsLabel` and no slider in the region. `editor.soundInfo` reads `100 . none`.
 - Arabic, on `music-wide`: the label reads "00:00-00:07 / 00:10" as given and stands right of the middle of the volume slider, while `editor.play` is left of `editor.time` and `editor.clip.1` left of `editor.clip.2`.
 
-That the volume runs from 0 to 1 in steps of 0.05, the start from 0 to `Music.largestStart` in steps of `SoundGeometry.startStep` and the fades from 0 to `SoundGeometry.maximumFade` in steps of 300, that the start slider shows only while `canSetMusicStart` is true, and that each slider sends once when a drag ends are read in the diff. No seed has music without a start to set, so the part with no start slider is held by the Linux test of `canSetMusicStart` and the review.
+That the volume runs from 0 to 1 in steps of 0.05, the start from 0 to `Music.largestStart` in steps of `SoundGeometry.startStep` and the fades from 0 to `SoundGeometry.maximumFade` in steps of 300, that the start slider shows only while `canSetMusicStart` is true, that the start sends once when a drag ends and that the volume and the fades send each value of a drag and end the run at its end are read in the diff. No seed has music without a start to set, so the part with no start slider is held by the Linux test of `canSetMusicStart` and the review.
 
 Screenshots: `music-levels-01-levels` (the part `levels` under the part row: the label of the times above the four sliders, each with its word), `music-levels-01-levels-ar` (the same in Arabic, mirrored, with the times read from left to right: the Arabic words of the keys are read on it), `music-levels-02-changed` (the four sliders after the moves, the times of the later start, the blue clip in the picture), `music-levels-03-no-music` (the words of no music on `two-clips-wide`). No mark: nothing here is found in the recording by a name.
 
 `Tests/ReelsmithCoreTests/MusicLevelsWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `music-levels` of the English, the Arabic or the Swedish file holds anything but the five keys `music.volume`, `music.start`, `music.fadeIn`, `music.fadeOut` and `music.none` in that order or a line with an empty text, and when their English texts are not "Music volume", "Starts at", "Fade in", "Fade out" and "No music yet".
+
+### UI tests of levels that follow the finger
+
+`UITests/FollowFingerTests.swift` holds the level sliders that send each value of a drag in seven tests, each with `-drafts fresh` at its first launch, so the drag is the only step of undo. A drag is one `press(forDuration: 0.1, thenDragTo:withVelocity:thenHoldForDuration:)` from the thumb, placed from the value and half a thumb of 14 points, to 30 points past one end at 400 points a second, which lasts about two seconds on the runner, printed. In the tests while playing the places of the drag are read from the slider before the tap on `editor.play`, so the drag and the reads after it fit the 7 seconds of `music-wide`, and the second read prints its seconds after the tap. The sound of the project is read from `editor.soundInfo` by the place of a field: field 1 the volume of the clips times 100, field 4 the volume of the music times 100, field 5 the fade in in ticks. A clip is read by the value of its block. After a tap or a drag the test reads until the effect holds, expected within 1 second and failing only above 3, and each wait prints a line that starts with `follow: waited`. No test listens.
+
+- While playing, on `music-wide` with `-playhead 0`: `sound.tab.clips` tapped, then `editor.play`, and once the time is past "00:00" one drag of `sound.clipVolume` to its lowest end, the right end in Arabic. Then the time is read twice a second apart and is later the second time, `editor.play` keeps its label of pause, the count of builds in the value of `editor.picture` is the one of before the drag, and `editor.soundInfo` begins "0 .". One tap on `editor.undo`: it begins "100 ." and `editor.undo` is disabled. The same drag in Arabic and in Swedish.
+- Kept: after the same drag the app ended, `-drafts kept`, `drafts.row.1` opened: `editor.soundInfo` begins "0 .".
+- Red, on `two-clips-wide` with `-playhead 2400`: red tapped, one drag of `clip.volume` from its middle to its lowest: `editor.clip.2` ends " 0 v". One undo: " 100 v", and `editor.undo` is disabled.
+- The music, on `music-wide` after a tap on `sound.tab.levels`: one drag of `sound.musicVolume` to its lowest makes field 4 read 0, and one undo 100. The fade in begins at 0, its lowest, so one drag of `sound.fadeIn` to its highest makes field 5 read 3000, and one undo 0. After each undo `editor.undo` is disabled.
+
+That a level moves under the finger during the drag, at least three values of field 1 while the finger is down and the time moving on, is read by the QA pass in the recording from the mark, and heard on the phone. That the player is never reset at a drag is read in the simulator log of the run, which holds no `AudioProcessingTapChanged`.
+
+Screenshots: `follow-01-dragged` (the part `clips` after the drag, the slider at its lowest and the video playing), `follow-01-dragged-ar` and `follow-01-dragged-sv` (the same in Arabic, mirrored, and in Swedish). Mark: `follow-01-drag`, set right before the drag of each start while playing.
 
 ### UI tests of music from a video
 
