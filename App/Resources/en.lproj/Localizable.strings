@@ -173,3 +173,12 @@
 
 /* slot: clip-path */
 /* end slot: clip-path */
+
+/* slot: framing */
+/* end slot: framing */
+
+/* slot: guide */
+/* end slot: guide */
+
+/* slot: fold-frames */
+/* end slot: fold-frames */

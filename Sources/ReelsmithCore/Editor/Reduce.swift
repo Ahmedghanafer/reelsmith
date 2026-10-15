@@ -46,6 +46,8 @@ private func step(_ state: EditorState, _ action: EditorAction) -> EditorState {
         return reduceText(state, textAction)
     case .sound(let soundAction):
         return reduceSound(state, soundAction)
+    case .frame(let frameAction):
+        return reduceFrame(state, frameAction)
     }
     return next
 }

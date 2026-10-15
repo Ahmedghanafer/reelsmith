@@ -28,10 +28,13 @@ public struct Segment: Equatable, Sendable {
     public var isStill: Bool
     /// The clip's own volume as stored. What is heard of the segment is sound.clipVolume times it.
     public var volume: Double
+    /// Pixels of the plan's picture: the fill at zoom 1, centred, under the picture, when the backdrop is blurred
+    /// and the picture leaves part of the canvas bare. Nil otherwise (rule 84).
+    public var backdrop: Placement?
 
     public init(
         clip: ClipID, media: MediaID, sourceStart: Time, timelineStart: Time, duration: Time, placement: Placement,
-        hasSound: Bool, isStill: Bool = false, volume: Double = 1
+        hasSound: Bool, isStill: Bool = false, volume: Double = 1, backdrop: Placement? = nil
     ) {
         self.clip = clip
         self.media = media
@@ -42,6 +45,7 @@ public struct Segment: Equatable, Sendable {
         self.hasSound = hasSound
         self.isStill = isStill
         self.volume = volume
+        self.backdrop = backdrop
     }
 }
 
@@ -182,21 +186,29 @@ public func renderPlan(for project: Project, settings: ExportSettings) throws ->
         let turned = info.quarterTurns % 2 != 0
         let uprightWidth = Double(turned ? info.height : info.width)
         let uprightHeight = Double(turned ? info.width : info.height)
-        // The side that limits the fit takes the plan's width or height itself, so it is exact.
-        var width = pictureWidth
-        var height = pictureHeight
-        if uprightWidth * pictureHeight > uprightHeight * pictureWidth {
-            height = uprightHeight * pictureWidth / uprightWidth
-        } else {
-            width = uprightWidth * pictureHeight / uprightHeight
-        }
+        // Rule 84: the fit or fill size times the zoom, at the held offset. The edges are held again in pixels of
+        // the picture. At the standard framing this is the centred fit of before, to the bit.
+        let framing = clip.framing.held(
+            uprightWidth: uprightWidth, uprightHeight: uprightHeight, canvas: project.canvas)
+        let size = framing.size(
+            uprightWidth: uprightWidth, uprightHeight: uprightHeight, width: pictureWidth, height: pictureHeight)
         let placement = Placement(
-            quarterTurns: info.quarterTurns, x: (pictureWidth - width) / 2, y: (pictureHeight - height) / 2,
-            width: width, height: height)
+            quarterTurns: info.quarterTurns, x: nearEdge(framing.x, picture: size.width, canvas: pictureWidth),
+            y: nearEdge(framing.y, picture: size.height, canvas: pictureHeight), width: size.width,
+            height: size.height)
+        // A blurred backdrop is the fill at zoom 1, centred, while the picture leaves part of the canvas bare.
+        var backdrop: Placement?
+        if framing.backdrop == .blurred && (size.width < pictureWidth || size.height < pictureHeight) {
+            let fill = Framing(fit: .fill).size(
+                uprightWidth: uprightWidth, uprightHeight: uprightHeight, width: pictureWidth, height: pictureHeight)
+            backdrop = Placement(
+                quarterTurns: info.quarterTurns, x: (pictureWidth - fill.width) / 2,
+                y: (pictureHeight - fill.height) / 2, width: fill.width, height: fill.height)
+        }
         segments.append(Segment(
             clip: clip.id, media: clip.media, sourceStart: clip.sourceStart, timelineStart: start,
             duration: clip.duration, placement: placement, hasSound: info.hasSound, isStill: info.kind == .photo,
-            volume: clip.volume))
+            volume: clip.volume, backdrop: backdrop))
         start = start + clip.duration
     }
     var texts: [TextLayer] = []
