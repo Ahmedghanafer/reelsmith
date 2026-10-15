@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 481 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 666 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 214 UI tests in thirty-seven classes.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 488 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 677 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 218 UI tests in thirty-eight classes.
 
 What comes back from the simulator run:
 
@@ -395,6 +395,16 @@ Screenshots: `clip-gain-01-highest` (red at 200 in the clip panel), `clip-gain-0
 - `two-clips` gives 202 or 203 by 360, a blue middle and black in the middle of its width 10 rows from the top. `text-box-wide` with its text for the whole video gives a middle that differs from blue by more than 24: the box or a letter.
 - `empty` throws `nothingToExport`, a media folder without the clips throws `sourceMissing` of `blue`, and a file in a folder that is not there throws `cannotWrite`. In each case no file is at the place asked.
 - E16: one test prints the seconds of the first and of the second cover, in a line that starts with `cover: two-clips-wide`, and fails only above 30 seconds.
+
+### Tests of block frames
+
+- `Tests/ReelsmithCoreTests/BlockFramesTests.swift`, 7 Linux tests of `BlockFrames`: blue is made at 0, 600 and 1200, the photo at 0 alone and a video of 30 seconds 30 times, from 0 to 17400. A width of 180 holds 4 tiles of 56, 240 holds 5, 112 holds 2 and 0 none. At 60 points a second, of a clip from source 600 of the video of 30 seconds, tile 2 shows 1800 (600 plus 1120 is 1720), tile 1 shows 1200 (600 plus 560 is 1160) and tile 0 shows 600. Tile 4 of a clip of blue from 600 shows 1200, its last made time, tile 40 of the long video 17400, and every tile of the photo 0.
+- `Tests/ReelsmithEngineTests/BlockFramesMakerTests.swift` runs on the hosted Mac with the other Engine tests, 4 tests, inside `#if canImport(AVFoundation)`, in a folder of its own, `reelsmith-block-frames` under the temporary folder, where it writes blue, turned, a green clip of 1920 by 1080 and 30 seconds with no sound, and the test photo with its still movie. A share is the part of the pixels of rows of a frame within 24 per channel of a colour.
+- E24: one test makes the frames of blue, of the photo and of the clip of 30 seconds, and prints one line for each that starts with `E24:`, with the count of frames, the seconds, the bytes of the images and their sizes. It asserts only that the frames are made at the times of `BlockFrames.times(of:)`. Speed is not judged on a runner.
+- Blue gives 3 frames, each above 0.9 blue and at most 168 on its long side. The photo gives one frame at zero, above 0.9 magenta. Turned gives 2 frames, each upright (taller than wide, at most 168 high), above 0.9 white in its top 40 percent and above 0.9 blue in its bottom 40 percent.
+- `UITests/BlockFramesTests.swift`, 4 UI tests on `two-clips-wide` with `-drafts fresh`. Each wait prints a line that starts with `frames: waited`, and the frames of the blocks are expected within a third of 10 seconds and fail only above 10. At 1800 ticks `editor.frames.1` reads "4 4 2" and `editor.frames.2` "5 5 2", the blue share of `editor.clip.1` and the red share of `editor.clip.2` (the probe) are above 0.5, and the blocks read "blue 0+1800 100 v" and "red 0+2400 100 v". In Arabic and in Swedish the same values, and the blocks and their tiles run blue then red from the left, touching. After a pinch with scale 2, once `editor.clip.1` is wider than 270, `editor.frames.1` reads its width over 56 rounded up as tiles and as drawn, and made 2. After `editor.addClips` and the cell 1 of the picker, blue copied in again, `editor.frames.3` reads drawn equal to tiles and made 3.
+
+Screenshots: `frames-01-strip`, `frames-01-strip-ar`, `frames-01-strip-sv`, `frames-02-pinched`, `frames-03-added`. Marks: `frames-01-strip`, `frames-02-pinch`.
 
 ### The player time
 
