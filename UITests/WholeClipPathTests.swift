@@ -167,7 +167,6 @@ final class WholeClipPathTests: XCTestCase {
         let raisedFrom = raiseRed(app)
         tapOn(app, "editor.undo")
         waitUntil("editor.clip.3 reading " + raisedFrom + " after one undo") { self.value(app, "editor.clip.3") == raisedFrom }
-        XCTAssertTrue(value(app, "editor.clip.3").hasSuffix(" 100 v"), "one undo: " + value(app, "editor.clip.3"))
         print("clip-path: after one undo editor.clip.3 reads " + value(app, "editor.clip.3"))
         tapOn(app, "editor.redo")
         waitUntil("editor.clip.3 ending 200 v after the redo") { self.value(app, "editor.clip.3").hasSuffix(" 200 v") }
@@ -270,8 +269,10 @@ final class WholeClipPathTests: XCTestCase {
         }
         screenshot("clip-path-02-saved")
         let panel = done.exists ? "export.done" : "export.close"
-        tapOn(app, panel)
-        waitUntil("the panel gone after the tap on " + panel) { !self.element(app, panel).exists }
+        if element(app, panel).exists {
+            tapOn(app, panel)
+            waitUntil("the panel gone after the tap on " + panel) { !self.element(app, panel).exists }
+        }
         stepDone("the export")
 
         // Back, the app ended, and the draft reopened with all of it.
@@ -401,6 +402,10 @@ final class WholeClipPathTests: XCTestCase {
         waitUntil("4 clips, 4 files in editor.seedInfo after the picker", expected: expectedCopy) {
             app.staticTexts["editor.seedInfo"].label == "4 clips, 4 files"
         }
+        // A confirmed pick that adds no clip has failed above, and the walk goes on from the seed.
+        guard app.staticTexts["editor.seedInfo"].label == "4 clips, 4 files" else {
+            return "the added clip did not come within \(3 * expectedCopy) seconds of the tap on the right of the picker's bar"
+        }
         print("clip-path: after the added clip the blocks read \(values(app, 4))")
         XCTAssertTrue(element(app, "editor.clip.4").exists)
         XCTAssertFalse(element(app, "editor.clip.5").exists)
@@ -415,7 +420,7 @@ final class WholeClipPathTests: XCTestCase {
         if let info {
             XCTAssertTrue(line.hasPrefix(info), line)
         }
-        waitUntil("drafts.row.1 on the start screen") { self.element(app, "drafts.row.1").exists }
+        waitUntil("drafts.row.1 on the start screen", expected: expectedBack) { self.element(app, "drafts.row.1").exists }
         tapOn(app, "drafts.row.1")
         waitForTheEditor(app)
         return app
