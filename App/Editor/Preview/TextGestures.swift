@@ -177,7 +177,8 @@ private struct TextDrag: UIGestureRecognizerRepresentable {
     }
 }
 
-/// With no text it zooms the clip framed by hand: the zoom at the start times the scale of the pinch.
+/// With no text it zooms the clip framed by hand: the zoom at the start times the scale of the pinch, with
+/// the offset at the start.
 ///
 /// https://developer.apple.com/documentation/uikit/uipinchgesturerecognizer
 /// https://developer.apple.com/documentation/uikit/uipinchgesturerecognizer/scale
@@ -202,9 +203,11 @@ private struct TextPinch: UIGestureRecognizerRepresentable {
         guard let clip = context.coordinator.clip(for: recognizer, in: store) else {
             return
         }
-        // A cancel sends no value.
+        // A cancel sends no value. Core holds the offset again at each zoom, so the offset of the start is sent
+        // after it: a pinch that zooms out and back in within one gesture ends on the offset it began with.
         if recognizer.state != .cancelled, recognizer.state != .failed {
             store.sendDragStep(.frame(.setZoom(clip.id, clip.framing.zoom * Double(recognizer.scale))))
+            store.sendDragStep(.frame(.setOffset(clip.id, x: clip.framing.x, y: clip.framing.y)))
         }
         if ends(recognizer) {
             store.endDrag()
