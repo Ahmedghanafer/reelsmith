@@ -93,22 +93,25 @@ final class TimelineStripView: UIView {
     let frames = FramesCache()
     /// The tiles of each block, beside its label in its container, in the order of `blocks`.
     private var tiles: [FrameTiles] = []
+    /// The container of each block, in the order of `blocks`. Held here, since a view does not hold its superview.
+    private var containers: [UIView] = []
 
     override func layoutSubviews() {
         super.layoutSubviews()
         let clips: [Clip] = state.project.clips
         // Each block is a container in `strip` that holds its tiles and, on top, its label. The container lets its
         // touches through to `strip`. A new container goes into `strip` only once it and its label have their frames
-        // and identifiers, below, so the label is never taken in as a hidden element of an empty container. The
-        // container does not clip, so nothing of it can hide the label: the tiles clip themselves.
+        // and identifiers, below, so it never joins the strip empty and of no size.
         while blocks.count > clips.count {
-            blocks.removeLast().superview?.removeFromSuperview()
+            blocks.removeLast()
             tiles.removeLast()
+            containers.removeLast().removeFromSuperview()
         }
         while blocks.count < clips.count {
             let container = UIView()
             container.semanticContentAttribute = .forceLeftToRight
             container.isUserInteractionEnabled = false
+            container.clipsToBounds = true
             container.backgroundColor = UIColor.systemGray
             let tile = FrameTiles()
             container.addSubview(tile)
@@ -124,6 +127,7 @@ final class TimelineStripView: UIView {
             container.addSubview(block)
             blocks.append(block)
             tiles.append(tile)
+            containers.append(container)
         }
 
         let middle = bounds.width / 2
@@ -134,12 +138,15 @@ final class TimelineStripView: UIView {
             height: Self.clipRow.height
         )
         let side = Self.clipRow.height
-        for ((clip, block), tile) in zip(zip(clips, blocks), tiles) {
+        for (place, clip) in clips.enumerated() {
+            let block = blocks[place]
+            let tile = tiles[place]
+            let container = containers[place]
             let start: Time = state.project.start(of: clip.id) ?? Time.zero
             let position: Int = state.project.position(of: clip.id) ?? 0
             let selected = clip.id == state.selection
             let width = CGFloat(scale.width(of: clip.duration))
-            block.superview?.frame = CGRect(x: CGFloat(scale.x(of: start)), y: 0, width: width, height: side)
+            container.frame = CGRect(x: CGFloat(scale.x(of: start)), y: 0, width: width, height: side)
             block.frame = CGRect(x: 0, y: 0, width: width, height: side)
             tile.frame = block.frame
             var images: [CGImage?] = []
@@ -158,7 +165,7 @@ final class TimelineStripView: UIView {
             block.accessibilityTraits = selected ? [.staticText, .selected] : .staticText
             block.layer.borderWidth = selected ? 3 : 1
             block.layer.borderColor = (selected ? UIColor.systemYellow : UIColor.systemBackground).cgColor
-            if let container = block.superview, container.superview == nil {
+            if container.superview == nil {
                 strip.addSubview(container)
             }
         }
