@@ -175,6 +175,10 @@
 /* end slot: clip-path */
 
 /* slot: framing */
+"clip.fit" = "ملاءمة";
+"clip.fill" = "ملء";
+"clip.blur" = "تمويه";
+"clip.applyAll" = "كل المقاطع";
 /* end slot: framing */
 
 /* slot: guide */

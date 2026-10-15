@@ -175,6 +175,10 @@
 /* end slot: clip-path */
 
 /* slot: framing */
+"clip.fit" = "Anpassa";
+"clip.fill" = "Fyll";
+"clip.blur" = "Oskärpa";
+"clip.applyAll" = "Alla klipp";
 /* end slot: framing */
 
 /* slot: guide */

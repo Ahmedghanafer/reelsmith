@@ -175,6 +175,10 @@
 /* end slot: clip-path */
 
 /* slot: framing */
+"clip.fit" = "Fit";
+"clip.fill" = "Fill";
+"clip.blur" = "Blur";
+"clip.applyAll" = "All clips";
 /* end slot: framing */
 
 /* slot: guide */

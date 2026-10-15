@@ -2,7 +2,7 @@ import ReelsmithCore
 import SwiftUI
 
 /// The clip panel of the selected clip: one row with Delete before and Delete after the playhead, then, only while
-/// the clip's media has sound, the slider of the clip's volume. It decides nothing and holds no state: Core says
+/// the clip's media has sound, the slider of the clip's volume, then the framing row. It holds no state: Core says
 /// whether a button is enabled and whether the slider shows, a tap sends one action, and the slider sends
 /// `setVolumeOfClip` once, when its drag ends. It lays out from leading to trailing, so Arabic mirrors it.
 ///
@@ -37,6 +37,44 @@ struct ClipPanel: View {
                 // Made anew for each clip, so a drag begun on one clip is never sent to the next one selected.
                 // https://developer.apple.com/documentation/swiftui/view/id(_:)
                 .id(clip.id)
+            }
+            if let framed: Clip = state.project.clips.first(where: { $0.id == state.selection }) {
+                // A container, so each control keeps its own identifier. The picked fit and the blurred
+                // backdrop are bold and have the trait selected.
+                // https://developer.apple.com/documentation/swiftui/view/accessibilityelement(children:)
+                // https://developer.apple.com/documentation/swiftui/view/accessibilityaddtraits(_:)
+                // https://developer.apple.com/documentation/swiftui/view/fontweight(_:)
+                // https://developer.apple.com/documentation/swiftui/text/init(verbatim:)
+                HStack(spacing: 12) {
+                    Button("clip.fit") { sendStill(.frame(.setFit(framed.id, .fit))) }
+                        .fontWeight(framed.framing.fit == .fit ? Font.Weight.bold : Font.Weight.regular)
+                        .accessibilityIdentifier("clip.fit")
+                        .accessibilityAddTraits(framed.framing.fit == .fit ? .isSelected : [])
+                    Button("clip.fill") { sendStill(.frame(.setFit(framed.id, .fill))) }
+                        .fontWeight(framed.framing.fit == .fill ? Font.Weight.bold : Font.Weight.regular)
+                        .accessibilityIdentifier("clip.fill")
+                        .accessibilityAddTraits(framed.framing.fit == .fill ? .isSelected : [])
+                    Button("clip.blur") {
+                        // Read at the tap, so a second tap before the next render still turns the backdrop back.
+                        let now = store.state.project.clips.first(where: { $0.id == framed.id })?.framing.backdrop
+                        sendStill(.frame(.setBackdrop(framed.id, now == .blurred ? .black : .blurred)))
+                    }
+                    .fontWeight(framed.framing.backdrop == .blurred ? Font.Weight.bold : Font.Weight.regular)
+                    .accessibilityIdentifier("clip.blur")
+                    .accessibilityAddTraits(framed.framing.backdrop == .blurred ? .isSelected : [])
+                    Button("clip.applyAll") { sendStill(.frame(.applyToAll(framed.id))) }
+                        .accessibilityIdentifier("clip.applyAll")
+                    // slot: guide
+                    // end slot: guide
+                }
+                .frame(minHeight: 44)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("clip.framing")
+            }
+            if store.options.showsInfo {
+                Text(verbatim: state.frameInfo)
+                    .font(.footnote)
+                    .accessibilityIdentifier("clip.frameInfo")
             }
         }
         .padding(.horizontal, 16)

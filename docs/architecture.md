@@ -556,6 +556,15 @@ The region of the selected clip, with the two cuts at the playhead and the volum
 - `App/Editor/Clip/ClipPanel.swift`: `ClipPanel`, with `let store: EditorStore`. It holds no state. One row from leading to trailing, so Arabic mirrors it while the strip does not: the button `clip.cutBefore` with the key of the same name, enabled by `canCutBefore`, which sends `cutBefore`, and the button `clip.cutAfter`, enabled by `canCutAfter`, which sends `cutAfter`. Each sends inside a transaction that has `disablesAnimations` set. Under the row, only while `showsClipVolume` is true, so never for a photo, stands the merged `SoundSlider` of "The sound of the clips" with the identifier and the key `clip.volume`, the volume of the selected clip from 0 to 2 in steps of 0.05, which sends `sound(.setVolumeOfClip(id, value))` once, when the drag ends. The slider is made anew for each clip, so a drag begun on one clip is never sent to another. A level plays on, as "Levels while playing" says.
 - Its three word keys stand in the group `clip-panel` of the three word files: `clip.cutBefore`, `clip.cutAfter` and `clip.volume`.
 
+### The framing row
+
+The row of the clip panel where she sets how the selected clip stands on the canvas, under "Framing in the model and the plan". It decides nothing: Core holds and stores each framing, and the picture follows by the preview, as "Framing in the picture" says.
+
+- `App/Editor/Clip/ClipPanel.swift`, under the slider of the volume, so for a photo too: the row `clip.framing`, an accessibility container so each control keeps its identifier, from leading to trailing, so Arabic mirrors it. The button `clip.fit` sends `frame(.setFit(id, .fit))` and `clip.fill` sends `frame(.setFit(id, .fill))` for the selected clip: the picked one is bold and has the trait selected, the other not. The button `clip.blur` is a toggle of the backdrop: it sends `frame(.setBackdrop(id, .blurred))` while the backdrop is black and `frame(.setBackdrop(id, .black))` while it is blurred, and is bold with the trait selected while blurred. The button `clip.applyAll` sends `frame(.applyToAll(id))`, so every clip takes the selected clip's fit and backdrop and keeps its own zoom and offset, one step of undo. Each sends one action inside a transaction that has `disablesAnimations` set. The row ends with the empty slot `guide` and is laid out for five controls, the four and a symbol of 44 points.
+- Under the row, only while `store.options.showsInfo` holds, the text `clip.frameInfo` shows `state.frameInfo` as it is, as the info lines of the editor do.
+- A change of framing alone refreshes the standing item of the player and builds nothing, since `sameFootage` leaves the framing out. Each is one step of undo and is written to the draft.
+- Its four word keys stand in the group `framing` of the three word files: `clip.fit`, `clip.fill`, `clip.blur` and `clip.applyAll`.
+
 ### Adding music
 
 The part `music` of the sound panel, where she adds, replaces and removes the music from a file she picks in the system's file browser.
