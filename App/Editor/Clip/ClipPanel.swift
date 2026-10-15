@@ -55,7 +55,9 @@ struct ClipPanel: View {
                         .accessibilityIdentifier("clip.fill")
                         .accessibilityAddTraits(framed.framing.fit == .fill ? .isSelected : [])
                     Button("clip.blur") {
-                        sendStill(.frame(.setBackdrop(framed.id, framed.framing.backdrop == .black ? .blurred : .black)))
+                        // Read at the tap, so a second tap before the next render still turns the backdrop back.
+                        let now = store.state.project.clips.first(where: { $0.id == framed.id })?.framing.backdrop
+                        sendStill(.frame(.setBackdrop(framed.id, now == .blurred ? .black : .blurred)))
                     }
                     .fontWeight(framed.framing.backdrop == .blurred ? Font.Weight.bold : Font.Weight.regular)
                     .accessibilityIdentifier("clip.blur")
