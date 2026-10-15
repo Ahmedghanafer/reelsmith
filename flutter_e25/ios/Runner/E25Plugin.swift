@@ -219,10 +219,22 @@ final class E25Plugin: NSObject, FlutterPlugin, FlutterTexture, FlutterStreamHan
                     self.textures.textureFrameAvailable(self.textureId)
                 }
                 let after = self.latest.map { Self.mean(of: $0, centre: true) }
-                result([
-                    "beforeLuma": before?.luma ?? -1, "afterLuma": after?.luma ?? -1,
-                    "framesBetween": self.frames - framesBefore, "ms": (CACurrentMediaTime() - start) * 1000,
-                ])
+                let framesSame = self.frames - framesBefore
+                // Second way: one tick back, then the exact time again, so the frame is decoded anew.
+                let back = CMTimeSubtract(now, CMTime(value: 1, timescale: 600))
+                self.player.seek(to: back, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+                    self.player.seek(to: now, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            let nudged = self.latest.map { Self.mean(of: $0, centre: true) }
+                            result([
+                                "beforeLuma": before?.luma ?? -1, "afterLuma": after?.luma ?? -1,
+                                "framesBetween": framesSame, "nudgedLuma": nudged?.luma ?? -1,
+                                "nudgedFrames": self.frames - framesBefore - framesSame,
+                                "ms": (CACurrentMediaTime() - start) * 1000,
+                            ])
+                        }
+                    }
+                }
             }
         }
     }

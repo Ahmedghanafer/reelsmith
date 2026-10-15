@@ -152,7 +152,7 @@ class _E25ScreenState extends State<E25Screen> {
     try {
       final r = Map<String, dynamic>.from(await engine.invokeMethod('refresh') as Map);
       e25.refreshed =
-          'refresh luma ${(r['beforeLuma'] as num).round()} to ${(r['afterLuma'] as num).round()} frames ${r['framesBetween']} in ${(r['ms'] as num).round()} ms';
+          'refresh luma ${(r['beforeLuma'] as num).round()} to ${(r['afterLuma'] as num).round()} frames ${r['framesBetween']}, nudged luma ${(r['nudgedLuma'] as num).round()} frames ${r['nudgedFrames']} in ${(r['ms'] as num).round()} ms';
     } catch (e) {
       e25.refreshed = 'refresh failed $e';
     }

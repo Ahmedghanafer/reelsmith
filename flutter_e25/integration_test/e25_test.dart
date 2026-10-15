@@ -28,7 +28,9 @@ void main() {
   Future<void> shot(String name) async {
     try {
       final bytes = await binding.takeScreenshot(name).timeout(const Duration(seconds: 20));
-      final folder = Directory('${Directory.systemTemp.path}/e25shots')..createSync(recursive: true);
+      // The simulator shares the host's disk, so the run's own folder is written straight.
+      const out = String.fromEnvironment('E25_OUT');
+      final folder = Directory(out.isEmpty ? '${Directory.systemTemp.path}/e25shots' : out)..createSync(recursive: true);
       File('${folder.path}/$name.png').writeAsBytesSync(bytes);
       say('screenshot $name ${bytes.length} bytes in ${folder.path}');
     } catch (e) {

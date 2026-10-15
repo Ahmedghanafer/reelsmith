@@ -88,12 +88,12 @@ jobs:
             while true; do
               n=$((n + 1))
               xcrun simctl io "$SIMULATOR" screenshot "$out/loop-$(printf %03d $n).png" > /dev/null 2>&1 || true
-              sleep 10
+              sleep 3
             done
           ) &
           looper=$!
           set +e
-          flutter test integration_test -d "$SIMULATOR" --reporter expanded 2>&1 | tee "$out/integration.txt"
+          flutter test integration_test -d "$SIMULATOR" --reporter expanded --dart-define=E25_OUT="$out" 2>&1 | tee "$out/integration.txt"
           status=${PIPESTATUS[0]}
           set -e
           kill "$looper" || true
@@ -117,6 +117,8 @@ jobs:
         run: |
           trap 'echo "xcuitest: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           out="$RUNNER_TEMP/e25"
+          # The integration test points the generated settings at its own entry, the app's entry is put back.
+          (cd .. && flutter build ios --simulator --debug --config-only)
           xcodebuild build-for-testing -workspace Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" \
             -derivedDataPath "$RUNNER_TEMP/ui" > "$out/ui-build.txt" 2>&1 || { tail -80 "$out/ui-build.txt"; exit 1; }
           echo "xcuitest build-for-testing: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"
