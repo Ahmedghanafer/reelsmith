@@ -168,6 +168,7 @@
 /* end slot: clip-panel */
 
 /* slot: music-row */
+"musicRow.bar" = "Musik %1$@";
 /* end slot: music-row */
 
 /* slot: clip-path */
