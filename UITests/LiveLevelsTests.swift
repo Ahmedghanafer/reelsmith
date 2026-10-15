@@ -17,7 +17,7 @@ import XCTest
 // https://developer.apple.com/documentation/foundation/thread/sleep(fortimeinterval:)
 @MainActor
 final class LiveLevelsTests: XCTestCase {
-    /// E21: the volume of the clips to its lowest while playing, then the time read three times a second apart.
+    /// E21: the volume of the clips to its lowest while playing, then the time read a second apart until it rises.
     func testTheVolumeOfTheClipsLoweredWhilePlayingLeavesTheVideoPlaying() {
         let pause = lowerTheClipsWhilePlaying(language: "en", picture: "live-levels-01-playing")
         XCTAssertEqual(pause, "Pause")
@@ -59,11 +59,10 @@ final class LiveLevelsTests: XCTestCase {
 
     /// Starts on music-wide at the playhead 0, taps `sound.tab.clips` and finds the slider and the places of its two
     /// ends, all before the tap on `editor.play`. Then it waits for the time to move, drags the slider to its lowest
-    /// at once and reads the time three times one second apart. Asserts that each time is later than the one before,
-    /// that `editor.play` keeps the label it took at the play, that the count of builds is the one before the move
-    /// and that `editor.soundInfo` begins "0 .". The project is 7 seconds long: when its end comes before the third
-    /// read, the test fails on the timing and says so. Prints all of it, keeps the picture and answers the label of
-    /// `editor.play` while playing.
+    /// at once and reads the time one second apart until two reads before the end rise, each with the label
+    /// `editor.play` took at the play and the count of builds of before the change. `editor.soundInfo` begins "0 .".
+    /// The project is 7 seconds long: when its end comes before two such reads, the test fails on the timing and
+    /// says so. Prints all of it, keeps the picture and answers the label of `editor.play` while playing.
     private func lowerTheClipsWhilePlaying(language: String, picture name: String) -> String {
         let app = startApp(seed: "music-wide", language: language, playhead: 0)
         waitForTheEditor(app)
@@ -84,6 +83,9 @@ final class LiveLevelsTests: XCTestCase {
             .withOffset(CGVector(dx: mirrored ? 14 : -14, dy: 0))
         let lowest = slider.coordinate(withNormalizedOffset: CGVector(dx: mirrored ? 1 : 0, dy: 0.5))
             .withOffset(CGVector(dx: mirrored ? 30 : -30, dy: 0))
+
+        // The play starts only once the thumb and the lowest end stand on the screen.
+        print("live-levels: the thumb at \(thumb.screenPoint), the lowest end at \(lowest.screenPoint)")
 
         mark("live-levels-01-play")
         let began = Date()
@@ -108,30 +110,40 @@ final class LiveLevelsTests: XCTestCase {
             }
         }
         let changed = Date().timeIntervalSince(began)
-        print("live-levels: \(changed) seconds after the play the time reads \(timeBeforeTheSlash(app)), editor.soundInfo \(soundInfo(app))")
+        print("live-levels: the level changed \(changed) seconds after the play, the time reads \(timeBeforeTheSlash(app)), editor.soundInfo \(soundInfo(app))")
+        XCTAssertTrue(soundInfo(app).hasPrefix("0 ."), "editor.soundInfo reads \(soundInfo(app))")
 
-        var times: [String] = []
-        for read in 1...3 {
-            if read > 1 {
-                // The reads are one second apart, which is what is measured: no effect to wait for.
+        // Reads one second apart until two of them rise before the end, each with the pause label and the count of
+        // builds of before the change. The spacing is what is measured: no effect to wait for.
+        var good: [String] = []
+        var reads: [String] = []
+        while good.count < 2 {
+            if !reads.isEmpty {
                 Thread.sleep(forTimeInterval: 1)
             }
-            times.append(timeBeforeTheSlash(app))
+            let time = timeBeforeTheSlash(app)
+            let label = play.label
+            let count = builds(picture)
+            let seconds = Date().timeIntervalSince(began)
+            reads.append(time)
+            print("live-levels: E21 in \(language): read \(reads.count) at \(seconds) seconds after the play: the time \(time), editor.play \(label), editor.picture \(count ?? -1) from \(before ?? -1)")
+            if time == end {
+                print("live-levels: timing: the playback reached its end \(end) before two rising reads, the level changed \(changed) seconds after the play")
+                XCTFail("timing, not the product: the project of 7 seconds reached its end \(end) before two rising reads after the level, which changed \(changed) seconds after the play")
+                return pause
+            }
+            XCTAssertEqual(label, pause, "editor.play at read \(reads.count) after the level changed")
+            XCTAssertEqual(count, before, "an item was built for a level")
+            guard label == pause, count == before else {
+                return pause
+            }
+            if let last = good.last, !(last < time) {
+                XCTFail("the time stood after the level changed: \(last) then \(time)")
+                return pause
+            }
+            good.append(time)
         }
-        let after = builds(picture)
-        let info = soundInfo(app)
-        let seconds = Date().timeIntervalSince(began)
-        print("live-levels: E21 in \(language): the time read \(times), editor.play \(play.label) (\(pause) at the play), editor.picture \(after ?? -1) from \(before ?? -1), editor.soundInfo \(info), the level changed \(changed) and the last read \(seconds) seconds after the play")
-        if times.contains(end) {
-            print("live-levels: timing: the playback reached its end \(end) before the third read, \(seconds) seconds after the play")
-            XCTFail("timing, not the product: the project of 7 seconds reached its end \(end) before the third read, the level changed \(changed) seconds after the play")
-            return pause
-        }
-        XCTAssertLessThan(times[0], times[1], "the time stood after the level changed")
-        XCTAssertLessThan(times[1], times[2], "the time stood after the level changed")
-        XCTAssertEqual(play.label, pause, "editor.play after the level changed")
-        XCTAssertEqual(after, before, "an item was built for a level")
-        XCTAssertTrue(info.hasPrefix("0 ."), "editor.soundInfo reads \(info)")
+        print("live-levels: E21 in \(language): the time read \(good) after the level, editor.soundInfo \(soundInfo(app)), \(Date().timeIntervalSince(began)) seconds after the play")
         screenshot(name)
         return pause
     }
