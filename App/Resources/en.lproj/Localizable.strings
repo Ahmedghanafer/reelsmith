@@ -185,4 +185,5 @@
 /* end slot: guide */
 
 /* slot: fold-frames */
+"tools.frames" = "Frames";
 /* end slot: fold-frames */

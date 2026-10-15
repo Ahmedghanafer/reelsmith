@@ -9,14 +9,6 @@ import UIKit
 /// https://developer.apple.com/documentation/swift/mainactor
 @MainActor
 enum MusicBar {
-    /// The row of music: 24 points high from y 100.
-    static let row: (y: CGFloat, height: CGFloat) = (y: 100, height: 24)
-
-    /// The height the slot `timeline` gives the strip: 128 without a selected text, 104 with one.
-    static func stripHeight(for state: EditorState) -> CGFloat {
-        state.selectedText == nil ? 128 : 104
-    }
-
     /// Called on every layout of the strip view, in the slot `music-row`. The bar is made once, below the
     /// playhead line, and hidden with no heard music or a selected text.
     static func layout(in view: TimelineStripView, below playhead: UIView) {
@@ -36,6 +28,7 @@ enum MusicBar {
             return
         }
         bar.isHidden = false
+        let row = (y: CGFloat(view.rows.musicY), height: CGFloat(view.rows.rowHeight))
         bar.frame = CGRect(
             x: view.strip.frame.minX + CGFloat(view.scale.x(of: Time.zero)),
             y: row.y,

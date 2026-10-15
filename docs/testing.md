@@ -654,6 +654,20 @@ That the picture is 24 points lower while the row shows, and grows by 24 points 
 
 Screenshots: `music-row-01-bar`, `music-row-01-bar-ar`, `music-row-01-bar-sv`. Marks: `music-row-02-pinch`.
 
+### UI tests of folding the frames
+
+`UITests/FoldTests.swift` holds the button `editor.frames` and the folded strip. Every first launch starts with `-drafts fresh` and waits for the editor with `waitForTheEditor`. Places are compared within 1 point, the picture within 2. After a tap, a drag or a launch the test reads until the effect is there, expected within 1 second and failing only above 3 (the walk above 10, the start screen above 30), and prints a line that starts with `fold: waited`. A fold is a tap on `editor.frames` and a wait for `editor.clip.1` 24 high, and a folded strip is 96 high (72 with a selected text) with `editor.clip.1` 24 high at y 8 and no `editor.frames.1`.
+
+- The row, on `music-wide` in English, Arabic and Swedish: `editor.split`, `editor.delete`, `editor.addText`, `editor.sound`, `editor.addClips` and `editor.frames` are hittable, in one row, each after the one before from the leading side with a gap, `editor.frames` 44 by 44. Their frames are printed. In Arabic and Swedish the strip is then folded.
+- The fold, on `music-wide`: folded, `editor.music` stands 68 points below the top of the strip, the top of the strip is 32 points lower while its bottom stays, so the room of the picture is 32 points higher, and `editor.picture` is higher than before. The room is read at the strip because the frame of `editor.previewRegion`, an accessibility container, is the union of its elements and not the room it is laid out in. The picture keeps the shape of the canvas and never gets wider than the screen, so on the landscape canvas it grows only to 226 points, 402 by 9/16, and stands in the middle of its room. A second tap gives a strip of 128, `editor.clip.1` 56 high and `editor.frames.1` again, and `editor.undo` is disabled. Folded once more, the app ended and launched with `-drafts kept`, the draft opened from `drafts.row.1` shows a strip of 128, blocks of 56 and `editor.frames.1`.
+- Folded, on `two-clips-wide` at 1800 ticks: the end handle of blue is 24 high, and a drag of it 60 points to the left makes blue shorter than 1800 ticks while red reads "red 0+2400 100 v".
+- Folded, on `three-clips` at 3300 ticks: the walk of E20 (green pressed for 0.6 seconds and let go 4 points right of red's left end) gives blue, green, red.
+- Folded, on `text-box-wide`: the strip is 72 high and the bar of the selected text stands 40 points below its top, 24 high.
+
+`Tests/ReelsmithCoreTests/StripRowsTests.swift` holds the rows of `StripRows` unfolded and folded, with and without a selected text, and `Tests/ReelsmithCoreTests/FoldWordsTests.swift` the group `fold-frames` of the three word files: the key `tools.frames`, "Frames", "الإطارات" and "Bildrutor". Both run on Linux.
+
+Screenshots: `fold-01-folded`, `fold-01-folded-ar`, `fold-01-folded-sv`.
+
 ### The split and the delete button
 
 `UITests/ToolsTests.swift` holds the split and the delete button. Every test waits for the editor after a start with `waitForTheEditor` and uses no control of the preview or the export. Two of its four tests tap blocks of the timeline strip, and the other two tap nothing. After a tap on a block the test reads it until it reads as selected, expected within 1 second and failing only above 3, before it taps delete, and prints a line that starts with `m1-9a-split-delete: waited`. Whether a button is enabled is `canSplit` and `canDelete`, held on Linux by `EditActionsTests.swift`, and the UI tests below hold that the two buttons follow them.

@@ -35,7 +35,7 @@ enum TextBars {
             bars.append(bar)
         }
 
-        let row = TimelineStripView.textRow
+        let row = (y: CGFloat(view.rows.textY), height: CGFloat(view.rows.rowHeight))
         var selectedFrame: CGRect?
         for (entry, bar) in zip(texts, bars) {
             let item: TextItem = entry.item

@@ -136,4 +136,7 @@ final class EditorStore {
         write()
     }
     // end slot: export-choice
+    /// The blocks of the strip are thin and show no frames. False when an editor opens, toggled by `editor.frames`,
+    /// never stored and no step of undo.
+    var framesFolded: Bool = false
 }
