@@ -181,12 +181,12 @@ final class Compositor: NSObject, AVVideoCompositing {
             let source = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: NSNull()])
             if let backdrop = piece.backdrop {
                 // Blurred at an eighth of the size, which is cheap, and clamped so its edges do not fade to clear.
+                // It is cut only at the canvas, so the row where the fill meets the canvas edge is not darkened.
                 let eighth = CGAffineTransform(scaleX: 0.125, y: 0.125)
                 let blurred = source.clampedToExtent()
                     .transformed(by: eighth)
                     .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 8])
                     .transformed(by: eighth.inverted())
-                    .cropped(to: source.extent)
                     .transformed(by: backdrop)
                     .cropped(to: canvas)
                 picture = blurred.composited(over: picture)

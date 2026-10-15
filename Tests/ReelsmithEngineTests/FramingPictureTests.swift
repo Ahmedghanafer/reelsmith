@@ -73,6 +73,11 @@ final class FramingPictureTests: XCTestCase {
         XCTAssertGreaterThan(right.b, 127.5, "blue at (972, 300)")
         XCTAssertGreaterThan(right.b, max(right.r, right.g), "blue the largest at (972, 300)")
 
+        // A bug a review found: the first row of the canvas, where the fill meets its edge, was darkened.
+        let edge = try mean(in: blurred, CGRect(x: 103, y: 0, width: 10, height: 1))
+        print("framing picture: halves blurred, the first row at x 108 \(edge)")
+        XCTAssertGreaterThan(edge.r, 127.5, "red in the first row at x 108")
+
         let middle = try mean(in: blurred, x: 540, y: 960)
         let middleAtBlack = try mean(in: plain, x: 540, y: 960)
         print("framing picture: the middle blurred \(middle), black \(middleAtBlack)")

@@ -234,7 +234,7 @@ The compositor draws the framing the plan gives (rule 22): fill, zoom and offset
 
 - Fill, zoom and offset need no drawing of their own: a placement larger than the canvas is put by the same transform and cut at the canvas as every frame is.
 - `videoComposition(plan:media:tracks:kept:)` in `Composition.swift` counts the transform of `Segment.backdrop` as it counts that of the placement, and gives it to the instruction as `backdrop`, nil when the segment has none.
-- `startRequest` of `Compositor` draws the backdrop first when the instruction has one: the segment's own source frame clamped at its edges, scaled to an eighth, blurred by `CIGaussianBlur` with a radius of 8 at that size, scaled back, cut to the frame, put at the backdrop and cut to the canvas. The picture goes over it as before. A segment with no backdrop is drawn as before, with no blur.
+- `startRequest` of `Compositor` draws the backdrop first when the instruction has one: the segment's own source frame clamped at its edges, scaled to an eighth, blurred by `CIGaussianBlur` with a radius of 8 at that size, scaled back, put at the backdrop and cut to the canvas, so the edge where the fill meets the canvas is not darkened. The picture goes over it as before. A segment with no backdrop is drawn as before, with no blur.
 - A change of framing alone keeps the footage the same, so the standing item gets `refreshPicture` with the new plan and its instructions hold the new transforms. Nothing is built.
 
 ### Sound in the composition
