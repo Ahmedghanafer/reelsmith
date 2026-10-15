@@ -2,9 +2,10 @@ import XCTest
 
 // Levels that follow the finger. A level slider sends each value of a drag, the whole drag one step of undo and one
 // write of the draft, and while the video plays it leaves it playing. A drag is one press of 0.1 seconds on the
-// thumb, then a move to past one end at 200 points a second, so it takes more than a second. The seed music-wide
-// is the clips of two-clips-wide, blue 3 seconds and red 4 on the landscape canvas, under the long test tone, with
-// the sound panel open at the start. The sound of the project is read from `editor.soundInfo` by the place of a
+// thumb, then a move to past one end at 400 points a second, which the runner made last about two seconds. The
+// places of the drag are read from the slider before the play, so the reads after it fit the 7 seconds of the
+// project. The seed music-wide is the clips of two-clips-wide, blue 3 seconds and red 4 on the landscape canvas,
+// under the long test tone, with the sound panel open at the start. The sound of the project is read from `editor.soundInfo` by the place of a
 // field, counted from 1: field 1 is the volume of the clips times 100, field 2 "m" or ".", field 4 the volume of
 // the music times 100, field 5 the fade in in ticks. A clip is read by the value of its block, "<media>
 // <start>+<duration> <volume times 100> <v or p>". Every start is with `-drafts fresh`, so the drag is the only
@@ -28,8 +29,8 @@ final class FollowFingerTests: XCTestCase {
     /// other.
     private let thumbHalf: CGFloat = 14
 
-    /// The points a second of a drag.
-    private let speed: CGFloat = 200
+    /// The points a second of a drag. At 200 a drag of about 290 points lasted 3.4 to 3.9 seconds on the runner.
+    private let speed: CGFloat = 400
 
     /// The seconds a start of a draft from the start screen is expected to take. A wait fails at three times this.
     private let expectedStart = 20.0
@@ -119,7 +120,10 @@ final class FollowFingerTests: XCTestCase {
         let picture = element(app, "editor.picture")
         let still = play.label
         let end = element(app, "editor.time").label.components(separatedBy: " / ").last ?? ""
+        // The volume of the clips is 1: the thumb stands at the higher end. Placed before the play.
+        let (thumb, target) = places(of: slider, from: 1, toHighest: false, mirrored: language == "ar")
 
+        let began = Date()
         play.tap()
         waitUntil("editor.play labelled otherwise than \(still) after the tap on it") { play.label != still }
         let pause = play.label
@@ -128,13 +132,13 @@ final class FollowFingerTests: XCTestCase {
         XCTAssertNotNil(before, "editor.picture has no count of builds")
 
         mark("follow-01-drag")
-        // The volume of the clips is 1: the thumb stands at the higher end.
-        drag(slider, from: 1, toHighest: false, mirrored: language == "ar")
+        drag(thumb, to: target)
         waitUntil("field 1 at 0 after the drag of sound.clipVolume to its lowest") { self.field(app, 1) == "0" }
 
         let first = time(app)
         Thread.sleep(forTimeInterval: 1)
         let second = time(app)
+        print("follow: in \(language) the second read \(Date().timeIntervalSince(began)) seconds after the tap on editor.play")
         print("follow: in \(language) after the drag the time reads \(first) then \(second) a second later, the project ends at \(end), editor.play \(play.label), editor.picture \(builds(picture) ?? -1) from \(before ?? -1), editor.soundInfo \(soundInfo(app))")
         XCTAssertNotEqual(first, "00:00")
         XCTAssertNotEqual(second, end, "timing, not the product: the playback reached its end before the second read")
@@ -163,6 +167,15 @@ final class FollowFingerTests: XCTestCase {
     /// One drag from the thumb, standing at the share of the track from its lower end, to 30 points past the lowest
     /// or the highest end. A mirrored slider has its lower end at the right.
     private func drag(_ slider: XCUIElement, from share: CGFloat, toHighest: Bool, mirrored: Bool = false) {
+        let (thumb, target) = places(of: slider, from: share, toHighest: toHighest, mirrored: mirrored)
+        drag(thumb, to: target)
+    }
+
+    /// The thumb, standing at the share of the track from its lower end, and the place 30 points past the lowest or
+    /// the highest end. A mirrored slider has its lower end at the right.
+    private func places(
+        of slider: XCUIElement, from share: CGFloat, toHighest: Bool, mirrored: Bool
+    ) -> (XCUICoordinate, XCUICoordinate) {
         let width = slider.frame.width
         let left = slider.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
         let along = thumbHalf + (width - 2 * thumbHalf) * share
@@ -171,6 +184,11 @@ final class FollowFingerTests: XCTestCase {
         let right = toHighest != mirrored
         let target = left.withOffset(CGVector(dx: right ? width + 30 : -30, dy: 0))
         print("follow: the slider at \(slider.frame), mirrored \(mirrored), the thumb at \(thumb.screenPoint), the drag to \(target.screenPoint)")
+        return (thumb, target)
+    }
+
+    /// One press of 0.1 seconds on the thumb, then a move to the target at `speed`.
+    private func drag(_ thumb: XCUICoordinate, to target: XCUICoordinate) {
         let began = Date()
         thumb.press(
             forDuration: 0.1, thenDragTo: target, withVelocity: XCUIGestureVelocity(rawValue: speed),
