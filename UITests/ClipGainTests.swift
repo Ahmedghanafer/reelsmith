@@ -5,18 +5,24 @@ import XCTest
 // <volume times 100> <v or p>", and the sound of the project from `editor.soundInfo`, whose first field is the volume
 // of all clips times 100 and the second "." while not muted.
 //
-// https://developer.apple.com/documentation/xcuiautomation/xcuielement/adjust(tonormalizedsliderposition:)
+// https://developer.apple.com/documentation/xcuiautomation/xcuicoordinate/press(forduration:thendragto:)
+// https://developer.apple.com/documentation/xcuiautomation/xcuicoordinate/withoffset(_:)
 // https://developer.apple.com/documentation/xcuiautomation/xcuielement/coordinate(withnormalizedoffset:)
 // https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/value
 // https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes/isselected
 // https://developer.apple.com/documentation/foundation/thread/sleep(fortimeinterval:)
 @MainActor
 final class ClipGainTests: XCTestCase {
-    /// The most moves toward the higher end the test makes before the volume of the clip must read 200.
+    /// The most drags toward the higher end the test makes before the volume of the clip must read 200.
     private let mostMoves = 5
 
-    /// A scripted move does not promise the end of a slider, so the moves are repeated until the value of red ends
-    /// " 200 v". When a move lowers the value, as a mirrored slider might, the next move aims at the other end.
+    /// Half the width of the thumb: the track runs from this far inside one end of the slider to as far inside the
+    /// other.
+    private let thumbHalf: CGFloat = 14
+
+    /// A scripted move does not reach the higher end of a mirrored slider, so the thumb is dragged by coordinates,
+    /// from where the value puts it to past the higher end: the right end, the left one in Arabic, where the slider
+    /// mirrors. The drags are repeated until the value of red ends " 200 v".
     func testRedAtItsHighestReadsTwoHundredAndTheClipsStayAtOneHundred() {
         for language in ["en", "ar", "sv"] {
             let app = startApp(seed: "two-clips-wide", language: language, playhead: 2400, drafts: "fresh")
@@ -28,25 +34,29 @@ final class ClipGainTests: XCTestCase {
             }
             let slider = app.sliders["clip.volume"]
             waitUntil("the slider clip.volume in " + language) { slider.exists }
-            var target: CGFloat = 1
+            let mirrored = language == "ar"
+            let width = slider.frame.width
+            let start = slider.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            let highest = start.withOffset(CGVector(dx: mirrored ? -30 : width + 30, dy: 0))
+            print("clip-gain: in " + language + " the slider at \(slider.frame), mirrored \(mirrored), the highest end at \(highest.screenPoint)")
             var moves = 0
             while !value(app, "editor.clip.2").hasSuffix(" 200 v") && moves < mostMoves {
                 let before = value(app, "editor.clip.2")
-                slider.adjust(toNormalizedSliderPosition: target)
+                // The share of the range the value stands at, from the end of 0 along the track.
+                let share = CGFloat(max(volume(before), 0)) / 200
+                let along = thumbHalf + (width - 2 * thumbHalf) * share
+                let thumb = start.withOffset(CGVector(dx: mirrored ? width - along : along, dy: 0))
+                thumb.press(forDuration: 0.05, thenDragTo: highest)
                 moves += 1
-                // A move that lands on the step it left changes nothing, so this wait does not fail: the last
-                // assert on " 200 v" decides.
+                // A drag that misses the thumb changes nothing, so this wait does not fail: the last assert on
+                // " 200 v" decides.
                 waitUntil(
-                    "a value of editor.clip.2 other than " + before + " after move \(moves) in " + language,
+                    "a value of editor.clip.2 other than " + before + " after drag \(moves) in " + language,
                     failing: false
                 ) {
                     self.value(app, "editor.clip.2") != before
                 }
-                let after = value(app, "editor.clip.2")
-                print("clip-gain: in " + language + " after move \(moves) to \(target) editor.clip.2 reads " + after)
-                if volume(after) < volume(before) {
-                    target = 1 - target
-                }
+                print("clip-gain: in " + language + " after drag \(moves) from \(thumb.screenPoint) editor.clip.2 reads " + value(app, "editor.clip.2"))
             }
             XCTAssertTrue(value(app, "editor.clip.2").hasSuffix(" 200 v"), value(app, "editor.clip.2"))
             let sound = app.staticTexts["editor.soundInfo"].label
