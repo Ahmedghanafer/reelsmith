@@ -19,10 +19,10 @@ final class PhotoSeedTests: XCTestCase {
         photo.height = 480
 
         XCTAssertEqual(TestPhoto.magenta.info, MediaInfo(
-            id: MediaID("magenta"), fileName: "magenta.png", width: 1080, height: 1440,
+            id: MediaID("magenta"), fileName: "magenta.mov", width: 1080, height: 1440,
             duration: MediaInfo.photoLongest, quarterTurns: 0, hasSound: false, kind: .photo))
         XCTAssertEqual(photo.info, MediaInfo(
-            id: MediaID("other"), fileName: "other.png", width: 640, height: 480,
+            id: MediaID("other"), fileName: "other.mov", width: 640, height: 480,
             duration: MediaInfo.photoLongest, quarterTurns: 0, hasSound: false, kind: .photo))
     }
 
@@ -46,7 +46,7 @@ final class PhotoSeedTests: XCTestCase {
             MediaID("blue"): TestClip.blue.info, MediaID("magenta"): TestPhoto.magenta.info,
             MediaID("red"): TestClip.red.info,
         ])
-        XCTAssertEqual(project.fileNames, ["blue.mov", "magenta.png", "red.mov"])
+        XCTAssertEqual(project.fileNames, ["blue.mov", "magenta.mov", "red.mov"])
         XCTAssertEqual(project.texts, [])
         XCTAssertNil(project.music)
         XCTAssertNil(seed.selectedText)

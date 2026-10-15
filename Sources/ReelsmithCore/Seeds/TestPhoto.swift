@@ -1,5 +1,5 @@
 public struct TestPhoto: Equatable, Sendable {
-    /// The file is name + ".png".
+    /// The picture is name + ".png", its still movie name + ".mov".
     public var name: String
     /// Upright pixels.
     public var width: Int
@@ -7,10 +7,11 @@ public struct TestPhoto: Equatable, Sendable {
     /// The colour of the whole picture.
     public var colour: RGB
 
-    /// The id is MediaID(name), the file name is name + ".png", a photo of photoLongest with no turn and no sound.
+    /// The id is MediaID(name), the file name is name + ".mov", the still movie of the picture: a photo of
+    /// photoLongest with no turn and no sound.
     public var info: MediaInfo {
         MediaInfo(
-            id: MediaID(name), fileName: name + ".png", width: width, height: height,
+            id: MediaID(name), fileName: name + ".mov", width: width, height: height,
             duration: MediaInfo.photoLongest, quarterTurns: 0, hasSound: false, kind: .photo)
     }
 
