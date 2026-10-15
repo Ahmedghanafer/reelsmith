@@ -119,6 +119,7 @@ struct PreviewPane: View {
 /// https://developer.apple.com/documentation/swiftui/path
 /// https://developer.apple.com/documentation/swiftui/shape/fill(_:style:)
 /// https://developer.apple.com/documentation/swiftui/fillstyle/init(eofill:antialiased:)
+/// https://developer.apple.com/documentation/swiftui/insettableshape/strokeborder(_:linewidth:antialiased:)
 /// https://developer.apple.com/documentation/swiftui/view/position(x:y:)
 /// https://developer.apple.com/documentation/swiftui/view/allowshittesting(_:)
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityelement(children:)
@@ -139,8 +140,10 @@ private struct InstagramGuideView: View {
                     path.addRect(hole)
                 }
                 .fill(Color.black.opacity(0.4), style: FillStyle(eoFill: true))
+                // Inside its frame: a line on the edge would reach half its width past the safe area, and the
+                // element's frame with it.
                 Rectangle()
-                    .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                    .strokeBorder(Color.white.opacity(0.6), lineWidth: 1)
                     .frame(width: hole.width, height: hole.height)
                     .accessibilityElement()
                     .accessibilityLabel(Text("clip.guide"))
