@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 459 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 634 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 208 UI tests in thirty-five classes.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 461 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 636 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 214 UI tests in thirty-six classes.
 
 What comes back from the simulator run:
 
@@ -581,6 +581,21 @@ The screen is 402 points wide with the playhead at x 201, and a handle of a bar 
 That nothing is sent while the finger moves, that one trim is sent on release and that a drag starts with `pause` cannot be seen on this screen and is held by no test.
 
 Screenshots: `text-row-01-row`, `text-row-02-handles`, `text-row-02-handles-ar`, `text-row-03-shortest`, `text-row-04-writing-start`, `text-row-05-writing-middle`, `text-row-06-writing-end`. Marks: `text-row-01-trim-end`, `text-row-02-trim-start`, `text-row-03-limits`.
+
+### UI tests of the music row
+
+`UITests/MusicRowTests.swift` holds the music row of the strip on `music-wide` (blue 3 seconds and red 4 under the long test tone of 10 seconds, titled "long-tone", the sound panel open at the start) and on `two-clips-wide`, with no music. At 60 points a second the heard music is 7 seconds, 420 points. Every launch starts with `-drafts fresh` and waits for the editor with `waitForTheEditor`. Places are compared within 1 point, the widths after a pinch within 2. After a start, a tap or a pinch the test reads until the effect is there, expected within 1 second and failing only above 3, and prints a line that starts with `music-row: waited`.
+
+- The row, on `music-wide`: `editor.timelineRegion` is 128 points high, and `editor.music` stands 100 points below its top, 24 high, from the left end of `editor.clip.1`, 420 points wide, with a label holding "long-tone". The test prints the label in a line that starts with `music-row: the label in en`.
+- The tap: after `sound.done` the sound region is gone, and a tap on the part of the bar that is on the screen shows `editor.soundRegion` again.
+- The selected text: after a tap on `editor.addText` the strip is 104 points high with no `editor.music`. A tap in the clip row left of the first block gives no text region, a strip 128 high and the bar again.
+- No music, on `two-clips-wide`: the strip is 128 points high with no `editor.music`.
+- The scale: after a pinch with scale 3 the bar is as wide as the two blocks together and begins where the first does.
+- Arabic and Swedish, on `music-wide`: the bar begins at the left end of the first block and at the playhead line in the middle, is 420 points wide, and its label, printed in a line that starts with `music-row: the label in ar` or `in sv`, holds "long-tone".
+
+That the picture is 24 points lower while the row shows, and grows by 24 points while a text is selected, is seen in the pictures and held by no assertion.
+
+Screenshots: `music-row-01-bar`, `music-row-01-bar-ar`, `music-row-01-bar-sv`. Marks: `music-row-02-pinch`.
 
 ### The split and the delete button
 

@@ -140,6 +140,7 @@ final class TimelineStripView: UIView {
         // slot: reorder
         // end slot: reorder
         // slot: music-row
+        MusicBar.layout(in: self, below: playhead)
         // end slot: music-row
         TextBars.layout(in: self, below: playhead)
     }

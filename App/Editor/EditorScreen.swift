@@ -42,7 +42,7 @@ struct EditorScreen: View {
                 // slot: timeline
                 // A wrapped UIKit view takes all the height it is offered, so the strip fixes its own.
                 TimelineStrip(state: store.state, send: { action in store.send(action) })
-                    .frame(height: 104)
+                    .frame(height: MusicBar.stripHeight(for: store.state))
                 // end slot: timeline
             }
             .region("editor.timelineRegion")
