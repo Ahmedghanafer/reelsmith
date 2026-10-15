@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 445 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 617 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 180 UI tests in thirty classes.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 449 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 621 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 185 UI tests in thirty-one classes.
 
 What comes back from the simulator run:
 
@@ -69,6 +69,7 @@ The files below are in `Tests/ReelsmithCoreTests` and run on Linux.
 - `Tests/ReelsmithCoreTests/ReduceTests.swift`: what `select`, `clearSelection`, `movePlayhead`, `play` and `pause` do.
 - `Tests/ReelsmithCoreTests/EditActionsTests.swift`: the five edit actions through `reduce`, `canSplit` and `canDelete`, on `Seed.threeClips` and `Seed.empty`. One test sends a fixed list of actions that holds every case of `EditorAction` but `text`, `sound`, `moveClip`, `cutBefore` and `cutAfter`, and checks after each that the state is valid.
 - `Tests/ReelsmithCoreTests/TimelineGeometryTests.swift`: the numbers of `TimelineGeometry`.
+- `Tests/ReelsmithCoreTests/TimelineScaleTests.swift`: `TimelineScale.standard` is 60 and gives what the static functions of `TimelineGeometry` give for the times and points of `TimelineGeometryTests.swift`. At 120 points a second 600 ticks are at x 120 and a drag of minus 61 points trims minus 300 ticks. `zoomed(by:)` holds 100 at 240 and 0.001 at 10, and a factor of 0, minus 1, infinity, minus infinity or not a number gives the scale unchanged.
 - `Tests/ReelsmithCoreTests/RenderPlanTests.swift`: the segments of a plan and the places of pictures on the portrait canvas.
 - `Tests/ReelsmithCoreTests/SeedsTests.swift`: the values of the five test clips and the seeds `empty`, `two-clips` and `three-clips`.
 
@@ -493,9 +494,9 @@ Whether the simulator performs a scripted pinch or twist as two fingers on an ar
 
 ### The timeline strip
 
-`UITests/TimelineTests.swift` holds the timeline strip on the seed `three-clips` (blue 3 seconds, red 4, green 2). Every test waits for the editor after a start with `waitForTheEditor`. The strip has no Linux test of its own: its positions and times are `TimelineGeometry`, held by `TimelineGeometryTests.swift`.
+`UITests/TimelineTests.swift` holds the timeline strip on the seed `three-clips` (blue 3 seconds, red 4, green 2). Every test waits for the editor after a start with `waitForTheEditor`. The strip has no Linux test of its own: its positions and times are `TimelineScale`, held by `TimelineGeometryTests.swift` and `TimelineScaleTests.swift`.
 
-- The blocks, started at 2700 ticks so a part of every block is on the screen: `editor.clip.1`, `editor.clip.2` and `editor.clip.3` are in one row inside `editor.timelineRegion`, in track order from left to right, touching, 180, 240 and 120 points wide. The label of a block is the text on it, the position and then the length, so it starts with "1" and ends with "00:03". After a pinch the widths are the same.
+- The blocks, started at 2700 ticks so a part of every block is on the screen: `editor.clip.1`, `editor.clip.2` and `editor.clip.3` are in one row inside `editor.timelineRegion`, in track order from left to right, touching, 180, 240 and 120 points wide. The label of a block is the text on it, the position and then the length, so it starts with "1" and ends with "00:03". After a pinch with scale 2 each block is wider, the first read until it is, expected within 1 second and failing only above 3.
 - The playhead: `editor.playhead` is in the middle of the region's width and its value is the playhead's `clockText`. With no playhead value it reads "00:00" with the left edge of the first block under it, with `-playhead 3000` it reads "00:05" with the red block under it.
 - The scrub: a drag is a press on a point of `editor.timelineRegion` and a move sideways, and only the value of `editor.playhead` is read after it. To the right at the start leaves "00:00", 120 points to the left gives "00:01", "00:02" or "00:03", back to the right gives less, and three long drags to the left stop at "00:09". That `pause` is sent before `movePlayhead` cannot be seen on this screen and is held by no test.
 - The tap, started at 2400 ticks: a tap in the middle of the red block makes `editor.clip.2` read as selected (`isSelected`) and the other two not, a tap on the blue block moves that to `editor.clip.1`, and the playhead still reads "00:04". No block is selected before the first tap.
@@ -505,6 +506,18 @@ Whether the simulator performs a scripted pinch or twist as two fingers on an ar
 Screenshots: `m1-8-timeline-01-strip`, `m1-8-timeline-01-strip-ar`, `m1-8-timeline-02-placed`, `m1-8-timeline-03-selected`, `m1-8-timeline-04-empty`. Marks: `m1-8-timeline-01-scrub`, `m1-8-timeline-02-scrub-ar`. The strip is 540 points long and the screen is narrower, so no picture shows all three blocks whole.
 
 For a later test of the strip: a block is one element, and its frame is expected to be the whole block, also where it is off the screen. The simulator run confirms that, and the checks of the frames and the taps rest on it. A tap needs a point on the screen, so a test that taps a block first starts with a `-playhead` that puts the tapped point on the screen. `TimelineTests` starts at 2400 ticks, where the middles of the first two blocks are on the screen, and taps a block with `coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()`. After each tap the test reads the block until it reads as selected, expected within 1 second and failing only above 3, and prints a line that starts with `m1-8-timeline: waited`. The view in `App/Editor/Timeline/TimelineView.swift` and its slot `handles` are described in `docs/architecture.md`.
+
+### UI tests of the zoom
+
+`UITests/ZoomTests.swift` holds the pinch of the strip. Every test waits for the editor after a start with `waitForTheEditor`. A pinch is `pinch(withScale:velocity:)` on `editor.timelineRegion`, with a velocity of 1 outward and of minus 1 inward. A scripted pinch gives about the scale it asks for, so a test that needs the scale reached reads it as the width of `editor.clip.1`, the blue clip of 3 seconds, divided by 3. After a pinch, a tap or a drag the test reads until the effect is there, expected within 1 second and failing only above 3, and prints a line that starts with `zoom: waited`.
+
+- In, on `three-clips` at 2700 ticks: the values of the three blocks are "blue 0+1800 100 v", "red 0+2400 100 v" and "green 0+1200 100 v". A pinch with scale 3 makes `editor.clip.1` wider than 270 points, and `editor.playhead` stays in the middle of the region and reads "00:04".
+- Out, at the same start: two pinches with scale 0.2 make `editor.clip.1` 30 points wide, 10 points a second, and every block keeps its height of 56.
+- A trim, on `three-clips` at 1800 ticks, where the end of blue is in the middle: after a pinch with scale 3, a tap on `editor.clip.1` at 0.9 of its width and a drag of `editor.trim.end` 60 points to the left give blue a duration, read from its value, within 20 ticks of 1800 less the trim the strip makes at the scale read. A scripted drag of 60 points reaches the pan as fewer points, since the pan begins only after the finger has moved a little and that stretch is not in its translation. So the test first makes the same tap and drag in a start at the standard scale, where the trim gives the points the drag delivered within 1, and expects those points at the new scale. Both durations and the points are printed.
+- The text bar, on `text-box-wide`: after a pinch with scale 3, `editor.text.1` begins the scale times 1 second right of the left edge of `editor.clip.1` and is the scale times 1.5 seconds wide, within 2 points. The text info is printed before and after the pinch.
+- Arabic and Swedish, on `three-clips` at 2700 ticks: after a pinch with scale 3 the blocks run blue, red, green from the left, touching, and the playhead reads "00:04".
+
+Screenshots: `zoom-01-in`, `zoom-01-in-ar`, `zoom-01-in-sv`, `zoom-02-out`. Marks: `zoom-01-pinch-in`, `zoom-02-pinch-out`, `zoom-03-trim`, `zoom-04-text-bar`.
 
 ### The trim handles
 

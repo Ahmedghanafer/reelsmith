@@ -66,8 +66,8 @@ final class TrimHandle: UIView, UIGestureRecognizerDelegate {
             }
             return
         }
-        let left = view.strip.frame.minX + CGFloat(TimelineGeometry.x(of: start))
-        let right = left + CGFloat(TimelineGeometry.width(of: clip.duration))
+        let left = view.strip.frame.minX + CGFloat(view.scale.x(of: start))
+        let right = left + CGFloat(view.scale.width(of: clip.duration))
         for handle in handles {
             handle.isHidden = false
             handle.frame = CGRect(
@@ -104,8 +104,8 @@ final class TrimHandle: UIView, UIGestureRecognizerDelegate {
         let moved = Double(pan.translation(in: view).x)
         let action: EditorAction =
             isStart
-            ? .trimStart(clip, by: TimelineGeometry.trimAmount(forDragOf: moved))
-            : .trimEnd(clip, by: TimelineGeometry.trimAmount(forDragOf: -moved))
+            ? .trimStart(clip, by: view.scale.trimAmount(forDragOf: moved))
+            : .trimEnd(clip, by: view.scale.trimAmount(forDragOf: -moved))
         if pan.state == .began || pan.state == .changed {
             view.state = reduce(start, action)
         } else if pan.state == .ended {

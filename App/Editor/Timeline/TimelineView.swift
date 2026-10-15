@@ -19,15 +19,18 @@ struct TimelineStrip: UIViewRepresentable {
     }
 }
 
-/// The clips as plain blocks in one row at the fixed scale of `TimelineGeometry`, under a playhead line
-/// that stays in the middle. A drag scrubs, a tap on a block selects it. Never mirrored: every frame is
-/// set by hand from the left, and the view forces left to right.
+/// The clips as plain blocks in one row at the scale of the strip, under a playhead line that stays in
+/// the middle. A drag scrubs, a tap on a block selects it, a pinch sets the scale. Never mirrored: every
+/// frame is set by hand from the left, and the view forces left to right.
 ///
 /// https://developer.apple.com/documentation/uikit/uiview/layoutsubviews()
 /// https://developer.apple.com/documentation/uikit/uiview/semanticcontentattribute
 /// https://developer.apple.com/documentation/uikit/uipangesturerecognizer
 /// https://developer.apple.com/documentation/uikit/uitapgesturerecognizer
+/// https://developer.apple.com/documentation/uikit/uipinchgesturerecognizer
+/// https://developer.apple.com/documentation/uikit/uipinchgesturerecognizer/scale
 /// https://developer.apple.com/documentation/uikit/uilabel
+/// https://developer.apple.com/documentation/objectivec/nsobject/accessibilityvalue
 /// https://developer.apple.com/documentation/objectivec/nsobject/accessibilitytraits
 /// https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier
 final class TimelineStripView: UIView {
@@ -43,11 +46,16 @@ final class TimelineStripView: UIView {
         didSet { setNeedsLayout() }
     }
 
+    /// The points a second of every x and width on the strip, its handles and its bars. Each editor makes
+    /// a strip view of its own, so it starts at the standard. Only a pinch changes it.
+    var scale: TimelineScale = .standard
+
     /// Holds the blocks and moves under the playhead. Its left edge is time zero.
     let strip = UIView()
     private var blocks: [UILabel] = []
     private let playhead = UIView()
     private var scrubStart: Double = 0
+    private var pinchStart: TimelineScale = .standard
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -63,7 +71,10 @@ final class TimelineStripView: UIView {
         let pan = UIPanGestureRecognizer(target: self, action: #selector(scrubbed(_:)))
         pan.maximumNumberOfTouches = 1
         addGestureRecognizer(pan)
+        addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(pinched(_:))))
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped(_:))))
+        // slot: recognizers
+        // end slot: recognizers
     }
 
     required init?(coder: NSCoder) {
@@ -90,9 +101,9 @@ final class TimelineStripView: UIView {
 
         let middle = bounds.width / 2
         strip.frame = CGRect(
-            x: middle - CGFloat(TimelineGeometry.x(of: state.playhead)),
+            x: middle - CGFloat(scale.x(of: state.playhead)),
             y: Self.clipRow.y,
-            width: CGFloat(TimelineGeometry.width(of: state.project.duration)),
+            width: CGFloat(scale.width(of: state.project.duration)),
             height: Self.clipRow.height
         )
         for (clip, block) in zip(clips, blocks) {
@@ -100,13 +111,14 @@ final class TimelineStripView: UIView {
             let position: Int = state.project.position(of: clip.id) ?? 0
             let selected = clip.id == state.selection
             block.frame = CGRect(
-                x: CGFloat(TimelineGeometry.x(of: start)),
+                x: CGFloat(scale.x(of: start)),
                 y: 0,
-                width: CGFloat(TimelineGeometry.width(of: clip.duration)),
+                width: CGFloat(scale.width(of: clip.duration)),
                 height: Self.clipRow.height
             )
             block.text = String(position) + "\n" + clip.duration.clockText
             block.accessibilityIdentifier = "editor.clip." + String(position)
+            block.accessibilityValue = state.project.clipInfo(clip.id)
             block.accessibilityTraits = selected ? [.staticText, .selected] : .staticText
             block.layer.borderWidth = selected ? 3 : 1
             block.layer.borderColor = (selected ? UIColor.systemYellow : UIColor.systemBackground).cgColor
@@ -124,6 +136,10 @@ final class TimelineStripView: UIView {
         // slot: handles
         TrimHandle.layout(in: self, below: playhead)
         // end slot: handles
+        // slot: reorder
+        // end slot: reorder
+        // slot: music-row
+        // end slot: music-row
         TextBars.layout(in: self, below: playhead)
     }
 
@@ -131,12 +147,24 @@ final class TimelineStripView: UIView {
     /// moves to a later time. Core keeps the time inside the project.
     @objc private func scrubbed(_ pan: UIPanGestureRecognizer) {
         if pan.state == .began {
-            scrubStart = TimelineGeometry.x(of: state.playhead)
+            scrubStart = scale.x(of: state.playhead)
             send(.pause)
         }
         if pan.state == .began || pan.state == .changed || pan.state == .ended {
             let x = scrubStart - Double(pan.translation(in: self).x)
-            send(.movePlayhead(TimelineGeometry.time(atX: x)))
+            send(.movePlayhead(scale.time(atX: x)))
+        }
+    }
+
+    /// A pinch sets the scale to the scale at its start times its factor, held by Core. It sends nothing:
+    /// the playhead stays in the middle on its time, and the strip is laid out again around it.
+    @objc private func pinched(_ pinch: UIPinchGestureRecognizer) {
+        if pinch.state == .began {
+            pinchStart = scale
+        }
+        if pinch.state == .began || pinch.state == .changed || pinch.state == .ended {
+            scale = pinchStart.zoomed(by: Double(pinch.scale))
+            setNeedsLayout()
         }
     }
 
@@ -146,7 +174,7 @@ final class TimelineStripView: UIView {
     @objc private func tapped(_ tap: UITapGestureRecognizer) {
         let point = tap.location(in: strip)
         if strip.bounds.contains(point),
-            let clip: Clip = state.project.clip(at: TimelineGeometry.time(atX: Double(point.x)))
+            let clip: Clip = state.project.clip(at: scale.time(atX: Double(point.x)))
         {
             send(.select(clip.id))
         } else {
