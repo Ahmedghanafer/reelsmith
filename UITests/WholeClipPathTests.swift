@@ -204,7 +204,9 @@ final class WholeClipPathTests: XCTestCase {
         let region = element(app, "editor.timelineRegion")
         let photoBlock = element(app, "editor.clip.1")
         tapOn(app, "editor.frames")
-        waitUntil("editor.clip.1 24 high after the tap on editor.frames") { abs(photoBlock.frame.height - 24) <= 1 }
+        waitUntil("editor.clip.1 24 high and the strip 96 after the tap on editor.frames") {
+            abs(photoBlock.frame.height - 24) <= 1 && abs(region.frame.height - 96) <= 1
+        }
         print("clip-path: folded the strip is \(region.frame.height) high, editor.clip.1 \(photoBlock.frame.height)")
         XCTAssertEqual(region.frame.height, 96, accuracy: 1)
         if music {
@@ -213,7 +215,9 @@ final class WholeClipPathTests: XCTestCase {
             XCTAssertEqual(musicY, 68, accuracy: 1)
         }
         tapOn(app, "editor.frames")
-        waitUntil("a strip 128 high after the second tap on editor.frames") { abs(region.frame.height - 128) <= 1 }
+        waitUntil("a strip 128 high with editor.clip.1 56 high after the second tap on editor.frames") {
+            abs(region.frame.height - 128) <= 1 && abs(photoBlock.frame.height - 56) <= 1
+        }
         print("clip-path: unfolded the strip is \(region.frame.height) high, editor.clip.1 \(photoBlock.frame.height)")
         stepDone("the fold")
 
@@ -261,7 +265,8 @@ final class WholeClipPathTests: XCTestCase {
         waitUntil("the saved panel after the tap on editor.export", expected: expectedExport) { done.exists || close.exists }
         print("clip-path: the export at 1080p and 30 took \(Date().timeIntervalSince(began)) seconds, expected \(expectedExport), limit \(3 * expectedExport)")
         if close.exists {
-            print("clip-path: the export failed, export.words reads " + element(app, "export.words").label)
+            let words = element(app, "export.words")
+            print("clip-path: the export failed, export.words reads " + (words.exists ? words.label : "nothing"))
         }
         XCTAssertTrue(done.exists, "the saved panel")
         if done.exists {
