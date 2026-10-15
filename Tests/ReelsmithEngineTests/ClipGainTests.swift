@@ -9,8 +9,9 @@ import XCTest
 /// A clip above full volume on `two-clips-wide`, read by pitch in exported files and through the mix of a player
 /// item, a reader that stands in for the player. The clips sound at 440 Hz with a peak of 0.5. Blue is read from
 /// 300 to 1500 ticks and red from 2100 to 3900, so no window holds the join at 1800. Each read prints a line that
-/// starts with `clip gain:`. Both readers decode to 16 bit, so the largest sample is a print and never past full
-/// scale.
+/// starts with `clip gain:`. The readers of levels and of the largest sample decode to 16 bit, so that largest sample
+/// is a print and never past full scale. Red at 3 is read as 32 bit float, where a sample past full scale reads
+/// past 1.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avassetreaderaudiomixoutput
 /// https://developer.apple.com/documentation/avfoundation/avaudiomixinputparameters/getvolumeramp(for:startvolume:endvolume:timerange:)
