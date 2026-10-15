@@ -89,35 +89,22 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
         }
     }
 
-    var parameters: [AVMutableAudioMixInputParameters] = []
-    if let track = sound {
-        let clips = AVMutableAudioMixInputParameters()
-        clips.trackID = track.trackID
-        clips.setVolume(Float(plan.sound.clipVolume), at: .zero)
-        parameters.append(clips)
-    }
+    var music: CMPersistentTrackID?
     if let layer = plan.sound.music {
-        parameters.append(try await addMusic(layer, to: composition, mediaFolder: mediaFolder))
+        music = try await addMusic(layer, to: composition, mediaFolder: mediaFolder)
     }
-    let mix = AVMutableAudioMix()
-    mix.inputParameters = parameters
+    let mix = audioMix(for: plan, clipTrack: sound?.trackID, musicTrack: music)
 
     let tracks = [CMPersistentTrackID](repeating: picture.trackID, count: plan.segments.count)
     return (composition, try videoComposition(plan: plan, media: media, tracks: tracks, kept: []), mix)
 }
 
-/// Lays `duration` of the music file from `sourceStart` at zero on a sound track of its own, and gives the
-/// parameters of that track: 0 rising to `volume` over the first `fadeIn`, `volume` up to the last `fadeOut`, and
-/// falling to 0 over it. A fade of zero sets no ramp.
+/// Lays `duration` of the music file from `sourceStart` at zero on a sound track of its own, and gives the id of
+/// that track.
 /// Throws `sourceMissing` with the id of the layer when the file is not in the media folder, and `cannotRead`
 /// when it has no sound track or cannot be put into the composition.
-///
-/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomix
-/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters
-/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolume(_:at:)
-/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolumeramp(fromstartvolume:toendvolume:timerange:)
 private func addMusic(_ layer: MusicLayer, to composition: AVMutableComposition, mediaFolder: URL) async throws
-    -> AVMutableAudioMixInputParameters {
+    -> CMPersistentTrackID {
     let file = mediaFolder.appendingPathComponent(layer.fileName)
     guard FileManager.default.fileExists(atPath: file.path) else { throw EngineError.sourceMissing(layer.media) }
     let asset = AVURLAsset(url: file)
@@ -134,25 +121,61 @@ private func addMusic(_ layer: MusicLayer, to composition: AVMutableComposition,
     } catch {
         throw EngineError.cannotRead
     }
+    return track.trackID
+}
 
-    let volume = Float(layer.volume)
-    let parameters = AVMutableAudioMixInputParameters()
-    parameters.trackID = track.trackID
-    if layer.fadeIn.ticks > 0 {
-        parameters.setVolumeRamp(
-            fromStartVolume: 0, toEndVolume: volume,
-            timeRange: CMTimeRange(start: .zero, duration: CMTime(value: layer.fadeIn.ticks, timescale: 600)))
-    } else {
-        parameters.setVolume(volume, at: .zero)
+/// The whole mix of a plan, for a new item and an export alike, made from the plan and the ids of its sound
+/// tracks and reading no file. The clip track holds `clipVolume` times the volume of each segment that has sound,
+/// from its start to its end in the order of the plan, so 0 while the clips are muted. The music track rises from 0 to the
+/// music's `volume` over the first `fadeIn`, stands at it up to the last `fadeOut` and falls to 0 over it. A fade
+/// of zero sets no ramp. A track id that is nil gets no parameters.
+///
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomix
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolume(_:at:)
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/setvolumeramp(fromstartvolume:toendvolume:timerange:)
+private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, musicTrack: CMPersistentTrackID?)
+    -> AVAudioMix {
+    var parameters: [AVMutableAudioMixInputParameters] = []
+    if let track = clipTrack {
+        let clips = AVMutableAudioMixInputParameters()
+        clips.trackID = track
+        // Between two volumes set with setVolume the platform ramps from one to the other (blue at 1 then red
+        // at 0.5 read blue at 0.375 in compile check run 38658994782), so each segment holds its volume from its
+        // start to its end with a ramp that does not change.
+        for segment in plan.segments where segment.hasSound {
+            let volume = Float(plan.sound.clipVolume * segment.volume)
+            clips.setVolumeRamp(
+                fromStartVolume: volume, toEndVolume: volume,
+                timeRange: CMTimeRange(
+                    start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
+                    duration: CMTime(value: segment.duration.ticks, timescale: 600)))
+        }
+        parameters.append(clips)
     }
-    if layer.fadeOut.ticks > 0 {
-        parameters.setVolumeRamp(
-            fromStartVolume: volume, toEndVolume: 0,
-            timeRange: CMTimeRange(
-                start: CMTime(value: layer.duration.ticks - layer.fadeOut.ticks, timescale: 600),
-                duration: CMTime(value: layer.fadeOut.ticks, timescale: 600)))
+    if let track = musicTrack, let layer = plan.sound.music {
+        let volume = Float(layer.volume)
+        let music = AVMutableAudioMixInputParameters()
+        music.trackID = track
+        if layer.fadeIn.ticks > 0 {
+            music.setVolumeRamp(
+                fromStartVolume: 0, toEndVolume: volume,
+                timeRange: CMTimeRange(start: .zero, duration: CMTime(value: layer.fadeIn.ticks, timescale: 600)))
+        } else {
+            music.setVolume(volume, at: .zero)
+        }
+        if layer.fadeOut.ticks > 0 {
+            music.setVolumeRamp(
+                fromStartVolume: volume, toEndVolume: 0,
+                timeRange: CMTimeRange(
+                    start: CMTime(value: layer.duration.ticks - layer.fadeOut.ticks, timescale: 600),
+                    duration: CMTime(value: layer.fadeOut.ticks, timescale: 600)))
+        }
+        parameters.append(music)
     }
-    return parameters
+    let mix = AVMutableAudioMix()
+    mix.inputParameters = parameters
+    return mix
 }
 
 /// The video composition of a plan, for a new item, an export and a refresh alike: one instruction per segment
