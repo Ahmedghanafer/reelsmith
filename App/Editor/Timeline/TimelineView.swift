@@ -7,14 +7,19 @@ import UIKit
 /// https://developer.apple.com/documentation/swiftui/uiviewrepresentable
 struct TimelineStrip: UIViewRepresentable {
     let state: EditorState
+    /// Where the files of the media are, for the frames on the blocks.
+    let mediaFolder: URL
     let send: @MainActor (EditorAction) -> Void
 
     func makeUIView(context: Context) -> TimelineStripView {
-        TimelineStripView()
+        let view = TimelineStripView()
+        view.frames.changed = { [weak view] in view?.setNeedsLayout() }
+        return view
     }
 
     func updateUIView(_ view: TimelineStripView, context: Context) {
         view.send = send
+        view.mediaFolder = mediaFolder
         view.state = state
     }
 }
@@ -82,22 +87,43 @@ final class TimelineStripView: UIView {
         return nil
     }
 
+    /// Where the files of the media are. Set by `TimelineStrip`, and no frame is made before.
+    var mediaFolder: URL?
+    /// The frames of each media, made once while this view lives.
+    let frames = FramesCache()
+    /// The tiles of each block, beside its label in its container, in the order of `blocks`.
+    private var tiles: [FrameTiles] = []
+
     override func layoutSubviews() {
         super.layoutSubviews()
         let clips: [Clip] = state.project.clips
+        // Each block is a container in `strip` that holds its tiles and, on top, its label. The container lets its
+        // touches through to `strip`.
         while blocks.count > clips.count {
-            blocks.removeLast().removeFromSuperview()
+            blocks.removeLast().superview?.removeFromSuperview()
+            tiles.removeLast()
         }
         while blocks.count < clips.count {
+            let container = UIView()
+            container.semanticContentAttribute = .forceLeftToRight
+            container.isUserInteractionEnabled = false
+            container.clipsToBounds = true
+            container.backgroundColor = UIColor.systemGray3
+            let tile = FrameTiles()
+            container.addSubview(tile)
             let block = UILabel()
             block.semanticContentAttribute = .forceLeftToRight
             block.numberOfLines = 2
             block.textAlignment = .center
             block.font = UIFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium)
-            block.textColor = UIColor.label
-            block.backgroundColor = UIColor.systemGray5
-            strip.addSubview(block)
+            // White with a dark shadow, readable on any frame.
+            block.textColor = UIColor.white
+            block.shadowColor = UIColor.black
+            block.shadowOffset = CGSize(width: 0, height: 1)
+            container.addSubview(block)
+            strip.addSubview(container)
             blocks.append(block)
+            tiles.append(tile)
         }
 
         let middle = bounds.width / 2
@@ -107,16 +133,25 @@ final class TimelineStripView: UIView {
             width: CGFloat(scale.width(of: state.project.duration)),
             height: Self.clipRow.height
         )
-        for (clip, block) in zip(clips, blocks) {
+        let side = Self.clipRow.height
+        for ((clip, block), tile) in zip(zip(clips, blocks), tiles) {
             let start: Time = state.project.start(of: clip.id) ?? Time.zero
             let position: Int = state.project.position(of: clip.id) ?? 0
             let selected = clip.id == state.selection
-            block.frame = CGRect(
-                x: CGFloat(scale.x(of: start)),
-                y: 0,
-                width: CGFloat(scale.width(of: clip.duration)),
-                height: Self.clipRow.height
-            )
+            let width = CGFloat(scale.width(of: clip.duration))
+            block.superview?.frame = CGRect(x: CGFloat(scale.x(of: start)), y: 0, width: width, height: side)
+            block.frame = CGRect(x: 0, y: 0, width: width, height: side)
+            tile.frame = block.frame
+            var images: [CGImage?] = []
+            if let media: MediaInfo = state.project.media[clip.media], let folder: URL = mediaFolder {
+                let made = frames.frames(of: media, in: folder)
+                for index in 0..<BlockFrames.tileCount(width: Double(width), tile: Double(side)) {
+                    let time = BlockFrames.frameTime(of: clip, media: media, tile: index, tile: Double(side), scale: scale)
+                    images.append(made?[time])
+                }
+            }
+            tile.show(images, side: side, made: frames.madeCount)
+            tile.accessibilityIdentifier = "editor.frames." + String(position)
             block.text = String(position) + "\n" + clip.duration.clockText
             block.accessibilityIdentifier = "editor.clip." + String(position)
             block.accessibilityValue = state.project.clipInfo(clip.id)
