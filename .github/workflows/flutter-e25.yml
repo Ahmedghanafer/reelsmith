@@ -1,0 +1,141 @@
+name: Flutter E25
+
+# Trial E25: a Flutter screen on the Swift Engine, on a hosted runner. Throwaway.
+on:
+  push:
+    branches: [check/flutter-e25]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  e25:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode 26.6, create and boot the simulator
+        run: |
+          trap 'echo "setup: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          mkdir -p "$RUNNER_TEMP/e25"
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version
+          runtime=$(xcrun simctl list runtimes --json | jq -er '[.runtimes[] | select(.name == "iOS 26.5" and .isAvailable)][0].identifier')
+          udid=$(xcrun simctl create "E25" "iPhone 17" "$runtime")
+          echo "Created the simulator $udid on $runtime"
+          echo "SIMULATOR=$udid" >> "$GITHUB_ENV"
+          xcrun simctl boot "$udid"
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version and packages
+        working-directory: flutter_e25
+        run: |
+          trap 'echo "flutter setup: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          flutter --version
+          flutter config --enable-swift-package-manager
+          flutter pub get
+
+      - name: Restore the build cache
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            flutter_e25/build
+            ~/Library/Developer/Xcode/DerivedData
+          key: e25-build-${{ github.run_id }}
+          restore-keys: e25-build-
+
+      - name: Build for the simulator
+        working-directory: flutter_e25
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-matched-key }}
+        run: |
+          trap 'echo "flutter build ios --simulator (cache: ${CACHE_HIT:-none}): ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          flutter build ios --simulator --debug 2>&1 | tee "$RUNNER_TEMP/e25/build.txt"
+
+      - name: Save the build cache
+        if: ${{ always() }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            flutter_e25/build
+            ~/Library/Developer/Xcode/DerivedData
+          key: e25-build-${{ github.run_id }}
+
+      - name: Integration test with recording
+        id: itest
+        working-directory: flutter_e25
+        run: |
+          trap 'echo "integration test: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          xcrun simctl bootstatus "$SIMULATOR" -b
+          echo "boot wait: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"
+          out="$RUNNER_TEMP/e25"
+          xcrun simctl io "$SIMULATOR" recordVideo --codec h264 --force "$out/e25.mp4" > "$out/recorder.txt" 2>&1 &
+          recorder=$!
+          (
+            n=0
+            while true; do
+              n=$((n + 1))
+              xcrun simctl io "$SIMULATOR" screenshot "$out/loop-$(printf %03d $n).png" > /dev/null 2>&1 || true
+              sleep 10
+            done
+          ) &
+          looper=$!
+          set +e
+          flutter test integration_test -d "$SIMULATOR" --reporter expanded 2>&1 | tee "$out/integration.txt"
+          status=${PIPESTATUS[0]}
+          set -e
+          kill "$looper" || true
+          kill -INT "$recorder" || true
+          for _ in $(seq 30); do
+            kill -0 "$recorder" 2>/dev/null || break
+            sleep 1
+          done
+          kill -KILL "$recorder" 2>/dev/null || true
+          data=$(xcrun simctl get_app_container "$SIMULATOR" com.ghanafer.flutterE25 data 2>/dev/null) || data=""
+          if [ -n "$data" ] && [ -d "$data/tmp/e25shots" ]; then
+            cp "$data/tmp/e25shots/"*.png "$out/" || true
+          fi
+          ls -l "$out"
+          grep "E25" "$out/integration.txt" || true
+          exit "$status"
+
+      - name: XCUITest against the Flutter build
+        if: ${{ !cancelled() }}
+        working-directory: flutter_e25/ios
+        run: |
+          trap 'echo "xcuitest: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
+          out="$RUNNER_TEMP/e25"
+          xcodebuild build-for-testing -workspace Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" \
+            -derivedDataPath "$RUNNER_TEMP/ui" > "$out/ui-build.txt" 2>&1 || { tail -80 "$out/ui-build.txt"; exit 1; }
+          echo "xcuitest build-for-testing: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"
+          set +e
+          xcodebuild test-without-building -workspace Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" \
+            -derivedDataPath "$RUNNER_TEMP/ui" -resultBundlePath "$out/ui.xcresult" 2>&1 | tee "$out/ui-test.txt"
+          status=${PIPESTATUS[0]}
+          set -e
+          grep "E25 UI\|Test Case\|error" "$out/ui-test.txt" || true
+          xcrun xcresulttool export attachments --path "$out/ui.xcresult" --output-path "$out/ui-shots" || true
+          exit "$status"
+
+      - name: Timings
+        if: ${{ always() }}
+        run: cat "$RUNNER_TEMP/timings.txt" || true
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: e25
+          path: ${{ runner.temp }}/e25
+          if-no-files-found: warn
