@@ -7,8 +7,8 @@
 "start.newProject" = "Nytt projekt";
 "start.landscape" = "Liggande 16:9";
 "start.portrait" = "Stående 9:16";
-"start.copying" = "Kopierar videor";
-"start.noneReadable" = "Ingen av videorna kunde användas.";
+"start.copying" = "Kopierar klipp";
+"start.noneReadable" = "Inget av klippen kunde användas.";
 "start.ok" = "OK";
 /* end slot: m1-6b-new-project */
 

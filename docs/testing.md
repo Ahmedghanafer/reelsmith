@@ -384,7 +384,7 @@ Both files run with `swift test` on macOS, write every file into a folder of the
 
 Screenshots: `m1-6b-new-project-01-start`, `m1-6b-new-project-01-start-ar`, `m1-6b-new-project-04-relaunch`, `m1-6b-new-project-05-portrait`. This file sets no mark.
 
-The system picker is driven by the walk of `UITests/WholePathTests.swift`, described under the whole path. The words "Copying videos" and the state with `start.noneReadable` and `start.ok` are not reached by any launch value and have no UI test. Their keys are held on Linux and the screens are judged by eye on the phone.
+The system picker is driven by the walk of `UITests/WholePathTests.swift`, described under the whole path. The words "Copying clips" and the state with `start.noneReadable` and `start.ok` are not reached by any launch value and have no UI test. Their keys are held on Linux and the screens are judged by eye on the phone.
 
 ### UI tests of saving
 
