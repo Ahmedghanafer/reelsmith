@@ -3,6 +3,7 @@ import AVFoundation
 import CoreGraphics
 import CoreMedia
 import Foundation
+import MediaToolbox
 import ReelsmithCore
 
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/init(asset:)
@@ -55,7 +56,7 @@ public func refreshSound(of item: AVPlayerItem, plan: RenderPlan) throws {
     let ids = composition.tracks.filter { $0.mediaType == .audio }.map { $0.trackID }.sorted()
     let clipSound = plan.segments.contains { $0.hasSound }
     let music = plan.sound.music != nil
-    guard ids.count == (clipSound ? 2 : 0) + (music ? 1 : 0) else { throw EngineError.cannotRead }
+    guard ids.count == (clipSound ? 1 : 0) + (music ? 1 : 0) else { throw EngineError.cannotRead }
     item.audioMix = audioMix(
         for: plan, clipTrack: clipSound ? ids.first : nil, musicTrack: music ? ids.last : nil)
 }
@@ -98,16 +99,9 @@ func buildComposition(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder
                     if sound == nil {
                         sound = composition.addMutableTrack(
                             withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
-                        // The lift, the same sound once more under the id after the clip track's: what is heard of
-                        // a clip above 1 beyond the clip track (seam AM, way 1).
-                        if let clips = sound {
-                            _ = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: clips.trackID + 1)
-                        }
                     }
-                    guard let track = sound, let lift = composition.track(withTrackID: track.trackID + 1)
-                    else { throw EngineError.cannotRead }
+                    guard let track = sound else { throw EngineError.cannotRead }
                     try track.insertTimeRange(range, of: sourceSound, at: start)
-                    try lift.insertTimeRange(range, of: sourceSound, at: start)
                 }
             }
         } catch {
@@ -169,19 +163,24 @@ private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, mus
         // Between two volumes set with setVolume the platform ramps from one to the other (blue at 1 then red
         // at 0.5 read blue at 0.375 in compile check run 38658994782), so each segment holds its volume from its
         // start to its end with a ramp that does not change.
-        let lift = AVMutableAudioMixInputParameters()
-        lift.trackID = track + 1
+        // A volume above 1 is never set on the track (rule 87): the track holds the volume up to 1, and the tap
+        // multiplies each sample by what lies above it (seam AM, way 2).
+        var gains: [ClipGains.Piece] = []
         for segment in plan.segments where segment.hasSound {
-            let range = CMTimeRange(
-                start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
-                duration: CMTime(value: segment.duration.ticks, timescale: 600))
-            let held = Float(plan.sound.clipVolume * min(segment.volume, 1))
-            let above = Float(min(plan.sound.clipVolume * max(segment.volume - 1, 0), 1))
-            clips.setVolumeRamp(fromStartVolume: held, toEndVolume: held, timeRange: range)
-            lift.setVolumeRamp(fromStartVolume: above, toEndVolume: above, timeRange: range)
+            let volume = plan.sound.clipVolume * segment.volume
+            let held = Float(min(volume, 1))
+            clips.setVolumeRamp(
+                fromStartVolume: held, toEndVolume: held,
+                timeRange: CMTimeRange(
+                    start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
+                    duration: CMTime(value: segment.duration.ticks, timescale: 600)))
+            gains.append(ClipGains.Piece(
+                start: Double(segment.timelineStart.ticks) / 600,
+                end: Double(segment.timelineStart.ticks + segment.duration.ticks) / 600,
+                gain: Float(max(volume, 1))))
         }
+        clips.audioTapProcessor = clipGainTap(ClipGains(pieces: gains))
         parameters.append(clips)
-        parameters.append(lift)
     }
     if let track = musicTrack, let layer = plan.sound.music {
         let volume = Float(layer.volume)
@@ -206,6 +205,80 @@ private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, mus
     let mix = AVMutableAudioMix()
     mix.inputParameters = parameters
     return mix
+}
+
+/// The gain of each segment with sound past the volume its track holds, from its start to its end on the timeline
+/// in seconds: 1 up to a volume of 1, the volume above it.
+private final class ClipGains {
+    struct Piece {
+        let start: Double
+        let end: Double
+        let gain: Float
+    }
+
+    let pieces: [Piece]
+
+    init(pieces: [Piece]) {
+        self.pieces = pieces
+    }
+
+    /// The gain at a time of the timeline, 1 outside every piece.
+    func gain(at seconds: Double) -> Float {
+        pieces.first { seconds >= $0.start && seconds < $0.end }?.gain ?? 1
+    }
+}
+
+/// The tap of the clip track: each sample of the track times the gain of its segment, held between minus 1 and 1.
+/// The time of a sample is read from the time range of the source audio of each call. The tap holds the gains
+/// and lets them go when the platform ends it. Nil when the platform makes no tap.
+///
+/// https://developer.apple.com/documentation/mediatoolbox/mtaudioprocessingtapcreate(_:_:_:_:)
+/// https://developer.apple.com/documentation/mediatoolbox/mtaudioprocessingtapcallbacks
+/// https://developer.apple.com/documentation/mediatoolbox/mtaudioprocessingtapgetsourceaudio(_:_:_:_:_:_:)
+/// https://developer.apple.com/documentation/mediatoolbox/mtaudioprocessingtapgetstorage(_:)
+/// https://developer.apple.com/documentation/avfoundation/avmutableaudiomixinputparameters/audiotapprocessor
+private func clipGainTap(_ gains: ClipGains) -> MTAudioProcessingTap? {
+    let held = Unmanaged.passRetained(gains).toOpaque()
+    var callbacks = MTAudioProcessingTapCallbacks(
+        version: kMTAudioProcessingTapCallbacksVersion_0,
+        clientInfo: held,
+        init: { _, clientInfo, storage in
+            storage.pointee = clientInfo
+        },
+        finalize: { tap in
+            Unmanaged<ClipGains>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).release()
+        },
+        prepare: nil,
+        unprepare: nil,
+        process: { tap, frames, _, buffers, framesOut, flagsOut in
+            var range = CMTimeRange()
+            guard MTAudioProcessingTapGetSourceAudio(tap, frames, buffers, flagsOut, &range, framesOut) == noErr
+            else { return }
+            let gains = Unmanaged<ClipGains>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue()
+            let count = Int(framesOut.pointee)
+            guard count > 0 else { return }
+            let start = range.start.seconds
+            let length = range.duration.seconds
+            // The tap's format is float samples, one buffer per channel unless a buffer says it holds more.
+            for buffer in UnsafeMutableAudioBufferListPointer(buffers) {
+                guard let data = buffer.mData else { continue }
+                let channels = max(Int(buffer.mNumberChannels), 1)
+                let samples = data.assumingMemoryBound(to: Float.self)
+                let total = min(Int(buffer.mDataByteSize) / MemoryLayout<Float>.size, count * channels)
+                for index in 0..<total {
+                    let gain = gains.gain(at: start + length * Double(index / channels) / Double(count))
+                    samples[index] = min(max(samples[index] * gain, -1), 1)
+                }
+            }
+        })
+    var tap: MTAudioProcessingTap?
+    guard MTAudioProcessingTapCreate(
+        kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PostEffects, &tap) == noErr
+    else {
+        Unmanaged<ClipGains>.fromOpaque(held).release()
+        return nil
+    }
+    return tap
 }
 
 /// The video composition of a plan, for a new item, an export and a refresh alike: one instruction per segment

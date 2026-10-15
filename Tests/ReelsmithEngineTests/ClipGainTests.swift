@@ -47,27 +47,31 @@ final class ClipGainTests: XCTestCase {
         XCTAssertGreaterThan(three.mixedRed, one.mixedRed, "red at 3 through the mix above red at 1")
     }
 
-    // A level of a clip above 1 is a refresh of the mix: the item takes red at 2, then at 0.5, with no throw.
+    // A level of a clip above 1 is a refresh of the mix: the item takes red at 2, then at 0.5, with no throw. The
+    // clip track holds red at 1, then at 0.5, and carries the tap, and through the mix red at 2 reads four times
+    // red at 0.5.
     @MainActor
     func testAnItemGivenRedAtTwoThenAtHalfHoldsTheValuesOfTheWay() async throws {
         let item = try await self.item(of: try renderPlan(for: Seed.twoClipsWide.project))
         var project = Seed.twoClipsWide.project
         let tracks = try XCTUnwrap(item.asset as? AVComposition).tracks
-            .filter { $0.mediaType == .audio }.map { $0.trackID }.sorted()
-        XCTAssertEqual(tracks.count, 2, "the clip track and the lift")
+            .filter { $0.mediaType == .audio }.map { $0.trackID }
+        XCTAssertEqual(tracks.count, 1, "the clip track alone")
         let clips = try XCTUnwrap(tracks.first)
-        let lift = try XCTUnwrap(tracks.last)
 
         project.clips[1].volume = 2
         try refreshSound(of: item, plan: try renderPlan(for: project))
         XCTAssertEqual(try volume(of: item, track: clips, at: redAt), 1, accuracy: 0.001, "red at 2 on the clip track")
-        XCTAssertEqual(try volume(of: item, track: lift, at: redAt), 1, accuracy: 0.001, "red at 2 on the lift")
-        XCTAssertEqual(try volume(of: item, track: lift, at: blueAt), 0, accuracy: 0.001, "blue at 1 on the lift")
+        XCTAssertNotNil(item.audioMix?.inputParameters.first?.audioTapProcessor, "the tap with red at 2")
+        let two = try await mixedToneLevel(of: item.asset, mix: item.audioMix, hertz: 440, from: redStart, to: redEnd)
 
         project.clips[1].volume = 0.5
         try refreshSound(of: item, plan: try renderPlan(for: project))
         XCTAssertEqual(try volume(of: item, track: clips, at: redAt), 0.5, accuracy: 0.001, "red at 0.5 on the clip track")
-        XCTAssertEqual(try volume(of: item, track: lift, at: redAt), 0, accuracy: 0.001, "red at 0.5 on the lift")
+        XCTAssertNotNil(item.audioMix?.inputParameters.first?.audioTapProcessor, "the tap with red at 0.5")
+        let half = try await mixedToneLevel(of: item.asset, mix: item.audioMix, hertz: 440, from: redStart, to: redEnd)
+        print("clip gain: the refreshed item reads red at 2 at \(two) and at 0.5 at \(half) through the mix")
+        assertLevel(two, near: 4 * half, "red at 2 against red at 0.5 through the mix")
     }
 
     /// What one plan reads over blue and red, in its exported file and through the mix of its player item, printed
@@ -127,7 +131,6 @@ private let blueStart = Time(ticks: 300)
 private let blueEnd = Time(ticks: 1500)
 private let redStart = Time(ticks: 2100)
 private let redEnd = Time(ticks: 3900)
-private let blueAt = Time(ticks: 600)
 private let redAt = Time(ticks: 2400)
 
 /// A level matches within 15 percent of its expected value.
