@@ -128,6 +128,7 @@ final class PunchInTests: XCTestCase {
         let picture = element(app, "editor.picture")
         let before = waitForTheShare(in: picture, "blue standing between bars", above: 0.2)
         let built = builds(picture)
+        XCTAssertNotNil(built, "editor.picture has no count of builds")
         let slider = app.sliders["clip.volume"]
         waitUntil("the slider clip.volume") { slider.exists }
         slider.adjust(toNormalizedSliderPosition: 0)
