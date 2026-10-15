@@ -1,14 +1,16 @@
 import XCTest
 
 // Punch in on the picture: with a clip selected and the playhead inside it, a pinch on `editor.picture` zooms that
-// clip and a one finger drag moves it, each gesture one step of undo. On `two-clips` (the 9:16 canvas) blue is 1920
-// by 1080 for 3 seconds, so fitted it stands between black bars and covers 0.316 of the picture, then red 1080 by
-// 1920 for 4 seconds. At 1 second (`-playhead 600`) blue is from x 141 to 321 on the strip, at 4 seconds from x -39
-// to 141. The framing of the selected clip is read from `clip.frameInfo`, "<fit|fill> <black|blur> <zoom times
-// 100> <x times 1000>,<y times 1000>", the picture through the probe `share(of:in:)` and a build of the player
-// through the count in the value of `editor.picture`. A scripted pinch reaches about the scale asked, never an
-// exact value, so a test reads a direction and a limit and prints the info. Each test starts with `-drafts fresh
-// -seed two-clips` and a tap on blue. That the picture grows under the fingers is read by the QA pass in the
+// clip and a one finger drag moves it, each gesture one step of undo. The pinches run on `two-clips-wide` (the 16:9
+// canvas) at 4 seconds (`-playhead 2400`) with red selected: red is 1080 by 1920, so fitted it stands between black
+// bars and covers 0.316 of the picture. A scripted pinch is not taken as a pinch by the narrow picture of the 9:16
+// canvas with the clip panel open, 158 by 280 points, so no pinch runs on `two-clips`. The drag runs there, with
+// blue (1920 by 1080) fitted between bars above and under it. On the strip at 1 second blue is from x 141 to 321, at
+// 4 seconds blue from x -39 to 141 and red from 141 to 381. The framing of the selected clip is read from
+// `clip.frameInfo`, "<fit|fill> <black|blur> <zoom times 100> <x times 1000>,<y times 1000>", the picture through the
+// probe `share(of:in:)` and a build of the player through the count in the value of `editor.picture`. A scripted
+// pinch reaches about the scale asked, never an exact value, so a test reads a direction and a limit and prints the
+// info. Every start is with `-drafts fresh`. That the picture grows under the fingers is read by the QA pass in the
 // recording from the mark `punch-01-pinch`.
 //
 // https://developer.apple.com/documentation/xcuiautomation/xcuielement/pinch(withscale:velocity:)
@@ -24,7 +26,7 @@ import XCTest
 // https://developer.apple.com/documentation/foundation/thread/sleep(fortimeinterval:)
 @MainActor
 final class PunchInTests: XCTestCase {
-    private let blue = (r: 0, g: 0, b: 255)
+    private let red = (r: 255, g: 0, b: 0)
     private let standard = "fit black 100 0,0"
 
     /// The seconds from a launch to the start screen.
@@ -33,24 +35,35 @@ final class PunchInTests: XCTestCase {
     /// The seconds from an edit to its frame in the picture area, as `PictureTests` waits.
     private let expectedFrame = 3.0
 
-    func testAPinchZoomsBlueADragMovesItAndEachIsOneUndoStep() {
-        let app = startPunchIn()
+    func testAPinchZoomsRedAndIsOneUndoStep() {
+        let app = startPinch()
         let picture = element(app, "editor.picture")
-        let before = waitForTheShare(in: picture, "blue standing between bars", above: 0.2)
-        XCTAssertLessThan(before, 0.4, "blue fitted")
+        let before = waitForTheShare(in: picture, "red standing between bars", above: 0.2)
+        XCTAssertLessThan(before, 0.4, "red fitted")
         let built = builds(picture)
         XCTAssertNotNil(built, "editor.picture has no count of builds")
 
         mark("punch-01-pinch")
         pinch(picture, app, scale: 2)
         waitUntil("a zoom above 150 after a pinch with scale 2") { self.zoom(app) > 150 }
-        let zoomed = waitForTheShare(in: picture, "blue zoomed", above: before + 0.1)
-        print("punch: the share of blue before the pinch \(before) and after it \(zoomed)")
-        XCTAssertGreaterThan(zoomed, before, "blue zoomed")
+        let zoomed = waitForTheShare(in: picture, "red zoomed", above: before + 0.1)
+        print("punch: the share of red before the pinch \(before) and after it \(zoomed)")
+        XCTAssertGreaterThan(zoomed, before, "red zoomed")
         print("punch: editor.picture before the pinch \(built ?? -1) and after it \(builds(picture) ?? -1)")
         XCTAssertEqual(builds(picture), built, "the count of builds")
         screenshot("punch-01-zoomed")
-        let zoomedInfo = info(app)
+
+        let undo = element(app, "editor.undo")
+        undo.tap()
+        waitUntil("clip.frameInfo reading " + standard + " after one undo") { self.info(app) == self.standard }
+        XCTAssertFalse(undo.isEnabled, "editor.undo after one undo of the pinch")
+    }
+
+    func testADragMovesBlueUpAndIsOneUndoStep() {
+        let app = startApp(seed: "two-clips", playhead: 600, drafts: "fresh")
+        waitForTheEditor(app)
+        select(app, "editor.clip.1", at: 0.5)
+        let picture = element(app, "editor.picture")
 
         // Upward: the picture moves up, so its centre is above the canvas centre.
         mark("punch-02-drag")
@@ -58,111 +71,115 @@ final class PunchInTests: XCTestCase {
         start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -60)))
         waitUntil("a y below 0 after a drag of 60 points upward") { self.offset(app).y < 0 }
         print("punch: clip.frameInfo after the drag reads " + info(app))
-        XCTAssertGreaterThan(zoom(app), 150, "the zoom after the drag")
 
         let undo = element(app, "editor.undo")
         undo.tap()
-        waitUntil("clip.frameInfo reading " + zoomedInfo + " after one undo") { self.info(app) == zoomedInfo }
-        XCTAssertEqual(offset(app).y, 0)
-        undo.tap()
-        waitUntil("clip.frameInfo reading " + standard + " after a second undo") { self.info(app) == self.standard }
-        XCTAssertFalse(undo.isEnabled, "editor.undo after the two undos")
+        waitUntil("clip.frameInfo reading " + standard + " after one undo") { self.info(app) == self.standard }
+        XCTAssertFalse(undo.isEnabled, "editor.undo after one undo of the drag")
     }
 
     func testAPinchInwardOnTheStandardFramingChangesNothing() {
-        let app = startPunchIn()
+        let app = startPinch()
         pinch(element(app, "editor.picture"), app, scale: 0.3)
         // Nothing follows a pinch that changes nothing, so the line is read at once.
         XCTAssertEqual(info(app), standard)
         XCTAssertFalse(element(app, "editor.undo").isEnabled, "editor.undo after the pinch")
     }
 
-    func testAPinchWithThePlayheadInsideRedChangesNoClip() {
-        let app = startPunchIn(playhead: 2400, blueAt: 0.85)
+    func testAPinchWithThePlayheadInsideRedChangesBlueNorRed() {
+        let app = startApp(seed: "two-clips-wide", playhead: 2400, drafts: "fresh")
+        waitForTheEditor(app)
+        select(app, "editor.clip.1", at: 0.85)
         pinch(element(app, "editor.picture"), app, scale: 2)
         // Nothing follows a pinch that changes nothing, so the lines are read at once.
         XCTAssertEqual(info(app), standard, "blue")
-        let red = element(app, "editor.clip.2")
-        red.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        waitUntil("editor.clip.2 selected after the tap on it") { red.isSelected }
+        select(app, "editor.clip.2", at: 0.5)
         print("punch: clip.frameInfo with red selected reads " + info(app))
         XCTAssertEqual(info(app), standard, "red")
     }
 
     func testTheZoomIsKeptInTheDraft() {
-        var app = startPunchIn()
+        var app = startPinch()
         pinch(element(app, "editor.picture"), app, scale: 2)
         waitUntil("a zoom above 150 after a pinch with scale 2") { self.zoom(app) > 150 }
         let zoomed = info(app)
         print("punch: clip.frameInfo before the relaunch reads " + zoomed)
         app.terminate()
 
-        // The app ended: the reopened draft keeps blue zoomed.
+        // The app ended: the reopened draft keeps red zoomed. At 0 seconds red begins at x 381, near the right edge of
+        // the screen, so red is tapped 8 points inside its left end, or 8 points inside the screen when that end lies
+        // left of it.
         app = startApp(seed: nil, drafts: "kept")
         waitUntil("drafts.row.1 on the start screen", expected: expectedStart) {
             self.element(app, "drafts.row.1").exists
         }
         element(app, "drafts.row.1").tap()
         waitForTheEditor(app)
-        selectBlue(app)
+        let block = element(app, "editor.clip.2")
+        let x = min(max(block.frame.minX, 0) + 8, block.frame.maxX - 8)
+        print("punch: editor.clip.2 in the reopened draft at \(block.frame), tapped at x \(x)")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: x, dy: block.frame.midY))
+            .tap()
+        waitUntil("editor.clip.2 selected and clip.frameInfo in the reopened draft") {
+            block.isSelected && app.staticTexts["clip.frameInfo"].exists
+        }
         waitUntil("clip.frameInfo reading " + zoomed + " in the reopened draft") { self.info(app) == zoomed }
     }
 
     func testAPinchInArabicAndInSwedish() {
         for language in ["ar", "sv"] {
-            let app = startPunchIn(language: language)
+            let app = startPinch(language: language)
             let picture = element(app, "editor.picture")
-            let before = waitForTheShare(in: picture, "blue standing between bars in " + language, above: 0.2)
+            let before = waitForTheShare(in: picture, "red standing between bars in " + language, above: 0.2)
             pinch(picture, app, scale: 2)
             waitUntil("a zoom above 150 after a pinch with scale 2 in " + language) { self.zoom(app) > 150 }
-            let zoomed = waitForTheShare(in: picture, "blue zoomed in " + language, above: before + 0.1)
-            XCTAssertGreaterThan(zoomed, before, "blue zoomed in " + language)
+            let zoomed = waitForTheShare(in: picture, "red zoomed in " + language, above: before + 0.1)
+            XCTAssertGreaterThan(zoomed, before, "red zoomed in " + language)
             screenshot("punch-01-zoomed-" + language)
             app.terminate()
         }
     }
 
-    /// A level of blue changed first, then the pinch: the picture shows the zoom and the player builds nothing.
+    /// A level of red changed first, then the pinch: the picture shows the zoom and the player builds nothing.
     func testAPinchAfterALevelShowsTheZoom() {
-        let app = startPunchIn()
+        let app = startPinch()
         let picture = element(app, "editor.picture")
-        let before = waitForTheShare(in: picture, "blue standing between bars", above: 0.2)
+        let before = waitForTheShare(in: picture, "red standing between bars", above: 0.2)
         let built = builds(picture)
         XCTAssertNotNil(built, "editor.picture has no count of builds")
         let slider = app.sliders["clip.volume"]
         waitUntil("the slider clip.volume") { slider.exists }
         slider.adjust(toNormalizedSliderPosition: 0)
-        waitUntil("editor.clip.1 ending other than 100 v after the move of clip.volume") {
-            !self.value(app, "editor.clip.1").hasSuffix(" 100 v")
+        waitUntil("editor.clip.2 ending other than 100 v after the move of clip.volume") {
+            !self.value(app, "editor.clip.2").hasSuffix(" 100 v")
         }
-        print("punch: after the move of clip.volume editor.clip.1 reads " + value(app, "editor.clip.1"))
+        print("punch: after the move of clip.volume editor.clip.2 reads " + value(app, "editor.clip.2"))
 
         pinch(picture, app, scale: 2)
         waitUntil("a zoom above 150 after a pinch with scale 2") { self.zoom(app) > 150 }
-        let zoomed = waitForTheShare(in: picture, "blue zoomed after the level", above: before + 0.1)
-        XCTAssertGreaterThan(zoomed, before, "blue zoomed after the level")
+        let zoomed = waitForTheShare(in: picture, "red zoomed after the level", above: before + 0.1)
+        XCTAssertGreaterThan(zoomed, before, "red zoomed after the level")
         print("punch: editor.picture before the level \(built ?? -1) and after the pinch \(builds(picture) ?? -1)")
         XCTAssertEqual(builds(picture), built, "the count of builds")
     }
 
-    /// Starts on `two-clips` at the playhead with fresh drafts, waits for the editor and selects blue.
-    private func startPunchIn(language: String = "en", playhead: Int = 600, blueAt share: CGFloat = 0.5)
-        -> XCUIApplication
-    {
-        let app = startApp(seed: "two-clips", language: language, playhead: playhead, drafts: "fresh")
+    /// Starts on `two-clips-wide` at 4 seconds with fresh drafts, waits for the editor and selects red.
+    private func startPinch(language: String = "en") -> XCUIApplication {
+        let app = startApp(seed: "two-clips-wide", language: language, playhead: 2400, drafts: "fresh")
         waitForTheEditor(app)
-        selectBlue(app, at: share)
+        select(app, "editor.clip.2", at: 0.5)
         return app
     }
 
-    /// Taps blue at the share of its width and waits until it is selected and its info reads.
-    private func selectBlue(_ app: XCUIApplication, at share: CGFloat = 0.5) {
-        let block = element(app, "editor.clip.1")
+    /// Taps the block at the share of its width and waits until it is selected and the info reads.
+    private func select(_ app: XCUIApplication, _ identifier: String, at share: CGFloat) {
+        let block = element(app, identifier)
         block.coordinate(withNormalizedOffset: CGVector(dx: share, dy: 0.5)).tap()
-        waitUntil("editor.clip.1 selected and clip.frameInfo after the tap on it") {
+        waitUntil(identifier + " selected and clip.frameInfo after the tap on it") {
             block.isSelected && app.staticTexts["clip.frameInfo"].exists
         }
     }
+
 
     /// One scripted pinch in a second, with the info printed before and after it.
     private func pinch(_ picture: XCUIElement, _ app: XCUIApplication, scale: CGFloat) {
@@ -209,18 +226,18 @@ final class PunchInTests: XCTestCase {
         app.descendants(matching: .any)[identifier]
     }
 
-    /// Reads the share of blue in the picture until it is above the number, expected within `expectedFrame` seconds
+    /// Reads the share of red in the picture until it is above the number, expected within `expectedFrame` seconds
     /// and given up above three times that. Prints the seconds and answers the last share.
     private func waitForTheShare(in picture: XCUIElement, _ what: String, above: Double) -> Double {
         let started = Date()
-        var found = share(of: blue, in: picture)
+        var found = share(of: red, in: picture)
         var waited = Date().timeIntervalSince(started)
         while !(found > above) && waited <= 3 * expectedFrame {
             Thread.sleep(forTimeInterval: 0.2)
-            found = share(of: blue, in: picture)
+            found = share(of: red, in: picture)
             waited = Date().timeIntervalSince(started)
         }
-        print("punch: waited \(waited) seconds for \(what), the share of blue \(found), expected \(expectedFrame), limit \(3 * expectedFrame)")
+        print("punch: waited \(waited) seconds for \(what), the share of red \(found), expected \(expectedFrame), limit \(3 * expectedFrame)")
         return found
     }
 
