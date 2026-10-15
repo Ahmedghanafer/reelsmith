@@ -86,7 +86,7 @@ final class PunchInTests: XCTestCase {
         XCTAssertFalse(element(app, "editor.undo").isEnabled, "editor.undo after the pinch")
     }
 
-    func testAPinchWithThePlayheadInsideRedChangesBlueNorRed() {
+    func testAPinchWithThePlayheadInsideRedChangesNoClip() {
         let app = startApp(seed: "two-clips-wide", playhead: 2400, drafts: "fresh")
         waitForTheEditor(app)
         select(app, "editor.clip.1", at: 0.85)

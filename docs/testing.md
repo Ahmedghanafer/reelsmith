@@ -541,7 +541,7 @@ Whether the simulator performs a scripted pinch or twist as two fingers on an ar
 - The drag and its undo, on `two-clips`: a drag of 60 points upward from the middle gives a y below 0. One undo brings back "fit black 100 0,0", and `editor.undo` is then disabled.
 - A pinch with scale 0.3 on the standard framing leaves "fit black 100 0,0" and `editor.undo` disabled.
 - Blue tapped at 0.85 of its width with the playhead inside red: a pinch with scale 2 leaves blue at "fit black 100 0,0", and red reads the same once tapped.
-- The zoom of a pinch is kept: after the app ended, `-drafts kept`, `drafts.row.1` and a tap on red, the info reads the one printed before the relaunch. Red is tapped 8 points inside the first of its left end and the left edge of the screen that lies on the screen, since at 0 seconds it begins near the right edge.
+- The zoom of a pinch is kept: after the app ended, `-drafts kept`, `drafts.row.1` and a tap on red, the info reads the one printed before the relaunch. Red is tapped 8 points right of its left end, or of the left edge of the screen when that end lies off it.
 - In Arabic and in Swedish a pinch with scale 2 gives a zoom above 150 and more red than before.
 - A level first: after `clip.volume` is moved to its lowest, a pinch with scale 2 still gives a zoom above 150, more red than before and no build.
 
