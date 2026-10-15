@@ -67,6 +67,19 @@ struct ClipPanel: View {
                     Button("clip.applyAll") { sendStill(.frame(.applyToAll(framed.id))) }
                         .accessibilityIdentifier("clip.applyAll")
                     // slot: guide
+                    // Turns the Instagram guide over the picture on and off. Only the 9:16 canvas has one.
+                    // https://developer.apple.com/documentation/swiftui/image/init(systemname:)
+                    // https://developer.apple.com/documentation/swiftui/view/accessibilitylabel(_:)-5f0zj
+                    Button {
+                        store.showsGuide.toggle()
+                    } label: {
+                        Image(systemName: "rectangle.dashed")
+                            .frame(width: 44, height: 44)
+                    }
+                    .disabled(InstagramGuide.safeArea(on: state.project.canvas) == nil)
+                    .accessibilityLabel(Text("clip.guide"))
+                    .accessibilityIdentifier("clip.guide")
+                    .accessibilityAddTraits(store.showsGuide ? .isSelected : [])
                     // end slot: guide
                 }
                 .frame(minHeight: 44)

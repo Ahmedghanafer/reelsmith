@@ -515,6 +515,22 @@ Screenshots: `preview-text-01-follows-typing` (the two white letters "MM" in the
 
 That a refresh that throws builds a new item, that a build which lands on other texts is refreshed once, and that the area has no value with no seed cannot be seen in these tests and is held by no test.
 
+### UI tests of the guide
+
+`UITests/GuideTests.swift` holds the Instagram guide. Each test starts with `-drafts fresh` and a tap on the middle of `editor.clip.1`, blue, after which it waits until blue is selected and `clip.framing` is there. All but the landscape test run on `two-clips` at `-playhead 600`. A tap on `clip.guide` is waited for until `editor.guide` and `editor.guide.safe` with a frame are there. After a tap the test reads until the effect holds, expected within 1 second and failing only above 3, and prints a line that starts with `guide: waited`.
+
+- The row and the guide, in English, Arabic and Swedish: `clip.fit`, `clip.fill`, `clip.blur`, `clip.applyAll` and `clip.guide` are hittable, inside the screen, share a stretch of height and lie over none of the others, their frames printed. No `editor.guide` before the tap. After it `editor.guide.safe` lies at 0.06, 0.14, 0.88 and 0.51 of the width and the height of `editor.picture` (x, y, width, height) within 1 point, both frames printed, and the count of builds in the value of `editor.picture` is the one before.
+- The panel goes: with the guide shown, a tap left of blue on `editor.timelineRegion` takes `clip.framing` away and `editor.guide` stays. A tap on `editor.clip.2` at the normalised offset (0.15, 0.5) and a tap on `clip.guide` take `editor.guide` away.
+- On `two-clips-wide`, the landscape canvas, `clip.guide` is there and disabled, and there is no `editor.guide`.
+- No touch: with the guide shown, a drag of 60 points upward from (0.5, 0.6) of the picture gives a y below 0 in `clip.frameInfo`, and the guide is still there.
+- Off when an editor opens: the app ended with the guide shown, launched with `-drafts kept`, `drafts.row.1` opened and blue tapped: no `editor.guide`, and `clip.guide` is not selected.
+
+Screenshots: `guide-01-shown` (blue between its bars on the 9:16 picture, darker at the top, at the bottom and at both sides, a thin white line around the safe area, the clip panel open), `guide-01-shown-ar` and `guide-01-shown-sv` (the same in Arabic and in Swedish, the guide not mirrored).
+
+`Tests/ReelsmithCoreTests/InstagramGuideTests.swift` runs on Linux and holds `InstagramGuide.safeArea(on:)`: (64.8, 268.8, 950.4, 979.2) on the portrait canvas and nil on the landscape canvas. `Tests/ReelsmithCoreTests/GuideWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `guide` of the English, the Arabic or the Swedish file holds anything but `clip.guide`, and when its text is not "Guide" in English, "دليل" in Arabic and "Guide" in Swedish.
+
+That the guide never reaches a cover or an export is read in the diff: it is drawn by the screen and no plan holds it. A pinch with the guide shown is not run: no scripted pinch is taken on the 9:16 picture with the clip panel open (see "UI tests of punch in"), so the drag holds that the guide takes no touch.
+
 ### UI tests of the gestures
 
 `UITests/TextGesturesTests.swift` holds the gestures on the picture area in nine tests, on the landscape seeds `text-wide`, `text-box-wide` and `two-clips-wide`. A start on a text seed has its text selected and the panel open, so the picture area is smaller than with no panel, and the drag test prints its size. The values of the text are read from `editor.textInfo` by the place of a field, counted from 1: field 1 the position, field 3 the size, field 6 the centre as "x,y", field 7 the rotation. A gesture asserts a direction and a limit, never a value between them. A drag is one finger pressed for a tenth of a second and moved by points. A pinch and a twist are the two fingers of `pinch(withScale:velocity:)` and `rotate(_:withVelocity:)` on `editor.picture`, and before and after each the test prints the field it changes, in a line that starts with `text-gestures: field 3` or `text-gestures: field 7`. After a gesture the test reads until the effect holds, expected within 1 second and failing only above 3, and where it reads the picture it asks for the share of white until it is above T, 0.00001, expected within 3 seconds and given up above 9. Each wait prints a line that starts with `text-gestures: waited`.

@@ -182,6 +182,7 @@
 /* end slot: framing */
 
 /* slot: guide */
+"clip.guide" = "Guide";
 /* end slot: guide */
 
 /* slot: fold-frames */
