@@ -44,8 +44,9 @@ public func refreshPicture(of item: AVPlayerItem, plan: RenderPlan, media: [Medi
 
 /// Gives an item `makePlayerItem` made the audio mix of the plan, made by the same function as at a build. The
 /// sound tracks of the item's composition, in the order of their ids, are the clip track when a segment has sound,
-/// then the music track when the plan has music. Throws `cannotRead` when the item is not a composition of ours or
-/// its tracks do not match the plan. After a throw the item has the mix it had. Reads no file.
+/// then the music track when the plan has music, the same in number whatever the volumes. The new mix carries a new
+/// tap of the clip track. Throws `cannotRead` when the item is not a composition of ours or its tracks do not match
+/// the plan. After a throw the item has the mix it had. Reads no file.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/audiomix
 /// https://developer.apple.com/documentation/avfoundation/avplayeritem/asset
@@ -62,8 +63,8 @@ public func refreshSound(of item: AVPlayerItem, plan: RenderPlan) throws {
 }
 
 /// The one builder for the player item and for the export. One picture track, one sound track when a segment
-/// has sound, one more sound track when the plan has music, the video composition of the plan, and the audio mix
-/// with one set of parameters for each sound track.
+/// has sound, one more sound track when the plan has music, whatever the volumes, the video composition of the
+/// plan, and the audio mix with one set of parameters for each sound track and a tap on the clip track.
 /// Throws `sourceMissing` when a file is not in the media folder and `cannotRead` when a file cannot be used.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avmutablecomposition
@@ -145,8 +146,9 @@ private func addMusic(_ layer: MusicLayer, to composition: AVMutableComposition,
 }
 
 /// The whole mix of a plan, for a new item and an export alike, made from the plan and the ids of its sound
-/// tracks and reading no file. The clip track holds `clipVolume` times the volume of each segment that has sound,
-/// from its start to its end in the order of the plan, so 0 while the clips are muted. The music track rises from 0 to the
+/// tracks and reading no file. What is heard of each segment that has sound is `clipVolume` times its volume, from
+/// its start to its end in the order of the plan, so 0 while the clips are muted: the clip track holds it up to 1
+/// and its tap multiplies by what lies above. The music track rises from 0 to the
 /// music's `volume` over the first `fadeIn`, stands at it up to the last `fadeOut` and falls to 0 over it. A fade
 /// of zero sets no ramp. A track id that is nil gets no parameters.
 ///
@@ -163,8 +165,8 @@ private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, mus
         // Between two volumes set with setVolume the platform ramps from one to the other (blue at 1 then red
         // at 0.5 read blue at 0.375 in compile check run 38658994782), so each segment holds its volume from its
         // start to its end with a ramp that does not change.
-        // A volume above 1 is never set on the track (rule 87): the track holds the volume up to 1, and the tap
-        // multiplies each sample by what lies above it (seam AM, way 2).
+        // A volume above 1 is never set on the track: the track holds the volume up to 1, and the tap
+        // multiplies each sample by what lies above it.
         var gains: [ClipGains.Piece] = []
         for segment in plan.segments where segment.hasSound {
             let volume = plan.sound.clipVolume * segment.volume
