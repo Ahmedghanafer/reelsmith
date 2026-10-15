@@ -32,7 +32,11 @@ struct ClipPanel: View {
             if let clip {
                 SoundSlider(
                     identifier: "clip.volume", label: "clip.volume", value: clip.volume, range: 0...1, step: 0.05,
-                    send: { store.send(.sound(.setVolumeOfClip(clip.id, $0))) })
+                    send: { store.send(.sound(.setVolumeOfClip(clip.id, $0))) }
+                )
+                // Made anew for each clip, so a drag begun on one clip is never sent to the next one selected.
+                // https://developer.apple.com/documentation/swiftui/view/id(_:)
+                .id(clip.id)
             }
         }
         .padding(.horizontal, 16)

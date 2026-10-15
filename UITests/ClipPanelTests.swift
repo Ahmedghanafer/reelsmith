@@ -117,7 +117,11 @@ final class ClipPanelTests: XCTestCase {
             let before = value(app, "editor.clip.2")
             slider.adjust(toNormalizedSliderPosition: 0)
             moves += 1
-            waitUntil("a value of editor.clip.2 other than " + before + " after move \(moves) to the lowest") {
+            // A move that lands on the step it left changes nothing, so this wait does not fail: the last
+            // assert on " 0 v" decides.
+            waitUntil(
+                "a value of editor.clip.2 other than " + before + " after move \(moves) to the lowest", failing: false
+            ) {
                 self.value(app, "editor.clip.2") != before
             }
             print("clip-panel: after move \(moves) editor.clip.2 reads " + value(app, "editor.clip.2"))
@@ -210,8 +214,8 @@ final class ClipPanelTests: XCTestCase {
     }
 
     /// Reads until the condition holds, prints the seconds it waited and fails only above three times the expected
-    /// seconds: a hosted runner under load can hold the app for seconds.
-    private func waitUntil(_ what: String, expected: Double = 1, _ reached: () -> Bool) {
+    /// seconds: a hosted runner under load can hold the app for seconds. With `failing` false it only waits.
+    private func waitUntil(_ what: String, expected: Double = 1, failing: Bool = true, _ reached: () -> Bool) {
         let started = Date()
         var holds = reached()
         var waited = Date().timeIntervalSince(started)
@@ -223,6 +227,8 @@ final class ClipPanelTests: XCTestCase {
             waited = Date().timeIntervalSince(started)
         }
         print("clip-panel: waited \(waited) seconds for \(what), expected \(expected), limit \(3 * expected)")
-        XCTAssertTrue(holds, what)
+        if failing {
+            XCTAssertTrue(holds, what)
+        }
     }
 }
