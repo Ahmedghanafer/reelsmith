@@ -98,7 +98,9 @@ final class TimelineStripView: UIView {
         super.layoutSubviews()
         let clips: [Clip] = state.project.clips
         // Each block is a container in `strip` that holds its tiles and, on top, its label. The container lets its
-        // touches through to `strip`.
+        // touches through to `strip`. A new container goes into `strip` only once it and its label have their frames
+        // and identifiers, below, so the label is never taken in as a hidden element of an empty container. The
+        // container does not clip, so nothing of it can hide the label: the tiles clip themselves.
         while blocks.count > clips.count {
             blocks.removeLast().superview?.removeFromSuperview()
             tiles.removeLast()
@@ -107,7 +109,6 @@ final class TimelineStripView: UIView {
             let container = UIView()
             container.semanticContentAttribute = .forceLeftToRight
             container.isUserInteractionEnabled = false
-            container.clipsToBounds = true
             container.backgroundColor = UIColor.systemGray
             let tile = FrameTiles()
             container.addSubview(tile)
@@ -121,7 +122,6 @@ final class TimelineStripView: UIView {
             block.shadowColor = UIColor.black
             block.shadowOffset = CGSize(width: 0, height: 1)
             container.addSubview(block)
-            strip.addSubview(container)
             blocks.append(block)
             tiles.append(tile)
         }
@@ -158,6 +158,9 @@ final class TimelineStripView: UIView {
             block.accessibilityTraits = selected ? [.staticText, .selected] : .staticText
             block.layer.borderWidth = selected ? 3 : 1
             block.layer.borderColor = (selected ? UIColor.systemYellow : UIColor.systemBackground).cgColor
+            if let container = block.superview, container.superview == nil {
+                strip.addSubview(container)
+            }
         }
         playhead.frame = CGRect(x: middle - 1, y: 0, width: 2, height: bounds.height)
         playhead.accessibilityValue = state.playhead.clockText
