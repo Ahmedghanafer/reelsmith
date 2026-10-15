@@ -256,7 +256,7 @@ final class WholePathTests: XCTestCase {
         }
         newProject.tap()
 
-        if let stopped = chooseInThePhotoPicker(app, fromTheEnd: [1, 2], confirms: true, picture: picture) {
+        if let stopped = chooseInThePhotoPicker(app, fromTheEnd: [1, 2], confirms: true, picture: picture, photos: true) {
             return stopped
         }
 

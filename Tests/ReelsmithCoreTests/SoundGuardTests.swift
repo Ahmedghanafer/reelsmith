@@ -151,6 +151,7 @@ private func actionCase(of action: EditorAction) -> ActionCase? {
     case .moveClip: return nil
     case .cutBefore: return nil
     case .cutAfter: return nil
+    case .frame: return nil
     }
 }
 
@@ -665,7 +666,7 @@ private func editFault(before: EditorState, action: EditorAction, after: EditorS
                 "showsSound \(after.showsSound), selection \(String(describing: after.selection)), "
                     + "selectedText \(String(describing: after.selectedText))")
         }
-        if action != .sound(.open) && after != before && after.isPlaying {
+        if action != .sound(.open) && after != before && after.isPlaying != (before.isPlaying && ![SoundKind.setMusicLong, .setMusicShort, .setMusic500, .setMusic900, .removeMusic, .start, .startBelow, .startAbove, .startOffFrame].contains(kind)) {
             return Fault("a sound action but open that changes the state pauses", "it was \(kind.rawValue)")
         }
         return nil

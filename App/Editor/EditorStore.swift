@@ -18,6 +18,8 @@ final class EditorStore {
     /// Nil for a seeded start without -drafts.
     let draft: OpenDraft?
     private(set) var exportSettings: ExportSettings
+    /// Whether the preview shows the Instagram guide. Off at each open of an editor, never stored, no undo step.
+    var showsGuide: Bool = false
 
     /// `history` is the undo history the draft was written with. Nil reads as an empty history.
     init(
@@ -47,6 +49,19 @@ final class EditorStore {
 
     func redo() {
         editing = editing.redone()
+        if editing.writesNow {
+            write()
+        }
+    }
+
+    /// One step of a drag: with the steps before it in the same run one undo step. It writes nothing.
+    func sendDragStep(_ action: EditorAction) {
+        editing = editing.afterDragStep(action)
+    }
+
+    /// The end of a drag: the run ends, and the draft is written when something is not written yet.
+    func endDrag() {
+        editing = editing.endingRun()
         if editing.writesNow {
             write()
         }
@@ -123,4 +138,7 @@ final class EditorStore {
         write()
     }
     // end slot: export-choice
+    /// The blocks of the strip are thin and show no frames. False when an editor opens, toggled by `editor.frames`,
+    /// never stored and no step of undo.
+    var framesFolded: Bool = false
 }

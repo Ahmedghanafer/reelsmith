@@ -61,32 +61,31 @@ final class SoundClipsTests: XCTestCase {
         XCTAssertNotNil(first, "editor.picture has no count of builds")
 
         slider.adjust(toNormalizedSliderPosition: 0.5)
-        waitUntil("field 1 below 100 and a higher count of builds after the move toward the lower end") {
-            (volume(app) ?? 100) < 100 && (builds(picture) ?? 0) > (first ?? Int.max)
+        waitUntil("field 1 below 100 and the count of builds unchanged after the move toward the lower end") {
+            (volume(app) ?? 100) < 100 && builds(picture) == first
         }
         print("sound-clips: after the first move field 1 reads \(volume(app) ?? -1), editor.picture \(builds(picture) ?? -1)")
         XCTAssertLessThan(volume(app) ?? 100, 100)
-        XCTAssertGreaterThan(builds(picture) ?? 0, first ?? Int.max)
+        XCTAssertEqual(builds(picture), first, "an item was built for a level")
         XCTAssertEqual(field(app, 2), ".")
 
-        // Each move that lowers field 1 is followed until its count of builds has risen, so the build of one
-        // move is never counted for the next.
+        // A level gives the standing item a new mix and builds nothing, so the count stays as it was after
+        // every move.
         var moves = 0
         while volume(app) != 0 && moves < mostMoves {
             let before = volume(app) ?? 100
-            let count = builds(picture)
             slider.adjust(toNormalizedSliderPosition: 0)
             moves += 1
-            let lowered = waitUntil("field 1 below \(before) after move \(moves) to the lower end", required: false) {
-                (volume(app) ?? 100) < before
-            }
-            // Also after a move that showed no effect in time, so a late build is not counted for the next move.
-            waitUntil("a higher count of builds after move \(moves) to the lower end", required: lowered) {
-                (builds(picture) ?? 0) > (count ?? Int.max)
+            waitUntil(
+                "field 1 below \(before) and the count of builds unchanged after move \(moves) to the lower end",
+                required: false
+            ) {
+                (volume(app) ?? 100) < before && builds(picture) == first
             }
             print("sound-clips: after move \(moves) to the lower end field 1 reads \(volume(app) ?? -1), editor.picture \(builds(picture) ?? -1)")
         }
         XCTAssertEqual(volume(app), 0, "field 1 after \(moves) moves to the lower end")
+        XCTAssertEqual(builds(picture), first, "an item was built for a level")
 
         let atZero = builds(picture)
         slider.adjust(toNormalizedSliderPosition: 0)
@@ -108,19 +107,19 @@ final class SoundClipsTests: XCTestCase {
         XCTAssertNotNil(first, "editor.picture has no count of builds")
 
         toggle.tap()
-        waitUntil("field 2 m, the toggle selected and a higher count of builds after the tap on it") {
-            field(app, 2) == "m" && toggle.isSelected && (builds(picture) ?? 0) > (first ?? Int.max)
+        waitUntil("field 2 m, the toggle selected and the count of builds unchanged after the tap on it") {
+            field(app, 2) == "m" && toggle.isSelected && builds(picture) == first
         }
         XCTAssertEqual(field(app, 2), "m")
         XCTAssertTrue(toggle.isSelected)
         XCTAssertEqual(field(app, 1), "100")
-        XCTAssertGreaterThan(builds(picture) ?? 0, first ?? Int.max)
+        XCTAssertEqual(builds(picture), first, "an item was built for a level")
         screenshot("sound-clips-02-muted")
 
         let muted = builds(picture)
         toggle.tap()
-        waitUntil("field 2 ., the toggle not selected and a higher count of builds after the second tap on it") {
-            field(app, 2) == "." && !toggle.isSelected && (builds(picture) ?? 0) > (muted ?? Int.max)
+        waitUntil("field 2 ., the toggle not selected and the count of builds unchanged after the second tap on it") {
+            field(app, 2) == "." && !toggle.isSelected && builds(picture) == muted
         }
         XCTAssertEqual(field(app, 2), ".")
         XCTAssertFalse(toggle.isSelected)
@@ -137,8 +136,8 @@ final class SoundClipsTests: XCTestCase {
         let first = builds(picture)
 
         toggle.tap()
-        waitUntil("field 2 m, the toggle selected and a higher count of builds after the tap on it") {
-            field(app, 2) == "m" && toggle.isSelected && (builds(picture) ?? 0) > (first ?? Int.max)
+        waitUntil("field 2 m, the toggle selected and the count of builds unchanged after the tap on it") {
+            field(app, 2) == "m" && toggle.isSelected && builds(picture) == first
         }
         let muted = soundInfo(app)
         print("sound-clips: muted editor.soundInfo reads \(muted)")

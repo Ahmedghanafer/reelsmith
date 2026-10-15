@@ -7,8 +7,8 @@
 "start.newProject" = "New project";
 "start.landscape" = "Landscape 16:9";
 "start.portrait" = "Portrait 9:16";
-"start.copying" = "Copying videos";
-"start.noneReadable" = "None of the videos could be used.";
+"start.copying" = "Copying clips";
+"start.noneReadable" = "None of the clips could be used.";
 "start.ok" = "OK";
 /* end slot: m1-6b-new-project */
 
@@ -158,13 +158,33 @@
 /* end slot: draft-path */
 
 /* slot: add-clips */
+"tools.add" = "Add";
 /* end slot: add-clips */
 
 /* slot: clip-panel */
+"clip.cutBefore" = "Delete before";
+"clip.cutAfter" = "Delete after";
+"clip.volume" = "Volume";
 /* end slot: clip-panel */
 
 /* slot: music-row */
+"musicRow.bar" = "Music %1$@";
 /* end slot: music-row */
 
 /* slot: clip-path */
 /* end slot: clip-path */
+
+/* slot: framing */
+"clip.fit" = "Fit";
+"clip.fill" = "Fill";
+"clip.blur" = "Blur";
+"clip.applyAll" = "All clips";
+/* end slot: framing */
+
+/* slot: guide */
+"clip.guide" = "Guide";
+/* end slot: guide */
+
+/* slot: fold-frames */
+"tools.frames" = "Frames";
+/* end slot: fold-frames */

@@ -7,8 +7,8 @@
 "start.newProject" = "Nytt projekt";
 "start.landscape" = "Liggande 16:9";
 "start.portrait" = "Stående 9:16";
-"start.copying" = "Kopierar videor";
-"start.noneReadable" = "Ingen av videorna kunde användas.";
+"start.copying" = "Kopierar klipp";
+"start.noneReadable" = "Inget av klippen kunde användas.";
 "start.ok" = "OK";
 /* end slot: m1-6b-new-project */
 
@@ -158,13 +158,33 @@
 /* end slot: draft-path */
 
 /* slot: add-clips */
+"tools.add" = "Lägg till";
 /* end slot: add-clips */
 
 /* slot: clip-panel */
+"clip.cutBefore" = "Radera före";
+"clip.cutAfter" = "Radera efter";
+"clip.volume" = "Volym";
 /* end slot: clip-panel */
 
 /* slot: music-row */
+"musicRow.bar" = "Musik %1$@";
 /* end slot: music-row */
 
 /* slot: clip-path */
 /* end slot: clip-path */
+
+/* slot: framing */
+"clip.fit" = "Anpassa";
+"clip.fill" = "Fyll";
+"clip.blur" = "Oskärpa";
+"clip.applyAll" = "Alla klipp";
+/* end slot: framing */
+
+/* slot: guide */
+"clip.guide" = "Guide";
+/* end slot: guide */
+
+/* slot: fold-frames */
+"tools.frames" = "Bildrutor";
+/* end slot: fold-frames */

@@ -157,8 +157,24 @@ final class PlayerPictureView: UIView {
             return
         }
         let sameFootage: Bool = project?.sameFootage(as: state.project) ?? false
+        // Only levels differ: the standing item is given the mix of the new plan and the player plays on, then the
+        // texts are refreshed as below when they differ too. While a build runs, or when the Engine refuses, a new
+        // item is built.
+        let sameTracks: Bool = project?.sameTracks(as: state.project) ?? false
+        let sameTexts: Bool = project?.texts == state.project.texts
+        // A level and a framing changed at once: the picture is refreshed too, as for other texts.
+        let sameFramings: Bool = project?.clips.map(\.framing) == state.project.clips.map(\.framing)
         project = state.project
-        if !sameFootage {
+        if !sameFootage, sameTracks, !isBuilding, let standing = item,
+            (try? refreshSound(of: standing, plan: renderPlan(for: state.project))) != nil {
+            if (sameTexts && sameFramings) || refresh(standing, to: state.project) {
+                if isReady {
+                    bring(to: state)
+                }
+            } else {
+                rebuild(for: state)
+            }
+        } else if !sameFootage {
             rebuild(for: state)
         } else if !isBuilding, let standing = item {
             if refresh(standing, to: state.project) {

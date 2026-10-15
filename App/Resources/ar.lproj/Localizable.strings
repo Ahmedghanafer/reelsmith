@@ -7,8 +7,8 @@
 "start.newProject" = "مشروع جديد";
 "start.landscape" = "أفقي 16:9";
 "start.portrait" = "عمودي 9:16";
-"start.copying" = "جارٍ نسخ الفيديوهات";
-"start.noneReadable" = "تعذّر استخدام أي من الفيديوهات.";
+"start.copying" = "جارٍ نسخ المقاطع";
+"start.noneReadable" = "تعذّر استخدام أي من المقاطع.";
 "start.ok" = "موافق";
 /* end slot: m1-6b-new-project */
 
@@ -158,13 +158,33 @@
 /* end slot: draft-path */
 
 /* slot: add-clips */
+"tools.add" = "إضافة";
 /* end slot: add-clips */
 
 /* slot: clip-panel */
+"clip.cutBefore" = "حذف ما قبل";
+"clip.cutAfter" = "حذف ما بعد";
+"clip.volume" = "مستوى الصوت";
 /* end slot: clip-panel */
 
 /* slot: music-row */
+"musicRow.bar" = "الموسيقى %1$@";
 /* end slot: music-row */
 
 /* slot: clip-path */
 /* end slot: clip-path */
+
+/* slot: framing */
+"clip.fit" = "ملاءمة";
+"clip.fill" = "ملء";
+"clip.blur" = "تمويه";
+"clip.applyAll" = "كل المقاطع";
+/* end slot: framing */
+
+/* slot: guide */
+"clip.guide" = "دليل";
+/* end slot: guide */
+
+/* slot: fold-frames */
+"tools.frames" = "الإطارات";
+/* end slot: fold-frames */

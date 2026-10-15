@@ -194,20 +194,28 @@ final class MusicLevelsTests: XCTestCase {
         return app
     }
 
-    /// Moves the slider toward the place, waits until its field reads another value and the count of builds has
-    /// risen, and asserts that every other field reads as before. Answers the field after the move.
+    /// Moves the slider toward the place, waits until its field reads another value and the count of builds reads
+    /// as it should, and asserts that every other field reads as before. A level gives the standing item a new mix,
+    /// so the count stays as it was. The start of the music builds a new item, so the count rises. Answers the field
+    /// after the move.
     private func move(_ app: XCUIApplication, _ identifier: String, to place: CGFloat, field owned: Int) -> String {
         let picture = element(app, "editor.picture")
         let before = (1...6).map { field(app, $0) }
         let count = builds(picture)
         XCTAssertNotNil(count, "editor.picture has no count of builds")
+        let rises = identifier == "sound.musicStart"
         app.sliders[identifier].adjust(toNormalizedSliderPosition: place)
-        waitUntil("field \(owned) changed and a higher count of builds after the move of \(identifier)") {
-            field(app, owned) != before[owned - 1] && (builds(picture) ?? 0) > (count ?? Int.max)
+        waitUntil("field \(owned) changed and " + (rises ? "a higher" : "the same") + " count of builds after the move of \(identifier)") {
+            field(app, owned) != before[owned - 1]
+                && (rises ? (builds(picture) ?? 0) > (count ?? Int.max) : builds(picture) == count)
         }
         let after = (1...6).map { field(app, $0) }
         print("music-levels: after the move of \(identifier) editor.soundInfo reads \(soundInfo(app)), editor.picture \(builds(picture) ?? -1) from \(count ?? -1)")
-        XCTAssertGreaterThan(builds(picture) ?? 0, count ?? Int.max, identifier)
+        if rises {
+            XCTAssertGreaterThan(builds(picture) ?? 0, count ?? Int.max, identifier)
+        } else {
+            XCTAssertEqual(builds(picture), count, "an item was built for the level " + identifier)
+        }
         for other in 1...6 where other != owned {
             XCTAssertEqual(after[other - 1], before[other - 1], "field \(other) after the move of \(identifier)")
         }

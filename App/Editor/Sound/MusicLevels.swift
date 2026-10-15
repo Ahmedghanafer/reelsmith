@@ -6,10 +6,10 @@ import SwiftUI
 /// the volume of the music from 0 to 1, where it begins in the file in ticks, and its fade in and fade out in
 /// ticks. The start slider shows only while `canSetMusicStart` is true, so its step fits into its range. With no
 /// music the part shows the words of `music.none` as `sound.noMusic` and no slider. It decides nothing and holds
-/// no state: each slider reads the project and sends its action once, at the end of a drag, and Core holds every
-/// value inside its limits. Every range and step is read from Core or is a number of the plan. The part lays out
-/// from leading to trailing, so Arabic mirrors it. The label of the times is fixed left to right, as the time of
-/// the preview is.
+/// no state: each slider reads the project, the start sends its action once, at the end of a drag, the volume and
+/// the fades send each value of a drag, the whole drag one step of undo, and Core holds every value inside its
+/// limits. Every range and step is read from Core or is a number of the plan. The part lays out from leading to
+/// trailing, so Arabic mirrors it. The label of the times is fixed left to right, as the time of the preview is.
 ///
 /// https://developer.apple.com/documentation/swiftui/text/init(verbatim:)
 /// https://developer.apple.com/documentation/swiftui/text/monospaceddigit()
@@ -35,7 +35,8 @@ struct MusicLevels: View {
                 }
                 SoundSlider(
                     identifier: "sound.musicVolume", label: "music.volume", value: music.volume, range: 0...1,
-                    step: 0.05, send: { store.send(.sound(.setMusicVolume($0))) })
+                    step: 0.05, send: { store.sendDragStep(.sound(.setMusicVolume($0))) }, follows: true,
+                    ended: { store.endDrag() })
                 if state.canSetMusicStart {
                     SoundSlider(
                         identifier: "sound.musicStart", label: "music.start", value: Double(music.start.ticks),
@@ -45,11 +46,13 @@ struct MusicLevels: View {
                 SoundSlider(
                     identifier: "sound.fadeIn", label: "music.fadeIn", value: Double(music.fadeIn.ticks),
                     range: 0...Double(SoundGeometry.maximumFade.ticks), step: fadeStep,
-                    send: { store.send(.sound(.setFadeIn(Time(ticks: Int64($0))))) })
+                    send: { store.sendDragStep(.sound(.setFadeIn(Time(ticks: Int64($0))))) }, follows: true,
+                    ended: { store.endDrag() })
                 SoundSlider(
                     identifier: "sound.fadeOut", label: "music.fadeOut", value: Double(music.fadeOut.ticks),
                     range: 0...Double(SoundGeometry.maximumFade.ticks), step: fadeStep,
-                    send: { store.send(.sound(.setFadeOut(Time(ticks: Int64($0))))) })
+                    send: { store.sendDragStep(.sound(.setFadeOut(Time(ticks: Int64($0))))) }, follows: true,
+                    ended: { store.endDrag() })
             } else {
                 Text("music.none")
                     .accessibilityIdentifier("sound.noMusic")

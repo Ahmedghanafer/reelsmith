@@ -11,18 +11,25 @@ public struct Clip: Equatable, Codable, Sendable {
     public var media: MediaID
     public var sourceStart: Time
     public var duration: Time
-    /// 0 to 1, a factor on the volume of the clips. 1 when a stored file lacks it.
+    /// 0 to 2, a factor on the volume of the clips. 1 when a stored file lacks it.
     public var volume: Double
+    /// How the picture stands on the canvas. The standard framing when a stored file lacks it.
+    public var framing: Framing
 
-    public init(id: ClipID, media: MediaID, sourceStart: Time, duration: Time, volume: Double = 1) {
+    public init(
+        id: ClipID, media: MediaID, sourceStart: Time, duration: Time, volume: Double = 1,
+        framing: Framing = .standard
+    ) {
         self.id = id
         self.media = media
         self.sourceStart = sourceStart
         self.duration = duration
         self.volume = volume
+        self.framing = framing
     }
 
-    /// The coding keys and the encoding stay synthesized. A file written before volume existed reads as 1.
+    /// The coding keys and the encoding stay synthesized. A file written before volume existed reads as 1, and one
+    /// written before framing existed reads as the standard framing.
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(ClipID.self, forKey: .id)
@@ -30,6 +37,7 @@ public struct Clip: Equatable, Codable, Sendable {
         sourceStart = try container.decode(Time.self, forKey: .sourceStart)
         duration = try container.decode(Time.self, forKey: .duration)
         volume = try container.decodeIfPresent(Double.self, forKey: .volume) ?? 1
+        framing = try container.decodeIfPresent(Framing.self, forKey: .framing) ?? .standard
     }
 }
 
@@ -146,11 +154,31 @@ public struct Project: Equatable, Codable, Sendable {
         return min(music.file.duration - music.start, duration)
     }
 
-    /// Canvas, clips, media, clipVolume, clipsMuted and music are equal. The texts may differ.
+    /// Canvas, the clips compared without their framing, media, clipVolume, clipsMuted and music are equal. The
+    /// texts and the framing of the clips may differ.
     public func sameFootage(as other: Project) -> Bool {
-        canvas == other.canvas && clips == other.clips && media == other.media
+        canvas == other.canvas && clips.map(unframed) == other.clips.map(unframed) && media == other.media
             && clipVolume == other.clipVolume && clipsMuted == other.clipsMuted && music == other.music
     }
+
+    /// sameFootage with the levels left out: canvas, media, the music's file and start, and the clips compared
+    /// without their volume are equal. The volume of the clips, the mute, the clips' volumes, the music's volume and
+    /// its fades may differ, and so may the texts.
+    public func sameTracks(as other: Project) -> Bool {
+        canvas == other.canvas && media == other.media && clips.count == other.clips.count
+            && zip(clips, other.clips).allSatisfy { mine, theirs in
+                mine.id == theirs.id && mine.media == theirs.media && mine.sourceStart == theirs.sourceStart
+                    && mine.duration == theirs.duration
+            }
+            && music?.file == other.music?.file && music?.start == other.music?.start
+    }
+}
+
+/// The clip with the standard framing, all else kept.
+private func unframed(_ clip: Clip) -> Clip {
+    var clip = clip
+    clip.framing = .standard
+    return clip
 }
 
 extension Project {

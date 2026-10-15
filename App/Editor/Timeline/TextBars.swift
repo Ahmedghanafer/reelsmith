@@ -35,7 +35,7 @@ enum TextBars {
             bars.append(bar)
         }
 
-        let row = TimelineStripView.textRow
+        let row = (y: CGFloat(view.rows.textY), height: CGFloat(view.rows.rowHeight))
         var selectedFrame: CGRect?
         for (entry, bar) in zip(texts, bars) {
             let item: TextItem = entry.item
@@ -44,9 +44,9 @@ enum TextBars {
             let selected = item.id == state.selectedText
             bar.shown = item.id
             bar.frame = CGRect(
-                x: view.strip.frame.minX + CGFloat(TimelineGeometry.x(of: range.start)),
+                x: view.strip.frame.minX + CGFloat(view.scale.x(of: range.start)),
                 y: row.y,
-                width: CGFloat(TimelineGeometry.width(of: range.duration)),
+                width: CGFloat(view.scale.width(of: range.duration)),
                 height: row.height
             )
             let lines = item.string.split(omittingEmptySubsequences: false, whereSeparator: { $0.isNewline })
@@ -94,8 +94,9 @@ enum TextBars {
 /// One bar of the text row of the strip: a text that has a range, drawn from its start for its length.
 /// It shows the first line of the string, which is content and no word of the app, in the label `writing`,
 /// on the part of the bar that is on the screen. A tap selects its text. It decides nothing: the place and
-/// the width of the bar and of its writing come from `TimelineGeometry`, the range and the position from
-/// `Project`. Never mirrored: its frame is set by hand from the left, and the writing lies against the left.
+/// the width of the bar come from the scale of the strip, those of its writing from `TimelineGeometry`,
+/// the range and the position from `Project`. Never mirrored: its frame is set by hand from the left, and
+/// the writing lies against the left.
 ///
 /// https://developer.apple.com/documentation/uikit/uilabel
 /// https://developer.apple.com/documentation/uikit/uilabel/linebreakmode
@@ -215,8 +216,8 @@ final class TextTrimHandle: UIView, UIGestureRecognizerDelegate {
         let moved = Double(pan.translation(in: view).x)
         let action: EditorAction =
             isStart
-            ? .text(.trimStart(id, by: TimelineGeometry.trimAmount(forDragOf: moved)))
-            : .text(.trimEnd(id, by: TimelineGeometry.trimAmount(forDragOf: -moved)))
+            ? .text(.trimStart(id, by: view.scale.trimAmount(forDragOf: moved)))
+            : .text(.trimEnd(id, by: view.scale.trimAmount(forDragOf: -moved)))
         if pan.state == .began || pan.state == .changed {
             view.state = reduce(start, action)
         } else if pan.state == .ended {

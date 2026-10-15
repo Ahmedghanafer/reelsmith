@@ -110,6 +110,7 @@ private func kind(of action: EditorAction, in state: EditorState) -> Kind {
     case .moveClip: return .clearSelection
     case .cutBefore: return .clearSelection
     case .cutAfter: return .clearSelection
+    case .frame: return .clearSelection
     }
 }
 

@@ -3,8 +3,9 @@ import ReelsmithEngine
 import SwiftUI
 
 /// The editor shell: four regions from top to bottom, each with the slot of the story that fills it,
-/// and between the tools and the export the text region, only while a text is selected, or the sound
-/// region, only while the sound panel shows. Core keeps the two from showing together.
+/// and between the tools and the export the text region, only while a text is selected, the sound
+/// region, only while the sound panel shows, or the clip region, only while a clip is selected. Core keeps
+/// any two of them from showing together.
 /// The root and the regions are accessibility containers, so a region is found while it is empty
 /// and a control inside it keeps its own identifier.
 ///
@@ -40,14 +41,19 @@ struct EditorScreen: View {
             ZStack {
                 // slot: timeline
                 // A wrapped UIKit view takes all the height it is offered, so the strip fixes its own.
-                TimelineStrip(state: store.state, send: { action in store.send(action) })
-                    .frame(height: 104)
+                TimelineStrip(
+                    state: store.state, mediaFolder: store.mediaFolder, folded: store.framesFolded,
+                    send: { action in store.send(action) }
+                )
+                .frame(
+                    height: CGFloat(
+                        StripRows.of(folded: store.framesFolded, textSelected: store.state.selectedText != nil).height))
                 // end slot: timeline
             }
             .region("editor.timelineRegion")
             ZStack {
                 // slot: tools
-                ToolsRow(state: store.state, send: { action in store.send(action) })
+                ToolsRow(store: store)
                 // end slot: tools
             }
             .region("editor.toolsRegion")
@@ -61,6 +67,10 @@ struct EditorScreen: View {
                 // Made anew every time the panel shows, so it starts on the part music.
                 SoundPanel(store: store)
                     .region("editor.soundRegion")
+            }
+            if store.state.showsClipPanel {
+                ClipPanel(store: store)
+                    .region("editor.clipRegion")
             }
             ZStack {
                 // slot: export

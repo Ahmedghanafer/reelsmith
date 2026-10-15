@@ -17,16 +17,20 @@ import XCTest
 // https://developer.apple.com/documentation/xctest/xcuicoordinate/withoffset(_:)
 // https://developer.apple.com/documentation/xctest/xcuicoordinate/tap()
 // https://developer.apple.com/documentation/foundation/thread/sleep(fortimeinterval:)
+// https://developer.apple.com/documentation/foundation/processinfo/environment
 @MainActor
 extension XCTestCase {
     /// For a picker that is opening or open. Waits for its grid, taps the named cells in the order given, counted
     /// from the end of the grid (1 is the last cell, the oldest video, which is blue, and 2 is red), each at a place
     /// read before the first tap, keeps the picture when one is named, and when `confirms` is true taps the control
     /// on the right of the picker's bar. Nil when all of it was done, else the step that found nothing. A read or a
-    /// tap that raises fails the test like any other.
-    func chooseInThePhotoPicker(_ app: XCUIApplication, fromTheEnd cells: [Int], confirms: Bool, picture: String?)
-        -> String?
-    {
+    /// tap that raises fails the test like any other. `photos` is true for a picker that offers photos beside the
+    /// videos: the simulator's own photos are older than blue and stand at the end of its grid, so that many cells
+    /// are skipped, the number the run hands over as REELSMITH_OWN_PHOTOS (0 when unset), and the cell 3 is the
+    /// test photo.
+    func chooseInThePhotoPicker(
+        _ app: XCUIApplication, fromTheEnd cells: [Int], confirms: Bool, picture: String?, photos: Bool = false
+    ) -> String? {
         // The videos are the cells of the picker's grid, which the system names PXGGridLayout-Info.
         // The grid lists the newest first. The simulator run puts blue into the library and then red, and every
         // video an export saved is newer, so blue is the last cell and red the one before it.
@@ -49,12 +53,13 @@ extension XCTestCase {
             }
         }
         let count = grid.count
-        let needed = cells.max() ?? 0
-        print("picker: the picker's grid holds " + String(count) + " cells")
+        let skipped = photos ? Int(ProcessInfo.processInfo.environment["REELSMITH_OWN_PHOTOS"] ?? "") ?? 0 : 0
+        let needed = (cells.max() ?? 0) + skipped
+        print("picker: the picker's grid holds " + String(count) + " cells, " + String(skipped) + " skipped at its end")
         guard count >= needed else {
             return "the picker's grid held " + String(count) + " cells, " + String(needed) + " are needed"
         }
-        let chosen = cells.map { grid[count - $0] }
+        let chosen = cells.map { grid[count - skipped - $0] }
         for (place, cell) in zip(cells, chosen) {
             print("picker: cell \(place) from the end reads: " + cell.label + ", at \(cell.frame)")
         }
@@ -83,7 +88,9 @@ extension XCTestCase {
         guard let tree = try? app.snapshot() else {
             return "no snapshot of the picker could be taken"
         }
-        let all = flattened(tree).filter { !$0.identifier.hasPrefix("start.") && $0.frame.width > 1 }
+        let all = flattened(tree).filter {
+            !$0.identifier.hasPrefix("start.") && !$0.identifier.hasPrefix("editor.") && $0.frame.width > 1
+        }
         // The bar of the picker is the row of its topmost button.
         let bar = all.filter { $0.elementType == .button && $0.frame.midY < top }
             .min { $0.frame.minY < $1.frame.minY }
