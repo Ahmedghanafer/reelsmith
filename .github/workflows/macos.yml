@@ -274,8 +274,19 @@ jobs:
           xcrun simctl terminate "$SIMULATOR" com.ghanafer.reelsmith || true
           mkdir -p recording results
           date +%s > recording/recording-start.txt
-          xcrun simctl io "$SIMULATOR" recordVideo --codec h264 recording/recording.mp4 &
+          xcrun simctl io "$SIMULATOR" recordVideo --codec h264 recording/recording.mp4 > "$RUNNER_TEMP/recorder.txt" 2>&1 &
           recorder=$!
+          # The file's own time starts when the recorder says it started: that moment, to the
+          # thousandth of a second, replaces the clock second in the start file.
+          for _ in $(seq 300); do
+            if grep -q "Recording started" "$RUNNER_TEMP/recorder.txt"; then
+              python3 -c 'import time; print(f"{time.time():.3f}")' > recording/recording-start.txt
+              break
+            fi
+            sleep 0.1
+          done
+          cat "$RUNNER_TEMP/recorder.txt"
+          echo "The start of the recording: $(cat recording/recording-start.txt)"
           status=0
           xcodebuild test-without-building -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$SIMULATOR" \
             -derivedDataPath build/simulator -parallel-testing-enabled NO \
@@ -299,6 +310,7 @@ jobs:
             status=1
           fi
           wait "$recorder" || true
+          cat "$RUNNER_TEMP/recorder.txt"
           ls -l recording
           if [ ! -s recording/recording.mp4 ]; then
             echo "No recording was written."
@@ -325,9 +337,11 @@ jobs:
           cat "$exported/manifest.json"
           mkdir -p screens
           # An exported file is named <attachment name>_<number>_<identifier>.<ending> in the manifest.
-          jq -r '.[].attachments[] | [.exportedFileName, (.suggestedHumanReadableName // .exportedFileName | gsub("[\r\n]"; "_"))] | @tsv' "$exported/manifest.json" > "$exported/names.tsv"
+          # The third column is the moment the attachment was added, in seconds since 1970 to the thousandth.
+          jq -r '.[].attachments[] | [.exportedFileName, (.suggestedHumanReadableName // .exportedFileName | gsub("[\r\n]"; "_")), (.timestamp // "")] | @tsv' "$exported/manifest.json" > "$exported/names.tsv"
           failed=0
-          while IFS=$'\t' read -r file suggested; do
+          : > "$exported/marks.tsv"
+          while IFS=$'\t' read -r file suggested stamp; do
             name=$(printf '%s' "$suggested" | sed -E 's/_[0-9]+_[0-9A-Fa-f-]{36}//')
             if [[ "$name" == *.mark.txt* ]]; then
               name="${name%%.mark.txt*}.mark.txt"
@@ -350,6 +364,9 @@ jobs:
             if ! cp "$exported/$file" "screens/$name"; then
               echo "Not copied: $file as $name"
               failed=1
+            elif [ "$ending" = ".mark.txt" ]; then
+              # Without a moment in the manifest, the clock second the mark file holds.
+              printf '%s\t%s\n' "$stem" "${stamp:-$(cat "screens/$name")}" >> "$exported/marks.tsv"
             fi
           done < "$exported/names.tsv"
           ls -l screens
@@ -357,12 +374,96 @@ jobs:
             echo "The result bundle gave no attachment."
             failed=1
           fi
-          start=$(cat recording/recording-start.txt)
-          : > recording/recording-index.txt
-          for mark in screens/*.mark.txt; do
-            [ -e "$mark" ] || continue
-            echo "$(basename "$mark" .mark.txt) $(( $(cat "$mark") - start ))" >> recording/recording-index.txt
-          done
+          # Each mark in the file's own time: its moment less the start, moved back to the last frame
+          # shown at or before it, since the file holds a frame only when the screen changes. The times
+          # of the frames are read from the sample tables of the video track (stts and ctts in mdhd units):
+          # https://developer.apple.com/documentation/quicktime-file-format
+          python3 - recording/recording.mp4 recording/recording-start.txt "$exported/marks.tsv" > recording/recording-index.txt <<'EOF'
+          import bisect, math, struct, sys
+
+          movie, start_file, marks_file = sys.argv[1:4]
+          start = float(open(start_file).read())
+
+
+          def boxes(f, begin, end):
+              while begin + 8 <= end:
+                  f.seek(begin)
+                  size, kind = struct.unpack(">I4s", f.read(8))
+                  head = 8
+                  if size == 1:
+                      size = struct.unpack(">Q", f.read(8))[0]
+                      head = 16
+                  elif size == 0:
+                      size = end - begin
+                  if size < head:
+                      return
+                  yield kind, begin + head, begin + size
+                  begin += size
+
+
+          def child(f, begin, end, kind):
+              return next(((b, e) for k, b, e in boxes(f, begin, end) if k == kind), None)
+
+
+          def frame_times(path):
+              with open(path, "rb") as f:
+                  f.seek(0, 2)
+                  moov = child(f, 0, f.tell(), b"moov")
+                  if moov is None:
+                      return []
+                  for kind, b, e in boxes(f, *moov):
+                      if kind != b"trak":
+                          continue
+                      mdia = child(f, b, e, b"mdia")
+                      hdlr = child(f, *mdia, b"hdlr")
+                      f.seek(hdlr[0] + 8)
+                      if f.read(4) != b"vide":
+                          continue
+                      mdhd = child(f, *mdia, b"mdhd")
+                      f.seek(mdhd[0])
+                      version = f.read(1)[0]
+                      f.seek(mdhd[0] + (20 if version == 1 else 12))
+                      scale = struct.unpack(">I", f.read(4))[0]
+                      stbl = child(f, *child(f, *mdia, b"minf"), b"stbl")
+                      durations = []
+                      stts = child(f, *stbl, b"stts")
+                      f.seek(stts[0] + 4)
+                      for _ in range(struct.unpack(">I", f.read(4))[0]):
+                          count, delta = struct.unpack(">II", f.read(8))
+                          durations += [delta] * count
+                      offsets = [0] * len(durations)
+                      ctts = child(f, *stbl, b"ctts")
+                      if ctts is not None:
+                          f.seek(ctts[0] + 4)
+                          at = 0
+                          for _ in range(struct.unpack(">I", f.read(4))[0]):
+                              count, offset = struct.unpack(">Ii", f.read(8))
+                              offsets[at:at + count] = [offset] * count
+                              at += count
+                      times, decode = [], 0
+                      for duration, offset in zip(durations, offsets):
+                          times.append((decode + offset) / scale)
+                          decode += duration
+                      return sorted(times)
+              return []
+
+
+          try:
+              frames = frame_times(movie)
+          except (OSError, struct.error, TypeError, IndexError):
+              frames = []
+          if not frames:
+              print("The recording could not be read: each mark is given unmoved.", file=sys.stderr)
+
+          for line in sorted(open(marks_file)):
+              name, stamp = line.rstrip("\n").split("\t")
+              second = float(stamp) - start
+              at = bisect.bisect_right(frames, second)
+              if at > 0:
+                  second = frames[at - 1]
+              second = max(second, 0.0)
+              print(f"{name} {math.floor(second * 100) / 100:.2f}")
+          EOF
           cat recording/recording-index.txt
           exit "$failed"
 
