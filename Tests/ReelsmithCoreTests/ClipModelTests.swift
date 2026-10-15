@@ -101,15 +101,15 @@ final class ClipModelTests: XCTestCase {
         XCTAssertEqual(deleted.project.clips.map(\.volume), [0.4, 0.7])
     }
 
-    func testTheVolumeOfAClipIsHeldBetweenZeroAndOneAndPlaysOn() {
+    func testTheVolumeOfAClipIsHeldBetweenZeroAndTwoAndPlaysOn() {
         var project = Seed.photoWide.project
         for index in project.clips.indices {
             project.clips[index].volume = 0.5
         }
         let state = playing(project)
 
-        let above = sendSound(state, .setVolumeOfClip(ClipID(1), 1.5))
-        XCTAssertEqual(above.project.clips.map(\.volume), [1, 0.5, 0.5])
+        let above = sendSound(state, .setVolumeOfClip(ClipID(1), 2.5))
+        XCTAssertEqual(above.project.clips.map(\.volume), [2, 0.5, 0.5])
         XCTAssertTrue(above.isPlaying)
 
         let below = sendSound(state, .setVolumeOfClip(ClipID(1), -1))

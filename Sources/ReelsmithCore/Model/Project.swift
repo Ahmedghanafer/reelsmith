@@ -11,7 +11,7 @@ public struct Clip: Equatable, Codable, Sendable {
     public var media: MediaID
     public var sourceStart: Time
     public var duration: Time
-    /// 0 to 1, a factor on the volume of the clips. 1 when a stored file lacks it.
+    /// 0 to 2, a factor on the volume of the clips. 1 when a stored file lacks it.
     public var volume: Double
     /// How the picture stands on the canvas. The standard framing when a stored file lacks it.
     public var framing: Framing

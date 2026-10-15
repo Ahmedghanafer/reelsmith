@@ -54,7 +54,7 @@ func reduceSound(_ state: EditorState, _ action: SoundAction) -> EditorState {
         guard volume.isFinite, let index = state.project.clips.firstIndex(where: { $0.id == id }) else {
             return state
         }
-        next.project.clips[index].volume = min(max(volume, 0), 1)
+        next.project.clips[index].volume = min(max(volume, 0), 2)
     }
     if next.project == state.project {
         return state
