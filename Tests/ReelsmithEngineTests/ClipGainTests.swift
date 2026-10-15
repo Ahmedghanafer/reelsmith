@@ -218,10 +218,15 @@ final class ClipGainTests: XCTestCase {
         var silent = TestClip.red
         silent.hasSound = false
         let picture = try await writeTestClip(silent, to: folder.appendingPathComponent("picture"))
+        print("clip gain: red with a peak of \(peak): the picture is written")
         let tone = try await writeTone(
             peak: peak, ticks: TestClip.red.duration.ticks, to: folder.appendingPathComponent("tone.mov"))
-        let pictureTracks = try await AVURLAsset(url: picture).loadTracks(withMediaType: .video)
-        let soundTracks = try await AVURLAsset(url: tone).loadTracks(withMediaType: .audio)
+        print("clip gain: red with a peak of \(peak): the tone is written")
+        // A track does not hold its asset, so both assets are kept until the export is done.
+        let pictureAsset = AVURLAsset(url: picture)
+        let toneAsset = AVURLAsset(url: tone)
+        let pictureTracks = try await pictureAsset.loadTracks(withMediaType: .video)
+        let soundTracks = try await toneAsset.loadTracks(withMediaType: .audio)
         let pictureTrack = try XCTUnwrap(pictureTracks.first, "the picture of red has no picture track")
         let soundTrack = try XCTUnwrap(soundTracks.first, "the tone has no sound track")
         let pictureRange = try await pictureTrack.load(.timeRange)
@@ -233,6 +238,7 @@ final class ClipGainTests: XCTestCase {
         let soundInput = try XCTUnwrap(
             composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid))
         try soundInput.insertTimeRange(soundRange, of: soundTrack, at: .zero)
+        print("clip gain: red with a peak of \(peak): picture and tone put together")
         let session = try XCTUnwrap(AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough))
         session.outputFileType = .mov
         session.outputURL = red
@@ -241,6 +247,7 @@ final class ClipGainTests: XCTestCase {
                 done.resume()
             }
         }
+        withExtendedLifetime((pictureAsset, toneAsset)) {}
         XCTAssertEqual(session.status, .completed, "red with a peak of \(peak): \(String(describing: session.error))")
         return folder
     }
