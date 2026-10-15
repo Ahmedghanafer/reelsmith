@@ -57,32 +57,50 @@ final class ZoomTests: XCTestCase {
     }
 
     func testATrimAfterAPinchTrimsByThePointsAtTheNewScale() {
-        // At 3 seconds the end of the blue block is under the playhead, at x 201.
-        let app = startZoom(seed: "three-clips", playhead: 1800)
-        let region = element(app, "editor.timelineRegion")
-        let blue = element(app, "editor.clip.1")
-
+        // A scripted drag of 60 points reaches the pan of a handle as fewer points: the pan begins only
+        // after the finger has moved a little, and that first stretch is not in its translation. So the
+        // same drag is made first at the standard scale, where 10 points are 100 ticks, and the points
+        // it gave are the points the drag after the pinch is expected to give.
+        var app = startZoom(seed: "three-clips", playhead: 1800)
         mark("zoom-03-trim")
-        region.pinch(withScale: 3, velocity: 1)
-        waitUntil("editor.clip.1 wider than 270 after a pinch with scale 3") { blue.frame.width > 270 }
-        // The blue block ends at x 201 and is on the screen from x 0, so the point at 0.9 of its width,
-        // 0.3 seconds before its end, is on the screen.
-        blue.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
-        let end = element(app, "editor.trim.end")
-        waitUntil("the blue block selected after the tap on it") { blue.isSelected && end.exists }
+        let standard = trimBlueAtTheEnd(app, pointsPerSecond: 60)
+        // A trim is rounded toward zero to a frame, so the points were from those of the trim to 2 more.
+        let points = Double(1800 - standard) / 10 + 1
+        print("zoom: at 60 points a second the drag of 60 points trimmed \(1800 - standard) ticks, so it gave \(points) points, within 1")
+        app.terminate()
 
+        // At 3 seconds the end of the blue block is under the playhead, at x 201.
+        app = startZoom(seed: "three-clips", playhead: 1800)
+        let blue = element(app, "editor.clip.1")
+        element(app, "editor.timelineRegion").pinch(withScale: 3, velocity: 1)
+        waitUntil("editor.clip.1 wider than 270 after a pinch with scale 3") { blue.frame.width > 270 }
         let pointsPerSecond = Double(blue.frame.width) / 3
         // As the strip computes it: ticks rounded toward zero, then to whole frames of 20 ticks.
-        let trim = Int(60 * 600 / pointsPerSecond) / 20 * 20
+        let trim = Int(points * 600 / pointsPerSecond) / 20 * 20
         let expected = 1800 - trim
-        print("zoom: \(pointsPerSecond) points a second read before the drag, a trim of \(trim) ticks expected")
+        print("zoom: \(pointsPerSecond) points a second read before the drag, a trim of \(trim) ticks expected for \(points) points")
+        let zoomed = trimBlueAtTheEnd(app, pointsPerSecond: pointsPerSecond, expected: expected)
+        XCTAssertLessThanOrEqual(abs(zoomed - expected), 20)
+    }
+
+    /// Taps the blue block at 0.9 of its width, which is on the screen while its end is at x 201, and drags
+    /// its end handle 60 points to the left. Gives the duration of blue that its value reads after the drag.
+    private func trimBlueAtTheEnd(_ app: XCUIApplication, pointsPerSecond: Double, expected: Int? = nil) -> Int {
+        let blue = element(app, "editor.clip.1")
+        let end = element(app, "editor.trim.end")
+        blue.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        waitUntil("the blue block selected after the tap on it") { blue.isSelected && end.exists }
         let start = end.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: -60, dy: 0)))
-        waitUntil("a duration of blue within 20 ticks of \(expected) after the drag") {
-            abs(self.duration(of: blue) - expected) <= 20
+        if let expected {
+            waitUntil("a duration of blue within 20 ticks of \(expected) after the drag") {
+                abs(self.duration(of: blue) - expected) <= 20
+            }
+        } else {
+            waitUntil("a duration of blue below 1800 after the drag") { (0..<1800).contains(self.duration(of: blue)) }
         }
-        print("zoom: the value of editor.clip.1 after the drag is \(blue.value as? String ?? "")")
-        XCTAssertLessThanOrEqual(abs(duration(of: blue) - expected), 20)
+        print("zoom: at \(pointsPerSecond) points a second the value of editor.clip.1 after the drag is \(blue.value as? String ?? "")")
+        return duration(of: blue)
     }
 
     func testTheTextBarFollowsTheScale() {
