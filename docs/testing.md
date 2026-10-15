@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 488 tests on Linux.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 490 tests on Linux.
 - On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 677 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 218 UI tests in thirty-eight classes.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 221 UI tests in thirty-nine classes.
 
 What comes back from the simulator run:
 
@@ -764,6 +764,20 @@ Screenshots: `clip-panel-01-selected` (the panel under the tools with the two cu
 `Tests/ReelsmithCoreTests/ClipPanelWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `clip-panel` of the English, the Arabic or the Swedish file holds anything but the three keys `clip.cutBefore`, `clip.cutAfter` and `clip.volume` in that order, and when their texts are not "Delete before", "Delete after" and "Volume" in English, "حذف ما قبل", "حذف ما بعد" and "مستوى الصوت" in Arabic, and "Radera före", "Radera efter" and "Volym" in Swedish.
 
 That the panel holds no state, that its buttons send in a transaction with animations off and that the slider sends once when a drag ends are read in the diff and held by no test here.
+
+### UI tests of the framing row
+
+`UITests/FramingPanelTests.swift` holds the framing row in three tests, each started with `-drafts fresh -seed two-clips -playhead 600` and a tap on the middle of `editor.clip.1`, blue, after which it waits until blue is selected and `clip.framing` is there. On the 9:16 canvas blue fitted stands between black bars. The framing of the selected clip is read from the label of `clip.frameInfo`, the picture through the probe `share(of:in:)` of blue in `editor.picture`, and a build of the player through the count in the value of `editor.picture`. After a tap the test reads until the effect holds, expected within 1 second and failing only above 3, and prints a line that starts with `framing: waited`. A share is read until it passes its number, expected within 3 seconds and given up above 9, printed in a line that starts with `framing: waited` with the share.
+
+- One row, in English, Arabic and Swedish: `clip.frameInfo` reads "fit black 100 0,0", and `clip.fit`, `clip.fill`, `clip.blur` and `clip.applyAll` are hittable, inside the screen, share a stretch of height and lie over none of the others, each frame printed in a line that starts with `framing: in`. In order from left to right, and from right to left in Arabic. In Arabic and in Swedish the test then taps `clip.fill` and waits for "fill black 100 0,0".
+- Fill, undo, blur and all clips, in English: the share of blue is read above 0.2 and must be below 0.4, then `clip.fill`: "fill black 100 0,0", the share above 0.9, both printed in a line that starts with `framing: the share of blue`, and the count of builds the one before the tap, printed in a line that starts with `framing: editor.picture`. `editor.undo`: "fit black 100 0,0" and the share below 0.4. `clip.blur`: "fit blur 100 0,0" and the share above 0.8. `clip.applyAll`, then red tapped at the normalised offset (0.15, 0.5): "fit blur 100 0,0". `editor.undo`, red tapped again: "fit black 100 0,0".
+- Kept: after `clip.fill` the app ends, `-drafts kept`, `drafts.row.1` opened and blue tapped: "fill black 100 0,0".
+
+Screenshots: `framing-01-fill` (blue filled, the row under the slider), `framing-01-fill-ar` and `framing-01-fill-sv` (the same in Arabic, the row mirrored, and in Swedish: the words of the four keys are read on them), `framing-02-blur` (blue with blurred bars). Marks: `framing-01-fill`, `framing-02-blur`, `framing-03-all-clips`.
+
+`Tests/ReelsmithCoreTests/FramingWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `framing` of the English, the Arabic or the Swedish file holds anything but the four keys `clip.fit`, `clip.fill`, `clip.blur` and `clip.applyAll` in that order, and when their texts are not "Fit", "Fill", "Blur" and "All clips" in English, "ملاءمة", "ملء", "تمويه" and "كل المقاطع" in Arabic, and "Anpassa", "Fyll", "Oskärpa" and "Alla klipp" in Swedish.
+
+That each control sends one frame action in a transaction with animations off and that the info shows only with the info lines are read in the diff and held by no test here.
 
 ### UI tests of adding music
 
