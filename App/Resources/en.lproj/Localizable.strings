@@ -158,6 +158,7 @@
 /* end slot: draft-path */
 
 /* slot: add-clips */
+"tools.add" = "Add";
 /* end slot: add-clips */
 
 /* slot: clip-panel */

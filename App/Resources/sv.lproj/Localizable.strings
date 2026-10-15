@@ -158,6 +158,7 @@
 /* end slot: draft-path */
 
 /* slot: add-clips */
+"tools.add" = "Lägg till";
 /* end slot: add-clips */
 
 /* slot: clip-panel */
