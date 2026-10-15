@@ -23,6 +23,8 @@ class E25State extends ChangeNotifier {
   String refreshed = '';
   String swapped = '';
   double prepareMs = 0;
+  bool probe = false;
+  String exportPath = '';
 
   void changed() => notifyListeners();
 }
@@ -92,6 +94,11 @@ class _E25ScreenState extends State<E25Screen> {
       final i = args.indexOf('-seed');
       if (i >= 0 && i + 1 < args.length) e25.seed = args[i + 1];
       log('launch arguments $args');
+      if (args.contains('-probe')) {
+        e25.probe = true;
+        e25.changed();
+        return;
+      }
       final ready = Map<String, dynamic>.from(await engine.invokeMethod('prepare') as Map);
       e25.textureId = ready['textureId'] as int;
       e25.seconds = (ready['seconds'] as num).toDouble();
@@ -120,6 +127,7 @@ class _E25ScreenState extends State<E25Screen> {
     e25.changed();
     try {
       final done = Map<String, dynamic>.from(await engine.invokeMethod('export') as Map);
+      e25.exportPath = done['path'] as String;
       e25.exported =
           'export done ${done['bytes']} bytes ${(done['seconds'] as num).toStringAsFixed(2)} s in ${(done['ms'] as num).round()} ms';
     } catch (e) {
@@ -188,6 +196,7 @@ class _E25ScreenState extends State<E25Screen> {
 
   @override
   Widget build(BuildContext context) {
+    if (e25.probe) return const ProbeScreen();
     final direction = Directionality.of(context) == TextDirection.rtl ? 'rtl' : 'ltr';
     final locale = Localizations.localeOf(context).toLanguageTag();
     final seekMean = e25.seekMs.isEmpty ? 0 : e25.seekMs.reduce((a, b) => a + b) / e25.seekMs.length;
@@ -250,6 +259,155 @@ class _E25ScreenState extends State<E25Screen> {
               _text('e25.refreshed', e25.refreshed.isEmpty ? 'no refresh' : e25.refreshed),
               _text('e25.swapped', e25.swapped.isEmpty ? 'no swap' : e25.swapped),
               if (e25.error.isNotEmpty) _text('e25.error', e25.error),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The probes of XCUITest against Flutter widgets, shown when the app is launched with -probe.
+class ProbeScreen extends StatefulWidget {
+  const ProbeScreen({super.key});
+
+  @override
+  State<ProbeScreen> createState() => _ProbeScreenState();
+}
+
+class _ProbeScreenState extends State<ProbeScreen> {
+  final _field = TextEditingController();
+  final _region = GlobalKey();
+  String _gesture = 'scale 1.00 rotation 0.00';
+  double _baseScale = 1;
+  String _picked = 'nothing picked';
+  String _regionSize = 'region unknown';
+  String _alert = 'no alert';
+  double _slider = 0.5;
+
+  @override
+  void initState() {
+    super.initState();
+    _field.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+  }
+
+  void _measure() {
+    final box = _region.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final at = box.localToGlobal(Offset.zero);
+    setState(() {
+      _regionSize =
+          'region ${box.size.width.round()}x${box.size.height.round()} at ${at.dx.round()},${at.dy.round()}';
+    });
+    log(_regionSize);
+  }
+
+  Future<void> _pick() async {
+    try {
+      final r = Map<String, dynamic>.from(await engine.invokeMethod('pick') as Map);
+      _picked = 'picked ${r['count']} ${r['type']}';
+    } catch (e) {
+      _picked = 'pick failed $e';
+    }
+    log(_picked);
+    setState(() {});
+  }
+
+  Future<void> _showAlert() async {
+    final answer = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Probe alert'),
+        content: const Text('Tap OK'),
+        actions: [
+          Semantics(
+            identifier: 'p.alertOk',
+            container: true,
+            child: TextButton(onPressed: () => Navigator.of(context).pop('ok'), child: const Text('OK')),
+          ),
+        ],
+      ),
+    );
+    setState(() => _alert = 'alert closed $answer');
+  }
+
+  Widget _text(String id, String text) => Semantics(
+        identifier: id,
+        container: true,
+        label: text,
+        excludeSemantics: true,
+        child: Text(text, style: const TextStyle(fontSize: 12)),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    const small = TextStyle(fontSize: 12);
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                identifier: 'p.value',
+                container: true,
+                label: 'meter',
+                value: '42 percent',
+                excludeSemantics: true,
+                child: const Text('meter', style: small),
+              ),
+              Semantics(
+                identifier: 'p.field',
+                child: TextField(controller: _field, decoration: const InputDecoration(hintText: 'type here')),
+              ),
+              _text('p.echo', 'echo ${_field.text}'),
+              Semantics(
+                identifier: 'p.gestureArea',
+                container: true,
+                child: GestureDetector(
+                  onScaleStart: (_) => _baseScale = 1,
+                  onScaleUpdate: (d) => setState(() {
+                    _gesture = 'scale ${(d.scale * _baseScale).toStringAsFixed(2)} rotation ${d.rotation.toStringAsFixed(2)}';
+                  }),
+                  child: Container(height: 140, color: Colors.teal.shade200),
+                ),
+              ),
+              _text('p.gesture', _gesture),
+              Row(children: [
+                Expanded(
+                  child: Semantics(
+                    identifier: 'p.pick',
+                    container: true,
+                    child: ElevatedButton(onPressed: _pick, child: const Text('Pick')),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Semantics(
+                    identifier: 'p.alert',
+                    child: ElevatedButton(onPressed: _showAlert, child: const Text('Alert')),
+                  ),
+                ),
+              ]),
+              _text('p.picked', _picked),
+              _text('p.alertResult', _alert),
+              Semantics(
+                identifier: 'p.region',
+                container: true,
+                child: SizedBox(
+                  key: _region,
+                  height: 80,
+                  child: const Column(children: [Text('first', style: small), Text('second', style: small)]),
+                ),
+              ),
+              _text('p.regionSize', _regionSize),
+              Semantics(
+                identifier: 'p.slider',
+                child: Slider(value: _slider, onChanged: (v) => setState(() => _slider = v)),
+              ),
+              _text('p.sliderValue', 'slider ${_slider.toStringAsFixed(2)}'),
             ],
           ),
         ),

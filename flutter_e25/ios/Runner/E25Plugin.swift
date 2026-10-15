@@ -1,5 +1,6 @@
 import AVFoundation
 import Flutter
+import PhotosUI
 import ReelsmithCore
 import ReelsmithEngine
 import UIKit
@@ -133,6 +134,8 @@ final class E25Plugin: NSObject, FlutterPlugin, FlutterTexture, FlutterStreamHan
             refresh(result)
         case "swap":
             Task { @MainActor in await self.swap(result) }
+        case "pick":
+            pick(result)
         case "export":
             Task { await self.runExport(result) }
         default:
@@ -262,6 +265,25 @@ final class E25Plugin: NSObject, FlutterPlugin, FlutterTexture, FlutterStreamHan
         }
     }
 
+    private var pickResult: FlutterResult?
+
+    /// Presents the system photo picker, videos only, over the Flutter view.
+    @MainActor private func pick(_ result: @escaping FlutterResult) {
+        var configuration = PHPickerConfiguration()
+        configuration.filter = .videos
+        configuration.selectionLimit = 1
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = self
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        guard let root = scene?.windows.first(where: { $0.isKeyWindow })?.rootViewController ?? scene?.windows.first?.rootViewController
+        else {
+            result(FlutterError(code: "pick", message: "no window", details: nil))
+            return
+        }
+        pickResult = result
+        root.present(picker, animated: true)
+    }
+
     private func runExport(_ result: @escaping FlutterResult) async {
         let start = CACurrentMediaTime()
         let target = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("e25.mp4")
@@ -277,5 +299,14 @@ final class E25Plugin: NSObject, FlutterPlugin, FlutterTexture, FlutterStreamHan
         } catch {
             result(FlutterError(code: "export", message: "\(error)", details: nil))
         }
+    }
+}
+
+extension E25Plugin: PHPickerViewControllerDelegate {
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        let type = results.first?.itemProvider.registeredTypeIdentifiers.first ?? "none"
+        pickResult?(["count": results.count, "type": type])
+        pickResult = nil
     }
 }

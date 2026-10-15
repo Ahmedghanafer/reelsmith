@@ -57,6 +57,11 @@ void main() {
     say(e25.exported);
     await shot('3-exported');
     expect(e25.exported, startsWith('export done'));
+    const out = String.fromEnvironment('E25_OUT');
+    if (out.isNotEmpty) {
+      File(e25.exportPath).copySync('$out/e25-export.mp4');
+      say('export copied to $out/e25-export.mp4');
+    }
 
     // E27, measured and printed, never failing the test.
     await engine.invokeMethod('pause');

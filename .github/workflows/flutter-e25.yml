@@ -119,15 +119,21 @@ jobs:
           out="$RUNNER_TEMP/e25"
           # The integration test points the generated settings at its own entry, the app's entry is put back.
           (cd .. && flutter build ios --simulator --debug --config-only)
+          # The exported file of the integration test is the video the picker probe chooses.
+          if [ -f "$out/e25-export.mp4" ]; then
+            xcrun simctl addmedia "$SIMULATOR" "$out/e25-export.mp4" && echo "export added to the library"
+          fi
           xcodebuild build-for-testing -workspace Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" \
             -derivedDataPath "$RUNNER_TEMP/ui" > "$out/ui-build.txt" 2>&1 || { tail -80 "$out/ui-build.txt"; exit 1; }
           echo "xcuitest build-for-testing: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"
           set +e
-          xcodebuild test-without-building -workspace Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" \
+          TEST_RUNNER_E25_OUT="$out" xcodebuild test-without-building -workspace Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" \
             -derivedDataPath "$RUNNER_TEMP/ui" -resultBundlePath "$out/ui.xcresult" 2>&1 | tee "$out/ui-test.txt"
           status=${PIPESTATUS[0]}
           set -e
-          grep "E25 UI\|Test Case\|error" "$out/ui-test.txt" || true
+          grep -i "test case\|error:" "$out/ui-test.txt" || true
+          cat "$out/ui-lines.txt" || true
+          xcrun xcresulttool get test-results summary --path "$out/ui.xcresult" | tee "$out/ui-summary.json" || true
           xcrun xcresulttool export attachments --path "$out/ui.xcresult" --output-path "$out/ui-shots" || true
           exit "$status"
 
