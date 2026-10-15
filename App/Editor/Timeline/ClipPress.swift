@@ -2,7 +2,8 @@ import ReelsmithCore
 import UIKit
 
 /// The press and drag that moves a clip on the strip. It decides nothing: the place a block is let go at is
-/// `Project.dropPosition(of:at:)` of the time under the finger, and the move is `reduce`. It begins only on a
+/// `Project.dropPosition(of:at:)` of the time of the block's left end moved by the finger since the press
+/// began, so a press held still keeps its place, and the move is `reduce`. It begins only on a
 /// block, after half a second. While the finger moves the strip view draws `reduce` of the state from the
 /// start with the move so far, and one `moveClip` is sent on release. A press on a trim handle, a text bar or
 /// the empty strip moves nothing. It is the delegate of the scrub of the strip view too, which does not
@@ -23,6 +24,9 @@ final class ClipPress: UILongPressGestureRecognizer, UIGestureRecognizerDelegate
     private var pressStart: EditorState?
     /// The clip the press began on, nil while no press runs.
     private var pressedClip: ClipID?
+    /// The x in `strip` of the left end of the pressed block, and of the finger, when the press began.
+    private var blockStartX: Double = 0
+    private var fingerStartX: Double = 0
     /// The one finger scrub of the strip view.
     private weak var scrub: UIPanGestureRecognizer?
 
@@ -76,11 +80,16 @@ final class ClipPress: UILongPressGestureRecognizer, UIGestureRecognizerDelegate
             pressedClip = clip(under: view)
             view.send(.pause)
             pressStart = reduce(view.state, .pause)
+            if let clip = pressedClip, let left = view.state.project.start(of: clip) {
+                blockStartX = view.scale.x(of: left)
+            }
+            fingerStartX = Double(location(in: view.strip).x)
         }
         guard let start = pressStart, let clip = pressedClip else {
             return
         }
-        let time: Time = view.scale.time(atX: Double(location(in: view.strip).x))
+        let moved = Double(location(in: view.strip).x) - fingerStartX
+        let time: Time = view.scale.time(atX: blockStartX + moved)
         guard let position = start.project.dropPosition(of: clip, at: time) else {
             return
         }
