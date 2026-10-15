@@ -29,7 +29,9 @@ enum MusicBar {
         }
 
         let state: EditorState = view.state
-        guard state.selectedText == nil, let music = state.project.music, let heard = state.project.heardMusic else {
+        guard state.selectedText == nil, let music = state.project.music, let heard = state.project.heardMusic,
+            heard > Time.zero
+        else {
             bar.isHidden = true
             return
         }
@@ -40,14 +42,27 @@ enum MusicBar {
             width: CGFloat(view.scale.width(of: heard)),
             height: row.height
         )
-        bar.writing.frame = CGRect(x: 6, y: 0, width: max(bar.frame.width - 12, 0), height: row.height)
+        // The title stands on the part of the bar that is on the screen, as the writing of a text bar does.
+        let writing = TimelineGeometry.writing(
+            barX: Double(bar.frame.minX),
+            barWidth: Double(bar.frame.width),
+            shownX: Double(view.bounds.minX),
+            shownWidth: Double(view.bounds.width)
+        )
+        bar.writing.frame = CGRect(
+            x: CGFloat(writing.x) - bar.frame.minX,
+            y: 0,
+            width: CGFloat(writing.width),
+            height: row.height
+        )
         bar.writing.text = music.file.title
         bar.accessibilityLabel = text(Words("musicRow.bar", [music.file.title]))
+        bar.layer.borderColor = UIColor.systemBackground.cgColor
     }
 }
 
 /// The bar of the music row. It shows the title of the music, which is content and no word of the app, set
-/// verbatim in the label `writing` against its left. A tap sends `.sound(.open)`. Never mirrored: its frame is
+/// verbatim in the label `writing`, against the left of the part of the bar that is on the screen. A tap sends `.sound(.open)`. Never mirrored: its frame is
 /// set by hand from the left.
 ///
 /// https://developer.apple.com/documentation/uikit/uilabel
@@ -75,7 +90,6 @@ final class MusicBarView: UIView, UIGestureRecognizerDelegate {
         addSubview(writing)
         backgroundColor = UIColor.systemTeal.withAlphaComponent(0.35)
         layer.borderWidth = 1
-        layer.borderColor = UIColor.systemBackground.cgColor
         isUserInteractionEnabled = true
         isAccessibilityElement = true
         accessibilityIdentifier = "editor.music"

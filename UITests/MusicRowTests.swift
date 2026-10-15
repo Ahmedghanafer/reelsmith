@@ -3,8 +3,8 @@ import XCTest
 // The music row of the strip on the seeds music-wide (blue 3 seconds and red 4 on the landscape canvas, under the
 // long test tone of 10 seconds, titled "long-tone", the sound panel open at the start) and two-clips-wide (the
 // same clips, no music). At 60 points a second the heard music is 7 seconds, 420 points. The screen is 402 points
-// wide with the playhead at x 201, so at the start the blocks and the bar begin at x 201. Every launch is the
-// first of its test and starts with `-drafts fresh`.
+// wide with the playhead at x 201, so at the start the blocks and the bar begin at x 201. Every launch starts
+// with `-drafts fresh`.
 //
 // https://developer.apple.com/documentation/xctest/xcuielement/tap()
 // https://developer.apple.com/documentation/xctest/xcuielement/pinch(withscale:velocity:)
