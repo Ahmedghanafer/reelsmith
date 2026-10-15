@@ -37,6 +37,11 @@ struct PreviewPane: View {
                     CGSize(width: state.project.canvas.width, height: state.project.canvas.height),
                     contentMode: .fit
                 )
+                .overlay {
+                    if store.showsGuide, let safe = InstagramGuide.safeArea(on: state.project.canvas) {
+                        InstagramGuideView(safe: safe, canvasWidth: Double(state.project.canvas.width))
+                    }
+                }
                 // On the picture itself, not on the space around it: the recognizers of `TextGestures`.
                 .modifier(TextGestures(store: store))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -102,5 +107,49 @@ struct PreviewPane: View {
         var still = Transaction()
         still.disablesAnimations = true
         withTransaction(still, tap)
+    }
+}
+
+/// The Instagram guide over the picture: a tint outside the safe area, and the safe area itself, outlined, the
+/// accessibility element `editor.guide.safe`. The screen draws it over the picture, so it is never in a plan, a cover
+/// or an export, and it takes no touch: the gestures on the picture go through it.
+///
+/// https://developer.apple.com/documentation/swiftui/view/overlay(alignment:content:)
+/// https://developer.apple.com/documentation/swiftui/geometryreader
+/// https://developer.apple.com/documentation/swiftui/path
+/// https://developer.apple.com/documentation/swiftui/shape/fill(_:style:)
+/// https://developer.apple.com/documentation/swiftui/fillstyle/init(eofill:antialiased:)
+/// https://developer.apple.com/documentation/swiftui/view/position(x:y:)
+/// https://developer.apple.com/documentation/swiftui/view/allowshittesting(_:)
+/// https://developer.apple.com/documentation/swiftui/view/accessibilityelement(children:)
+private struct InstagramGuideView: View {
+    /// `InstagramGuide.safeArea` in canvas pixels.
+    let safe: (x: Double, y: Double, width: Double, height: Double)
+    let canvasWidth: Double
+
+    var body: some View {
+        GeometryReader { proxy in
+            // The picture has the shape of the canvas, so its width gives the scale of both axes.
+            let scale: Double = Double(proxy.size.width) / canvasWidth
+            let hole = CGRect(
+                x: safe.x * scale, y: safe.y * scale, width: safe.width * scale, height: safe.height * scale)
+            ZStack(alignment: .topLeading) {
+                Path { path in
+                    path.addRect(CGRect(origin: .zero, size: proxy.size))
+                    path.addRect(hole)
+                }
+                .fill(Color.black.opacity(0.4), style: FillStyle(eoFill: true))
+                Rectangle()
+                    .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                    .frame(width: hole.width, height: hole.height)
+                    .accessibilityElement()
+                    .accessibilityLabel(Text("clip.guide"))
+                    .accessibilityIdentifier("editor.guide.safe")
+                    .position(x: hole.midX, y: hole.midY)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("editor.guide")
     }
 }
