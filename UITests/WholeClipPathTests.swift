@@ -98,7 +98,7 @@ final class WholeClipPathTests: XCTestCase {
         waitUntil("every editor.frames.<n> with all its tiles drawn and made \(count)", expected: expectedFrames) {
             (1...count).allSatisfy { position in
                 let fields = self.value(app, "editor.frames." + String(position)).split(separator: " ")
-                return fields.count == 3 && fields[0] == fields[1] && fields[2] == Substring(String(count))
+                return fields.count == 3 && fields[0] != "0" && fields[0] == fields[1] && fields[2] == Substring(String(count))
             }
         }
         for position in 1...count {
