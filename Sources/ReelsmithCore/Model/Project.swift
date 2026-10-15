@@ -151,6 +151,18 @@ public struct Project: Equatable, Codable, Sendable {
         canvas == other.canvas && clips == other.clips && media == other.media
             && clipVolume == other.clipVolume && clipsMuted == other.clipsMuted && music == other.music
     }
+
+    /// sameFootage with the levels left out: canvas, media, the music's file and start, and the clips compared
+    /// without their volume are equal. The volume of the clips, the mute, the clips' volumes, the music's volume and
+    /// its fades may differ, and so may the texts.
+    public func sameTracks(as other: Project) -> Bool {
+        canvas == other.canvas && media == other.media && clips.count == other.clips.count
+            && zip(clips, other.clips).allSatisfy { mine, theirs in
+                mine.id == theirs.id && mine.media == theirs.media && mine.sourceStart == theirs.sourceStart
+                    && mine.duration == theirs.duration
+            }
+            && music?.file == other.music?.file && music?.start == other.music?.start
+    }
 }
 
 extension Project {

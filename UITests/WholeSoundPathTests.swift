@@ -114,8 +114,8 @@ final class WholeSoundPathTests: XCTestCase {
         waitUntil("the toggle of the part clips after the tap on sound.tab.clips") { toggle.exists }
         let unmuted = builds(picture)
         toggle.tap()
-        waitUntil("field 2 m, the toggle selected and a higher count of builds after the tap on it") {
-            field(app, 2) == "m" && toggle.isSelected && (builds(picture) ?? 0) > (unmuted ?? Int.max)
+        waitUntil("field 2 m, the toggle selected and the count of builds unchanged after the tap on it") {
+            field(app, 2) == "m" && toggle.isSelected && builds(picture) == unmuted
         }
         XCTAssertEqual(field(app, 2), "m")
         XCTAssertTrue(toggle.isSelected)
@@ -282,11 +282,11 @@ final class WholeSoundPathTests: XCTestCase {
         let count = builds(picture)
         XCTAssertNotNil(count, "editor.picture has no count of builds")
         app.sliders[identifier].adjust(toNormalizedSliderPosition: place)
-        waitUntil("field \(owned) changed and a higher count of builds after the move of \(identifier)") {
-            field(app, owned) != was && (builds(picture) ?? 0) > (count ?? Int.max)
+        waitUntil("field \(owned) changed and the count of builds unchanged after the move of \(identifier)") {
+            field(app, owned) != was && builds(picture) == count
         }
         print("sound-path: after the move of \(identifier) editor.soundInfo reads \(soundInfo(app)), editor.picture \(builds(picture) ?? -1) from \(count ?? -1)")
-        XCTAssertGreaterThan(builds(picture) ?? 0, count ?? Int.max, identifier)
+        XCTAssertEqual(builds(picture), count, "an item was built for the level " + identifier)
         return field(app, owned)
     }
 

@@ -41,6 +41,25 @@ public func refreshPicture(of item: AVPlayerItem, plan: RenderPlan, media: [Medi
         plan: plan, media: media, tracks: pieces.map { $0.track }, kept: pieces.flatMap { $0.texts })
 }
 
+/// Gives an item `makePlayerItem` made the audio mix of the plan, made by the same function as at a build. The
+/// sound tracks of the item's composition, in the order of their ids, are the clip track when a segment has sound,
+/// then the music track when the plan has music. Throws `cannotRead` when the item is not a composition of ours or
+/// its tracks do not match the plan. After a throw the item has the mix it had. Reads no file.
+///
+/// https://developer.apple.com/documentation/avfoundation/avplayeritem/audiomix
+/// https://developer.apple.com/documentation/avfoundation/avplayeritem/asset
+/// https://developer.apple.com/documentation/avfoundation/avcomposition/tracks
+@MainActor
+public func refreshSound(of item: AVPlayerItem, plan: RenderPlan) throws {
+    guard let composition = item.asset as? AVComposition else { throw EngineError.cannotRead }
+    let ids = composition.tracks.filter { $0.mediaType == .audio }.map { $0.trackID }.sorted()
+    let clipSound = plan.segments.contains { $0.hasSound }
+    let music = plan.sound.music != nil
+    guard ids.count == (clipSound ? 1 : 0) + (music ? 1 : 0) else { throw EngineError.cannotRead }
+    item.audioMix = audioMix(
+        for: plan, clipTrack: clipSound ? ids.first : nil, musicTrack: music ? ids.last : nil)
+}
+
 /// The one builder for the player item and for the export. One picture track, one sound track when a segment
 /// has sound, one more sound track when the plan has music, the video composition of the plan, and the audio mix
 /// with one set of parameters for each sound track.

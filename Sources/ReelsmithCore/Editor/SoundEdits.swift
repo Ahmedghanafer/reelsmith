@@ -3,7 +3,8 @@
 /// What reduce calls for the case sound. A value past a limit is held at the limit. An action that would change
 /// nothing returns the state unchanged, the playing flag included, and so does a volume that is not a finite number,
 /// a volume of a clip the project does not have and, for the four that name the music, an action with no music.
-/// An action that changes the state pauses.
+/// An action that changes only a level (the volume of the clips, the mute, the volume of a clip, the volume of the
+/// music and its two fades) leaves isPlaying as it was. Every other one but open that changes the state pauses.
 func reduceSound(_ state: EditorState, _ action: SoundAction) -> EditorState {
     var next = state
     switch action {
@@ -58,7 +59,12 @@ func reduceSound(_ state: EditorState, _ action: SoundAction) -> EditorState {
     if next.project == state.project {
         return state
     }
-    next.isPlaying = false
+    switch action {
+    case .setClipVolume, .muteClips, .setVolumeOfClip, .setMusicVolume, .setFadeIn, .setFadeOut:
+        break
+    case .open, .setMusic, .removeMusic, .setMusicStart:
+        next.isPlaying = false
+    }
     return next
 }
 
