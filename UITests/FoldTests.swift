@@ -55,25 +55,28 @@ final class FoldTests: XCTestCase {
         var app = startFold(seed: "music-wide")
         let region = element(app, "editor.timelineRegion")
         let blue = element(app, "editor.clip.1")
-        // The 32 points go to the region the picture stands in. The picture itself keeps the shape of the canvas and
-        // never gets wider than the screen, so on the landscape canvas of music-wide it grows only to 226 (402 by 9/16).
+        // The 32 points go to the room of the picture, above the strip, whose bottom stays: the top of the strip
+        // moves down by 32. That room is not read from `editor.previewRegion`: the frame of an accessibility container
+        // is the union of its elements, not the room it is laid out in. The picture keeps the shape of the canvas and
+        // never gets wider than the screen, so on the landscape canvas of music-wide it grows only to 226 (402 by 9/16)
+        // and stands in the middle of its room.
         let previewRegion = element(app, "editor.previewRegion")
         let picture = element(app, "editor.picture")
         let music = element(app, "editor.music")
         XCTAssertTrue(element(app, "editor.frames.1").exists)
-        let before = previewRegion.frame.height
+        let before = region.frame.minY
+        let bottom = region.frame.maxY
         let pictureBefore = picture.frame.height
-        print("fold: before the fold the strip is \(region.frame.height) high, editor.previewRegion \(before), editor.picture \(pictureBefore)")
+        print("fold: before the fold the strip is \(region.frame), editor.previewRegion \(previewRegion.frame), editor.picture \(picture.frame)")
 
         fold(app)
         assertFolded(app, textSelected: false)
         print("fold: folded editor.clip.1 is \(blue.frame.height) high, editor.music at y \(music.frame.minY - region.frame.minY)")
         XCTAssertEqual(music.frame.minY - region.frame.minY, 68, accuracy: 1)
-        waitUntil("editor.previewRegion 32 points higher after the fold") {
-            abs(previewRegion.frame.height - before - 32) <= 2
-        }
-        print("fold: folded editor.previewRegion is \(previewRegion.frame.height) high, \(previewRegion.frame.height - before) more, editor.picture \(picture.frame.height), \(picture.frame.height - pictureBefore) more")
-        XCTAssertEqual(previewRegion.frame.height - before, 32, accuracy: 2)
+        waitUntil("the top of the strip 32 points lower after the fold") { abs(region.frame.minY - before - 32) <= 2 }
+        print("fold: folded the strip is \(region.frame), \(region.frame.minY - before) lower at its top, editor.previewRegion \(previewRegion.frame), editor.picture \(picture.frame), \(picture.frame.height - pictureBefore) higher")
+        XCTAssertEqual(region.frame.minY - before, 32, accuracy: 2)
+        XCTAssertEqual(region.frame.maxY, bottom, accuracy: 1)
         XCTAssertGreaterThan(picture.frame.height, pictureBefore)
         screenshot("fold-01-folded")
 
