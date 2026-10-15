@@ -9,15 +9,14 @@ import XCTest
 //
 // https://developer.apple.com/documentation/xctest/xcuielement/tap()
 // https://developer.apple.com/documentation/xctest/xcuielement/adjust(tonormalizedsliderposition:)
+// https://developer.apple.com/documentation/xctest/xcuielement/coordinate(withnormalizedoffset:)
+// https://developer.apple.com/documentation/xctest/xcuicoordinate/press(forduration:thendragto:withvelocity:thenholdforduration:)
 // https://developer.apple.com/documentation/xctest/xcuielementattributes/value
 // https://developer.apple.com/documentation/xctest/xcuielementattributes/label
 // https://developer.apple.com/documentation/xctest/xcuielementtypequeryprovider/sliders
 // https://developer.apple.com/documentation/foundation/thread/sleep(fortimeinterval:)
 @MainActor
 final class LiveLevelsTests: XCTestCase {
-    /// The most moves to the lower end before field 1 must read 0: a scripted move does not promise its place.
-    private let mostMoves = 3
-
     /// E21: the volume of the clips to its lowest while playing, then the time read three times a second apart.
     func testTheVolumeOfTheClipsLoweredWhilePlayingLeavesTheVideoPlaying() {
         let pause = lowerTheClipsWhilePlaying(language: "en", picture: "live-levels-01-playing")
@@ -58,13 +57,15 @@ final class LiveLevelsTests: XCTestCase {
         _ = lowerTheClipsWhilePlaying(language: "sv", picture: "live-levels-01-playing-sv")
     }
 
-    /// Starts on music-wide, taps `sound.tab.clips`, then `editor.play`, waits for the first second of the playback,
-    /// moves `sound.clipVolume` to its lowest and reads the time three times one second apart. Asserts that each
-    /// time is later than the one before, that `editor.play` keeps the label it took at the play, that the count
-    /// of builds is the one before the move and that `editor.soundInfo` begins "0 .". Prints all of it, keeps the
-    /// picture and answers the label of `editor.play` while playing.
+    /// Starts on music-wide at the playhead 0, taps `sound.tab.clips` and finds the slider and the places of its two
+    /// ends, all before the tap on `editor.play`. Then it waits for the time to move, drags the slider to its lowest
+    /// at once and reads the time three times one second apart. Asserts that each time is later than the one before,
+    /// that `editor.play` keeps the label it took at the play, that the count of builds is the one before the move
+    /// and that `editor.soundInfo` begins "0 .". The project is 7 seconds long: when its end comes before the third
+    /// read, the test fails on the timing and says so. Prints all of it, keeps the picture and answers the label of
+    /// `editor.play` while playing.
     private func lowerTheClipsWhilePlaying(language: String, picture name: String) -> String {
-        let app = startApp(seed: "music-wide", language: language)
+        let app = startApp(seed: "music-wide", language: language, playhead: 0)
         waitForTheEditor(app)
         waitUntil("the part button sound.tab.clips after the start") { element(app, "sound.tab.clips").exists }
         element(app, "sound.tab.clips").tap()
@@ -73,27 +74,41 @@ final class LiveLevelsTests: XCTestCase {
         let play = element(app, "editor.play")
         let picture = element(app, "editor.picture")
         let still = play.label
+        let end = element(app, "editor.time").label.components(separatedBy: " / ").last ?? ""
+        // The slider mirrors in Arabic, so its lowest end is at the right there. The thumb stands at the other end,
+        // the volume being 1, about half a thumb in from it. The drag goes past the lowest end, where it holds.
+        let mirrored = language == "ar"
+        let frame = slider.frame
+        print("live-levels: the slider at \(frame), mirrored \(mirrored), the project ends at \(end)")
+        let thumb = slider.coordinate(withNormalizedOffset: CGVector(dx: mirrored ? 0 : 1, dy: 0.5))
+            .withOffset(CGVector(dx: mirrored ? 14 : -14, dy: 0))
+        let lowest = slider.coordinate(withNormalizedOffset: CGVector(dx: mirrored ? 1 : 0, dy: 0.5))
+            .withOffset(CGVector(dx: mirrored ? 30 : -30, dy: 0))
 
         mark("live-levels-01-play")
         let began = Date()
         play.tap()
         waitUntil("editor.play labelled otherwise than \(still) after the tap on it") { play.label != still }
         let pause = play.label
-        waitUntil("the time at 00:01 or later after the tap on editor.play", expected: 2) {
-            timeBeforeTheSlash(app) >= "00:01"
+        waitUntil("the time past 00:00 after the tap on editor.play", expected: 2) {
+            timeBeforeTheSlash(app) != "00:00"
         }
         let before = builds(picture)
         XCTAssertNotNil(before, "editor.picture has no count of builds")
 
-        var moves = 0
-        while field(app, 1) != "0" && moves < mostMoves {
-            slider.adjust(toNormalizedSliderPosition: 0)
-            moves += 1
-            waitUntil("field 1 at 0 after move \(moves) of sound.clipVolume to its lowest", required: false) {
+        thumb.press(forDuration: 0.05, thenDragTo: lowest, withVelocity: .fast, thenHoldForDuration: 0)
+        waitUntil("field 1 at 0 after the drag of sound.clipVolume to its lowest", required: false) {
+            field(app, 1) == "0"
+        }
+        if field(app, 1) != "0" {
+            // The drag did not take the thumb: one scripted move to the lowest end, which is slower.
+            slider.adjust(toNormalizedSliderPosition: mirrored ? 1 : 0)
+            waitUntil("field 1 at 0 after the move of sound.clipVolume to its lowest", required: false) {
                 field(app, 1) == "0"
             }
         }
-        print("live-levels: after \(moves) moves to the lowest, \(Date().timeIntervalSince(began)) seconds after the play, editor.soundInfo reads \(soundInfo(app))")
+        let changed = Date().timeIntervalSince(began)
+        print("live-levels: \(changed) seconds after the play the time reads \(timeBeforeTheSlash(app)), editor.soundInfo \(soundInfo(app))")
 
         var times: [String] = []
         for read in 1...3 {
@@ -105,7 +120,13 @@ final class LiveLevelsTests: XCTestCase {
         }
         let after = builds(picture)
         let info = soundInfo(app)
-        print("live-levels: E21 in \(language): the time read \(times), editor.play \(play.label) (\(pause) at the play), editor.picture \(after ?? -1) from \(before ?? -1), editor.soundInfo \(info), \(Date().timeIntervalSince(began)) seconds after the play")
+        let seconds = Date().timeIntervalSince(began)
+        print("live-levels: E21 in \(language): the time read \(times), editor.play \(play.label) (\(pause) at the play), editor.picture \(after ?? -1) from \(before ?? -1), editor.soundInfo \(info), the level changed \(changed) and the last read \(seconds) seconds after the play")
+        if times.contains(end) {
+            print("live-levels: timing: the playback reached its end \(end) before the third read, \(seconds) seconds after the play")
+            XCTFail("timing, not the product: the project of 7 seconds reached its end \(end) before the third read, the level changed \(changed) seconds after the play")
+            return pause
+        }
         XCTAssertLessThan(times[0], times[1], "the time stood after the level changed")
         XCTAssertLessThan(times[1], times[2], "the time stood after the level changed")
         XCTAssertEqual(play.label, pause, "editor.play after the level changed")
