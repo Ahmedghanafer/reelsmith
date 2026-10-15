@@ -230,7 +230,7 @@ Every sample of the preview and of the export comes from the composition of the 
 ### The volume of each clip in the mix
 
 - The whole mix of an item and of an export is made by one function, `audioMix(for:clipTrack:musicTrack:)` in `Composition.swift`, private to the file. `buildComposition` calls it with the ids of the clip sound track and of the music track, either nil when there is none. It reads no file: it makes its parameters from the plan alone. `addMusic` only lays the music on its track and gives its id.
-- The clip track gets one `setVolume(_:at:)` for each segment that has sound, at its timeline start, in the order of the plan, with `Float(plan.sound.clipVolume * segment.volume)`. So what is heard of a clip is the volume of the clips times its own volume, and 0 while the clips are muted. A photo is a movie with no sound track and sets nothing. A segment with no sound lays nothing on the track, so the volume it would hold is never heard.
+- The clip track gets one `setVolumeRamp(fromStartVolume:toEndVolume:timeRange:)` for each segment that has sound, in the order of the plan, from `Float(plan.sound.clipVolume * segment.volume)` to the same value over the time range of the segment on the timeline. Two volumes set with `setVolume(_:at:)` are not held: the platform ramps from one to the next, and blue at 1 before red at 0.5 read 0.375 in its window. So what is heard of a clip is the volume of the clips times its own volume, and 0 while the clips are muted. A photo is a movie with no sound track and sets nothing. A segment with no sound lays nothing on the track, so the volume it would hold is never heard.
 - The music's parameters are the ones under "Sound in the composition", made in the same function.
 
 ### Export at a size and a rate

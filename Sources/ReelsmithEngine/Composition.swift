@@ -126,7 +126,7 @@ private func addMusic(_ layer: MusicLayer, to composition: AVMutableComposition,
 
 /// The whole mix of a plan, for a new item and an export alike, made from the plan and the ids of its sound
 /// tracks and reading no file. The clip track holds `clipVolume` times the volume of each segment that has sound,
-/// set at its start in the order of the plan, so 0 while the clips are muted. The music track rises from 0 to the
+/// from its start to its end in the order of the plan, so 0 while the clips are muted. The music track rises from 0 to the
 /// music's `volume` over the first `fadeIn`, stands at it up to the last `fadeOut` and falls to 0 over it. A fade
 /// of zero sets no ramp. A track id that is nil gets no parameters.
 ///
@@ -140,10 +140,16 @@ private func audioMix(for plan: RenderPlan, clipTrack: CMPersistentTrackID?, mus
     if let track = clipTrack {
         let clips = AVMutableAudioMixInputParameters()
         clips.trackID = track
+        // Between two volumes set with setVolume the platform ramps from one to the other (blue at 1 then red
+        // at 0.5 read blue at 0.375 in compile check run 38658994782), so each segment holds its volume from its
+        // start to its end with a ramp that does not change.
         for segment in plan.segments where segment.hasSound {
-            clips.setVolume(
-                Float(plan.sound.clipVolume * segment.volume),
-                at: CMTime(value: segment.timelineStart.ticks, timescale: 600))
+            let volume = Float(plan.sound.clipVolume * segment.volume)
+            clips.setVolumeRamp(
+                fromStartVolume: volume, toEndVolume: volume,
+                timeRange: CMTimeRange(
+                    start: CMTime(value: segment.timelineStart.ticks, timescale: 600),
+                    duration: CMTime(value: segment.duration.ticks, timescale: 600)))
         }
         parameters.append(clips)
     }
