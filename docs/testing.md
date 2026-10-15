@@ -4,9 +4,9 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 ## What runs where
 
-- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 457 tests on Linux.
-- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 632 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 200 UI tests in thirty-four classes.
+- On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 459 tests on Linux.
+- On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 634 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 208 UI tests in thirty-five classes.
 
 What comes back from the simulator run:
 
@@ -697,6 +697,25 @@ Screenshots: `sound-clips-01-clips` (the part `clips` under the part row: the wo
 `Tests/ReelsmithCoreTests/SoundClipsWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `sound-clips` of the English, the Arabic or the Swedish file holds anything but the two keys `sound.clipVolume` and `sound.clipsMuted` in that order or a line with an empty text, and when their English texts are not "Clip sound" and "Mute the clips".
 
 That the slider runs from 0 to 1 in steps of 0.05, that it sends once when a drag ends and at once with no drag, and that the audio session is set once at the start are read in the diff and held by no test here.
+
+### UI tests of the clip panel
+
+`UITests/ClipPanelTests.swift` holds the clip panel in eight tests, on `two-clips-wide` unless named, each with `-drafts fresh` at its first launch. Blue is 3 seconds and red 4 at 60 points a second, with the playhead at x 201. A block is tapped at its middle, and the test waits until it is selected and `editor.clipRegion` is there. A clip is read by the value of its block, never by a picture of the strip. After a tap or a move the test reads until the effect holds, expected within 1 second and failing only above 3, and each wait prints a line that starts with `clip-panel: waited`.
+
+- Selected, with `-playhead 600`: no `editor.clipRegion` before the tap. After a tap on `editor.clip.1` the region lies under `editor.toolsRegion` and above `editor.exportRegion`, printed in a line that starts with `clip-panel: editor.toolsRegion at`, and holds `clip.cutBefore`, `clip.cutAfter` and the slider `clip.volume`, both buttons enabled. Then the same in Arabic, where `clip.cutBefore` is right of `clip.cutAfter` while `editor.clip.1` is left of `editor.clip.2`, and in Swedish, where `clip.cutBefore` is left of `clip.cutAfter`.
+- Delete before, with `-playhead 600`: `editor.clip.1` reads "blue 600+1200 100 v", `editor.time` "00:00 / 00:06" and the region still shows. `editor.undo`: "blue 0+1800 100 v".
+- Delete after, with `-playhead 1200`: "blue 0+1200 100 v", and `editor.time` begins "00:02".
+- With `-playhead 0`: both buttons disabled.
+- The volume, with `-playhead 2400`, where red is from x 141 to 381: red tapped, then `adjust(toNormalizedSliderPosition: 0)` on `clip.volume`, repeated five times at most until the value of `editor.clip.2` ends " 0 v", since a scripted move does not promise the end of a slider. Each move waits until the value changed and prints it. Blue ends " 100 v" and `editor.soundInfo` begins "100 .". The app ended, `-drafts kept`, `drafts.row.1` opened: `editor.clip.2` still ends " 0 v".
+- A photo, on `photo-wide` with `-playhead 2700`: the photo, whose value ends " p", tapped: the region with the two cuts and no `clip.volume`.
+- The empty strip, with `-playhead 600`: after a tap on blue, a tap on `editor.timelineRegion` at x 40, left of the first block, takes the region away.
+- On `text-wide`, whose start has a text selected, and on `music-wide`, whose start has the sound panel open: no `editor.clipRegion`.
+
+Screenshots: `clip-panel-01-selected` (the panel under the tools with the two cuts and the slider, blue selected), `clip-panel-01-selected-ar` and `clip-panel-01-selected-sv` (the same in Arabic, the panel mirrored and the strip not, and in Swedish: the words of the three keys are read on them), `clip-panel-02-cut-before` (blue cut, the playhead at its start), `clip-panel-03-volume` (red at its lowest), `clip-panel-04-photo` (the photo selected, no slider). Marks: `clip-panel-02-cut-before`, `clip-panel-03-volume`.
+
+`Tests/ReelsmithCoreTests/ClipPanelWordsTests.swift` runs on Linux and reads the three word files itself. It fails when the group `clip-panel` of the English, the Arabic or the Swedish file holds anything but the three keys `clip.cutBefore`, `clip.cutAfter` and `clip.volume` in that order, and when their texts are not "Delete before", "Delete after" and "Volume" in English, "حذف ما قبل", "حذف ما بعد" and "مستوى الصوت" in Arabic, and "Radera före", "Radera efter" and "Volym" in Swedish.
+
+That the panel holds no state, that its buttons send in a transaction with animations off and that the slider sends once when a drag ends are read in the diff and held by no test here.
 
 ### UI tests of adding music
 
