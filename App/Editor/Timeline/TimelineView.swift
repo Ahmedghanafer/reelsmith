@@ -74,6 +74,7 @@ final class TimelineStripView: UIView {
         addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(pinched(_:))))
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped(_:))))
         // slot: recognizers
+        ClipPress.add(to: self, beside: pan)
         // end slot: recognizers
     }
 

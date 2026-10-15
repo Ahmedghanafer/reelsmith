@@ -6,7 +6,7 @@ The page goes from what runs where, through the helpers the UI tests share, to t
 
 - On Linux, the workflow `Tests` runs `swift test`: the Core tests in `Tests/ReelsmithCoreTests`. On Linux the Engine tests compile to nothing: every file of their target sits inside `#if canImport(AVFoundation)`, but `Tests/ReelsmithEngineTests/Support/MidToneClip.swift`, which holds one function and no test, and `TextPictureTests.swift`, `TextExportTests.swift`, `CoverTests.swift` and `PhotoTests.swift`, which sit inside `#if canImport(CoreText)`. That is 457 tests on Linux.
 - On a Mac, the compile check (the workflow `Compile check`) runs `swift test` on macOS, where the Engine tests run too. Engine tests live in `Tests/ReelsmithEngineTests` and run with `swift test` on macOS only. That is 632 package tests on the hosted Mac. The compile check also builds the UI tests and does not run them.
-- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 194 UI tests in thirty-three classes.
+- UI tests live in `UITests/`, are built by the compile check and run only in the simulator run (the workflow `macOS build`), in one simulator that the run records from before the first test to after the last. The package tests run there too, on macOS, as in the compile check. There are 200 UI tests in thirty-four classes.
 
 What comes back from the simulator run:
 
@@ -527,6 +527,19 @@ For a later test of the strip: a block is one element, and its frame is expected
 - Arabic and Swedish, on `three-clips` at 2700 ticks: after a pinch with scale 3 the blocks run blue, red, green from the left, touching, and the playhead reads "00:04".
 
 Screenshots: `zoom-01-in`, `zoom-01-in-ar`, `zoom-01-in-sv`, `zoom-02-out`. Marks: `zoom-01-pinch-in`, `zoom-02-pinch-out`, `zoom-03-trim`, `zoom-04-text-bar`.
+
+### UI tests of moving a clip
+
+`UITests/ReorderTests.swift` holds the press and drag that moves a clip. Each test starts its first launch with `-drafts fresh` and waits for the editor with `waitForTheEditor`. A press and drag is `press(forDuration: 0.6, thenDragTo:)` from the middle of a block, and a clip is read through the value of its block, as "blue 0+1800 100 v". After a press, a tap or a launch the test reads until the effect is there, expected within 1 second and failing only above 3 unless said, and prints a line that starts with `reorder: waited`.
+
+- The move, on `three-clips` at 3300 ticks, where red's left end is at x 51 and green's middle at x 351: the test prints whether `editor.clip.3` is hittable and its frame, then presses green at its middle and drags it to 4 points right of the left end of `editor.clip.2`. It reads `editor.clip.2` until it is green, expected within 1 second and failing at 10. The values then read blue, green, red, the playhead reads what it read before the press, and `editor.clip.2` is selected. `editor.undo` gives blue, red, green, `editor.redo` green second again, and after the app is ended a launch with `-drafts kept` reads `start.draftsInfo` as `1 3+5400+0+1080x30+.`.
+- A press held still, on `three-clips` at 3300 ticks: red pressed for 1 second at 0.9 of its width and let go, then a tap on green read until green is selected, leaves blue, red, green and `editor.undo` disabled.
+- A short press, on `three-clips` at zero: a press of 0.1 seconds in the middle of blue and a drag of 120 points to the left give the playhead "00:01", "00:02" or "00:03", and the three values are unchanged.
+- The end handle, on `three-clips` at 3300 ticks: after a tap on red, a press and drag of `editor.trim.end` 60 points to the left makes red shorter, and blue and green keep their values.
+- A text bar, on `text-box-wide`: a press and drag of `editor.text.1` 150 points to the left scrubs, read until the playhead value changes, and the two values are unchanged.
+- Arabic and Swedish: the same move gives blue, green, red, touching from the left.
+
+Screenshots: `reorder-01-moved`, `reorder-01-moved-ar`, `reorder-01-moved-sv`. Mark: `reorder-01-press`. Whether half a second feels right under her finger, whether she finds the press, and the drag in Arabic are judged on the phone.
 
 ### The trim handles
 
