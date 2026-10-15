@@ -366,7 +366,7 @@ jobs:
               failed=1
             elif [ "$ending" = ".mark.txt" ]; then
               # Without a moment in the manifest, the clock second the mark file holds.
-              printf '%s\t%s\n' "$stem" "${stamp:-$(cat "screens/$name")}" >> "$exported/marks.tsv"
+              printf '%s\t%s\n' "${name%.mark.txt}" "${stamp:-$(cat "screens/$name")}" >> "$exported/marks.tsv"
             fi
           done < "$exported/names.tsv"
           ls -l screens
