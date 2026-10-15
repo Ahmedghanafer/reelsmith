@@ -27,9 +27,10 @@ struct TimelineStrip: UIViewRepresentable {
     }
 }
 
-/// The clips as plain blocks in one row at the scale of the strip, under a playhead line that stays in
-/// the middle. A drag scrubs, a tap on a block selects it, a pinch sets the scale. Never mirrored: every
-/// frame is set by hand from the left, and the view forces left to right.
+/// The clips as blocks in one row at the scale of the strip, each showing frames of its clip unless the
+/// blocks are folded, under a playhead line that stays in the middle. A drag scrubs, a tap on a block
+/// selects it, a pinch sets the scale. Never mirrored: every frame is set by hand from the left, and the
+/// view forces left to right.
 ///
 /// https://developer.apple.com/documentation/uikit/uiview/layoutsubviews()
 /// https://developer.apple.com/documentation/uikit/uiview/semanticcontentattribute
