@@ -5,7 +5,7 @@ import XCTest
 final class ClipSlotsTests: XCTestCase {
     func testEachWordFileEndsWithTheFourSlotsOfClipsInTheirOrder() throws {
         var wanted: [String] = []
-        for topic in ["add-clips", "clip-panel", "music-row", "clip-path"] {
+        for topic in ["add-clips", "clip-panel", "music-row", "clip-path", "framing", "guide", "fold-frames"] {
             wanted += ["/* slot: " + topic + " */", "/* end slot: " + topic + " */"]
         }
         let repository = URL(fileURLWithPath: #filePath)
