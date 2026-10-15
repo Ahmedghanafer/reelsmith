@@ -93,6 +93,44 @@ final class ClipGainTests: XCTestCase {
         assertLevel(two, near: 2 * one, "red at 2 against red at 1 through the mix, the tap kept")
     }
 
+    // The limiter leaves a quiet clip alone: with the clips at 0.5, red at 1 reads blue's level and red at 2 twice
+    // it within 2 percent, in the file and through the mix, as the plain gain read before it.
+    @MainActor
+    func testWithTheClipsAtHalfRedAtOneAndAtTwoReadTheirPlainLevelsWithinTwoPercent() async throws {
+        var project = Seed.twoClipsWide.project
+        project.clipVolume = 0.5
+        let one = try await reads(try renderPlan(for: project), name: "limiter-clips-half-red-one")
+        project.clips[1].volume = 2
+        let two = try await reads(try renderPlan(for: project), name: "limiter-clips-half-red-two")
+        assertLevel(one.red, within: 0.02, of: one.blue, "red at 1 in the file")
+        assertLevel(one.mixedRed, within: 0.02, of: one.mixedBlue, "red at 1 through the mix")
+        assertLevel(two.red, within: 0.02, of: 2 * one.blue, "red at 2 in the file")
+        assertLevel(two.mixedRed, within: 0.02, of: 2 * one.mixedBlue, "red at 2 through the mix")
+        assertLevel(two.blue, within: 0.02, of: one.blue, "blue in the file")
+        assertLevel(two.mixedBlue, within: 0.02, of: one.mixedBlue, "blue through the mix")
+    }
+
+    // Red at 3 in a plan built here, a peak of 1.5 before the limiter: in red's window, read as float samples, no
+    // sample lies above full scale and fewer than 1 in 1000 lie at it, in the file and through the mix. The largest
+    // sample and that share are printed.
+    @MainActor
+    func testRedAtThreeHasNoSampleAboveFullScaleAndAlmostNoneAtIt() async throws {
+        var plan = try renderPlan(for: Seed.twoClipsWide.project)
+        plan.segments[1].volume = 3
+        let file = try await ExportTests.exported(plan, clips: [.blue, .red], name: "limiter-red-three.out").file
+        let item = try await self.item(of: plan)
+        let fileSamples = try await floatSamples(of: AVURLAsset(url: file), mix: nil)
+        let mixedSamples = try await floatSamples(of: item.asset, mix: item.audioMix)
+        for (what, samples) in [("the file", fileSamples), ("the mix", mixedSamples)] {
+            XCTAssertFalse(samples.isEmpty, "no sample of red in " + what)
+            let largest = samples.map { abs($0) }.max() ?? 0
+            let share = Double(samples.filter { abs($0) >= 1 }.count) / Double(max(samples.count, 1))
+            print("clip gain: red at 3 in \(what): the largest sample \(largest), at full scale \(share) of \(samples.count)")
+            XCTAssertLessThanOrEqual(largest, 1, "a sample of red at 3 above full scale in " + what)
+            XCTAssertLessThan(share, 0.001, "the share of red at 3 at full scale in " + what)
+        }
+    }
+
     /// What one plan reads over blue and red, in its exported file and through the mix of its player item, printed
     /// with the largest sample of red's window in each.
     struct Reads {
@@ -158,6 +196,54 @@ private func assertLevel(
 ) {
     XCTAssertLessThanOrEqual(
         abs(level - expected), 0.15 * expected, what + " reads \(level), expected \(expected)", file: file, line: line)
+}
+
+/// A level matches within a share of its expected value.
+private func assertLevel(
+    _ level: Double, within share: Double, of expected: Double, _ what: String,
+    file: StaticString = #filePath, line: UInt = #line
+) {
+    XCTAssertLessThanOrEqual(
+        abs(level - expected), share * expected, what + " reads \(level), expected \(expected)", file: file, line: line)
+}
+
+/// The samples of the first channel over red's window, all sound tracks of the asset mixed with the mix, decoded
+/// to 32 bit float, so a sample past full scale reads past 1.
+///
+/// https://developer.apple.com/documentation/avfoundation/avassetreaderaudiomixoutput
+/// https://developer.apple.com/documentation/coremedia/cmblockbuffercopydatabytes(_:atoffset:datalength:destination:)
+private func floatSamples(of asset: AVAsset, mix: AVAudioMix?) async throws -> [Float] {
+    let soundTracks = try await asset.loadTracks(withMediaType: .audio)
+    let reader = try AVAssetReader(asset: asset)
+    let output = AVAssetReaderAudioMixOutput(audioTracks: soundTracks, audioSettings: [
+        AVFormatIDKey: kAudioFormatLinearPCM,
+        AVLinearPCMBitDepthKey: 32,
+        AVLinearPCMIsFloatKey: true,
+        AVLinearPCMIsBigEndianKey: false,
+        AVLinearPCMIsNonInterleaved: false,
+    ])
+    output.audioMix = mix
+    reader.timeRange = CMTimeRange(
+        start: CMTime(value: redStart.ticks, timescale: 600),
+        duration: CMTime(value: redEnd.ticks - redStart.ticks, timescale: 600))
+    reader.add(output)
+    XCTAssertTrue(reader.startReading(), "the reader of the float samples did not start")
+    var first: [Float] = []
+    while let buffer = output.copyNextSampleBuffer() {
+        guard let block = CMSampleBufferGetDataBuffer(buffer),
+              let format = CMSampleBufferGetFormatDescription(buffer),
+              let basic = CMAudioFormatDescriptionGetStreamBasicDescription(format)
+        else { continue }
+        let channels = max(Int(basic.pointee.mChannelsPerFrame), 1)
+        var samples = [Float](repeating: 0, count: CMBlockBufferGetDataLength(block) / MemoryLayout<Float>.size)
+        _ = samples.withUnsafeMutableBytes { bytes in
+            CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: bytes.count, destination: bytes.baseAddress!)
+        }
+        for frame in 0..<(samples.count / channels) {
+            first.append(samples[frame * channels])
+        }
+    }
+    return first
 }
 
 /// The largest size of a sample of the first channel over red's window, all sound tracks of the asset mixed with
