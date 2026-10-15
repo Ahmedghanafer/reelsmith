@@ -71,6 +71,8 @@ final class FramingPanelTests: XCTestCase {
                 waitUntil("clip.frameInfo reading fill black 100 0,0 after clip.fill in " + language) {
                     self.info(app) == "fill black 100 0,0"
                 }
+                let filled = waitForTheShare(in: element(app, "editor.picture"), "blue filling in " + language, above: 0.9)
+                XCTAssertGreaterThan(filled, 0.9, "blue filled in " + language)
                 screenshot("framing-01-fill-" + language)
             }
             app.terminate()
