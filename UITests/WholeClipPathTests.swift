@@ -162,11 +162,9 @@ final class WholeClipPathTests: XCTestCase {
             red.isHittable && screen.minX + 10 < red.frame.midX && red.frame.midX < screen.maxX - 10
         }
         select(app, "editor.clip.3")
-        // Each drag that changes the value is one step, so one undo gives the value before the last drag: 100 when
-        // the first drag reached the end.
-        let raisedFrom = raiseRed(app)
+        raiseRed(app)
         tapOn(app, "editor.undo")
-        waitUntil("editor.clip.3 reading " + raisedFrom + " after one undo") { self.value(app, "editor.clip.3") == raisedFrom }
+        waitUntil("editor.clip.3 ending 100 v after one undo") { self.value(app, "editor.clip.3").hasSuffix(" 100 v") }
         print("clip-path: after one undo editor.clip.3 reads " + value(app, "editor.clip.3"))
         tapOn(app, "editor.redo")
         waitUntil("editor.clip.3 ending 200 v after the redo") { self.value(app, "editor.clip.3").hasSuffix(" 200 v") }
@@ -207,10 +205,12 @@ final class WholeClipPathTests: XCTestCase {
         let photoBlock = element(app, "editor.clip.1")
         tapOn(app, "editor.frames")
         waitUntil("editor.clip.1 24 high after the tap on editor.frames") { abs(photoBlock.frame.height - 24) <= 1 }
-        print("clip-path: folded the strip is \(region.frame.height) high, editor.music at y \(element(app, "editor.music").frame.minY - region.frame.minY)")
+        print("clip-path: folded the strip is \(region.frame.height) high, editor.clip.1 \(photoBlock.frame.height)")
         XCTAssertEqual(region.frame.height, 96, accuracy: 1)
         if music {
-            XCTAssertEqual(element(app, "editor.music").frame.minY - region.frame.minY, 68, accuracy: 1)
+            let musicY = element(app, "editor.music").frame.minY - region.frame.minY
+            print("clip-path: folded editor.music at y \(musicY) of the strip")
+            XCTAssertEqual(musicY, 68, accuracy: 1)
         }
         tapOn(app, "editor.frames")
         waitUntil("a strip 128 high after the second tap on editor.frames") { abs(region.frame.height - 128) <= 1 }
@@ -326,7 +326,8 @@ final class WholeClipPathTests: XCTestCase {
         // The guide over the picture, then gone.
         tapOn(app, "clip.guide")
         waitUntil("editor.guide over the picture after clip.guide") {
-            self.element(app, "editor.guide").exists && self.element(app, "editor.guide.safe").frame.width > 0
+            self.element(app, "editor.guide").exists && self.element(app, "editor.guide.safe").exists
+                && self.element(app, "editor.guide.safe").frame.width > 0
         }
         print("clip-path: editor.guide.safe at \(element(app, "editor.guide.safe").frame), editor.picture at \(element(app, "editor.picture").frame)")
         tapOn(app, "clip.guide")
@@ -466,10 +467,8 @@ final class WholeClipPathTests: XCTestCase {
         }
     }
 
-    /// Drags the thumb of `clip.volume` past its higher end, as `ClipGainTests` does, until red reads 200. Gives the
-    /// value of red before the last drag that changed it.
-    private func raiseRed(_ app: XCUIApplication) -> String {
-        var raisedFrom = value(app, "editor.clip.3")
+    /// Drags the thumb of `clip.volume` past its higher end, as `ClipGainTests` does, until red reads 200.
+    private func raiseRed(_ app: XCUIApplication) {
         let slider = app.sliders["clip.volume"]
         waitUntil("the slider clip.volume") { slider.exists }
         let width = slider.frame.width
@@ -489,12 +488,8 @@ final class WholeClipPathTests: XCTestCase {
                 self.value(app, "editor.clip.3") != before
             }
             print("clip-path: after drag \(moves) editor.clip.3 reads " + value(app, "editor.clip.3"))
-            if value(app, "editor.clip.3") != before {
-                raisedFrom = before
-            }
         }
         XCTAssertTrue(value(app, "editor.clip.3").hasSuffix(" 200 v"), value(app, "editor.clip.3"))
-        return raisedFrom
     }
 
     /// Taps a control of the framing row and waits until `clip.frameInfo` reads the line.
@@ -530,7 +525,8 @@ final class WholeClipPathTests: XCTestCase {
     }
 
     private func info(_ app: XCUIApplication) -> String {
-        app.staticTexts["clip.frameInfo"].label
+        let line = app.staticTexts["clip.frameInfo"]
+        return line.exists ? line.label : ""
     }
 
     private func zoom(_ app: XCUIApplication) -> Int {
@@ -553,7 +549,8 @@ final class WholeClipPathTests: XCTestCase {
     }
 
     private func soundInfo(_ app: XCUIApplication) -> String {
-        app.staticTexts["editor.soundInfo"].label
+        let line = app.staticTexts["editor.soundInfo"]
+        return line.exists ? line.label : ""
     }
 
     /// The field of `editor.soundInfo` at the place, counted from 1, or nothing when there is none.
@@ -567,12 +564,16 @@ final class WholeClipPathTests: XCTestCase {
         element(app, "editor.time").label.components(separatedBy: " / ").first ?? ""
     }
 
+    /// The value of `editor.playhead`, or "none" off the editor, as on the start screen or under the saved panel.
     private func playhead(_ app: XCUIApplication) -> String {
-        element(app, "editor.playhead").value as? String ?? ""
+        let line = element(app, "editor.playhead")
+        return line.exists ? line.value as? String ?? "" : "none"
     }
 
+    /// The value of the element, empty when there is none: a read of a missing element fails the test.
     private func value(_ app: XCUIApplication, _ identifier: String) -> String {
-        element(app, identifier).value as? String ?? ""
+        let found = element(app, identifier)
+        return found.exists ? found.value as? String ?? "" : ""
     }
 
     private func values(_ app: XCUIApplication, _ count: Int) -> [String] {
