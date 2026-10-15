@@ -10,7 +10,7 @@ import ReelsmithCore
 ///
 /// Throws `nothingToExport` for an empty plan, `sourceMissing` for a file that is not in the media folder,
 /// `cannotRead` for a file that has no picture or cannot be put into the composition, and `cannotWrite` when
-/// the output cannot be written or the export session fails. The file is written under a temporary name beside the output
+/// the output cannot be written or the export session fails. A session that fails to decode runs once more. The file is written under a temporary name beside the output
 /// place and renamed when it is whole.
 ///
 /// https://developer.apple.com/documentation/avfoundation/avassetexportsession
@@ -28,46 +28,65 @@ public func export(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: U
     let built = try await buildComposition(plan: plan, media: media, mediaFolder: mediaFolder)
     let preset = plan.settings.size.shortSide == 2160
         ? AVAssetExportPresetHEVCHighestQuality : AVAssetExportPresetHighestQuality
-    guard let session = AVAssetExportSession(asset: built.composition, presetName: preset)
-    else { throw EngineError.cannotWrite }
     let temporary = folder.appendingPathComponent(UUID().uuidString + ".tmp.mp4")
-    session.videoComposition = built.videoComposition
-    session.audioMix = built.audioMix
-    session.outputFileType = .mp4
-    session.outputURL = temporary
 
     progress(0)
-    let watcher = Task {
-        var last = 0.0
-        while !Task.isCancelled {
-            let now = Double(session.progress)
-            if now > last && now < 1 {
-                last = now
-                progress(now)
-            }
-            try? await Task.sleep(nanoseconds: 100_000_000)
-        }
-    }
-    await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
-        session.exportAsynchronously {
-            done.resume()
-        }
-    }
-    watcher.cancel()
-    await watcher.value
+    var reported = 0.0
+    for attempt in 1...2 {
+        guard let session = AVAssetExportSession(asset: built.composition, presetName: preset)
+        else { throw EngineError.cannotWrite }
+        session.videoComposition = built.videoComposition
+        session.audioMix = built.audioMix
+        session.outputFileType = .mp4
+        session.outputURL = temporary
 
-    do {
-        guard session.status == .completed else { throw EngineError.cannotWrite }
-        if FileManager.default.fileExists(atPath: output.path) {
-            try FileManager.default.removeItem(at: output)
+        let start = reported
+        let watcher = Task { () -> Double in
+            var last = start
+            while !Task.isCancelled {
+                let now = Double(session.progress)
+                if now > last && now < 1 {
+                    last = now
+                    progress(now)
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            return last
         }
-        try FileManager.default.moveItem(at: temporary, to: output)
-    } catch {
-        try? FileManager.default.removeItem(at: temporary)
-        // The session's own error, with its underlying error, names why a write failed.
-        NSLog("%@", "export: not written, session status \(session.status.rawValue), "
-            + "session error \(String(describing: session.error)), thrown \(error)")
-        throw EngineError.cannotWrite
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+            session.exportAsynchronously {
+                done.resume()
+            }
+        }
+        watcher.cancel()
+        reported = await watcher.value
+
+        // The decoder of a hosted Mac has failed once on clips that decode on every other run
+        // (AVError.decodeFailed). Such a session runs once more, from the same composition.
+        // https://developer.apple.com/documentation/avfoundation/averror/code/decodefailed
+        let sessionError = session.error as NSError?
+        if attempt == 1 && session.status == .failed && sessionError?.domain == AVFoundationErrorDomain
+            && sessionError?.code == AVError.Code.decodeFailed.rawValue {
+            try? FileManager.default.removeItem(at: temporary)
+            NSLog("%@", "export: retrying once, the session could not decode, "
+                + "session error \(String(describing: session.error))")
+            continue
+        }
+
+        do {
+            guard session.status == .completed else { throw EngineError.cannotWrite }
+            if FileManager.default.fileExists(atPath: output.path) {
+                try FileManager.default.removeItem(at: output)
+            }
+            try FileManager.default.moveItem(at: temporary, to: output)
+        } catch {
+            try? FileManager.default.removeItem(at: temporary)
+            // The session's own error, with its underlying error, names why a write failed.
+            NSLog("%@", "export: not written, session status \(session.status.rawValue), "
+                + "session error \(String(describing: session.error)), thrown \(error)")
+            throw EngineError.cannotWrite
+        }
+        break
     }
     progress(1)
 }
