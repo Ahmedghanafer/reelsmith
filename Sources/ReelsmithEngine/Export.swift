@@ -64,6 +64,9 @@ public func export(plan: RenderPlan, media: [MediaID: MediaInfo], mediaFolder: U
         try FileManager.default.moveItem(at: temporary, to: output)
     } catch {
         try? FileManager.default.removeItem(at: temporary)
+        // The session's own error, with its underlying error, names why a write failed.
+        NSLog("%@", "export: not written, session status \(session.status.rawValue), "
+            + "session error \(String(describing: session.error)), thrown \(error)")
         throw EngineError.cannotWrite
     }
     progress(1)
