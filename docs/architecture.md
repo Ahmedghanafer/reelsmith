@@ -451,6 +451,7 @@ While a press runs, the pressed block follows the finger. It decides nothing: th
 - `ClipPress` holds `private(set) var lifted: (clip: ClipID, left: Double)?`: the pressed clip and the x in `strip` of the left end of its block at the press moved by the finger since then. It is set at the start and at each step of a press, and nil at the end and at a cancel.
 - The slot `reorder` of `layoutSubviews()` reads it from the recognizers of the strip view. It draws the container of that clip's block, its tiles and its label with it, at that left end, above the other blocks (`zPosition` 1), scaled by 1.08 about its middle with a shadow, and not cut at its edges. The other blocks stand where `reduce` of the kept state with the move puts them, so they make room as the block passes.
 - Every container is first set with no transform and its frame set again in the slot, since a frame set on a view with a transform is not its frame. With no press every block is drawn at its place, 56 high and as wide as its clip.
+- `TrimHandle.layout(in:below:)` reads it from the same recognizers and hides both trim handles while a block is lifted. After the drop they are laid out again at the ends of the selected clip, which after a move is the moved clip.
 
 ### The trim handles
 
