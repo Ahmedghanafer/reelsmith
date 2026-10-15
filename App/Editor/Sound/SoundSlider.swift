@@ -5,13 +5,15 @@ import SwiftUI
 /// a change with no drag, as an accessibility step makes it, is sent at once: the start of the music builds a new
 /// item, so its drag must not send at every step. With `follows` it calls `send` at every change of a drag and
 /// `ended` when the drag ends, and after a change with no drag calls `send` then `ended`: a level refreshes the mix
-/// of the player item, so she hears it follow her finger. It holds no limit: Core does.
+/// of the player item, so she hears it follow her finger. A slider with `follows` that goes from the screen during a
+/// drag calls `ended` then, so the run never stays open. It holds no limit: Core does.
 ///
 /// https://developer.apple.com/documentation/swiftui/slider/init(value:in:step:label:oneditingchanged:)
 /// https://developer.apple.com/documentation/swiftui/binding/init(get:set:)
 /// https://developer.apple.com/documentation/swiftui/state
 /// https://developer.apple.com/documentation/swiftui/localizedstringkey
 /// https://developer.apple.com/documentation/swiftui/view/accessibilityidentifier(_:)
+/// https://developer.apple.com/documentation/swiftui/view/ondisappear(perform:)
 struct SoundSlider: View {
     private let identifier: String
     private let label: LocalizedStringKey
@@ -77,6 +79,12 @@ struct SoundSlider: View {
                 }
             )
             .accessibilityIdentifier(identifier)
+        }
+        .onDisappear {
+            if follows && dragged != nil {
+                dragged = nil
+                ended()
+            }
         }
     }
 }
