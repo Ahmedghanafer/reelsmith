@@ -38,6 +38,28 @@ public enum TimelineGeometry {
     }
 }
 
+/// The rows of the timeline strip, in points from its top: the clips, the texts under them and, while no text is
+/// selected, the music. Folded, the blocks are 24 points high and every row under them moves up 32.
+public struct StripRows: Sendable {
+    public let clipY: Double
+    public let clipHeight: Double
+    public let textY: Double
+    public let musicY: Double
+    /// The height of the text row and of the music row.
+    public let rowHeight: Double
+    /// The whole strip: 8 points under the text row with a selected text, 4 under the music row without.
+    public let height: Double
+
+    public static func of(folded: Bool, textSelected: Bool) -> StripRows {
+        let clipHeight: Double = folded ? 24 : 56
+        let textY = 8 + clipHeight + 8
+        let musicY = textY + 24 + 4
+        return StripRows(
+            clipY: 8, clipHeight: clipHeight, textY: textY, musicY: musicY, rowHeight: 24,
+            height: textSelected ? textY + 24 + 8 : musicY + 24 + 4)
+    }
+}
+
 /// The scale of the timeline strip, held between `least` and `most` points a second.
 public struct TimelineScale: Equatable, Sendable {
     public var pointsPerSecond: Double
