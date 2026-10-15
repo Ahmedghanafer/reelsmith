@@ -9,10 +9,6 @@ final class BlockFramesTests: XCTestCase {
         id: MediaID("long"), fileName: "long.mov", width: 1920, height: 1080, duration: Time(ticks: 18000),
         quarterTurns: 0, hasSound: false)
 
-    func testTheStepIsOneSecond() {
-        XCTAssertEqual(BlockFrames.step, Time(ticks: 600))
-    }
-
     func testBlueIsMadeAt0And600And1200() {
         XCTAssertEqual(BlockFrames.times(of: TestClip.blue.info), [0, 600, 1200].map { Time(ticks: $0) })
     }

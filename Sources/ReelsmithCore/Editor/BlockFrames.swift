@@ -9,7 +9,7 @@ public enum BlockFrames {
         if media.kind == .photo {
             return [Time.zero]
         }
-        return stride(from: Int64(0), to: media.duration.ticks, by: step.ticks).map { Time(ticks: $0) }
+        return stride(from: Int64(0), to: media.duration.ticks, by: Int(step.ticks)).map { Time(ticks: $0) }
     }
 
     /// Whole tiles that cover the width, 0 for 0.
