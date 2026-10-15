@@ -162,6 +162,9 @@
 /* end slot: add-clips */
 
 /* slot: clip-panel */
+"clip.cutBefore" = "Radera före";
+"clip.cutAfter" = "Radera efter";
+"clip.volume" = "Volym";
 /* end slot: clip-panel */
 
 /* slot: music-row */

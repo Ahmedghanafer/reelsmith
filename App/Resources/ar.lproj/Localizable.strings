@@ -162,6 +162,9 @@
 /* end slot: add-clips */
 
 /* slot: clip-panel */
+"clip.cutBefore" = "حذف ما قبل";
+"clip.cutAfter" = "حذف ما بعد";
+"clip.volume" = "مستوى الصوت";
 /* end slot: clip-panel */
 
 /* slot: music-row */

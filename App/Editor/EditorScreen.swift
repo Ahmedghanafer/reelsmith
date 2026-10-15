@@ -3,8 +3,9 @@ import ReelsmithEngine
 import SwiftUI
 
 /// The editor shell: four regions from top to bottom, each with the slot of the story that fills it,
-/// and between the tools and the export the text region, only while a text is selected, or the sound
-/// region, only while the sound panel shows. Core keeps the two from showing together.
+/// and between the tools and the export the text region, only while a text is selected, the sound
+/// region, only while the sound panel shows, or the clip region, only while a clip is selected. Core keeps
+/// any two of them from showing together.
 /// The root and the regions are accessibility containers, so a region is found while it is empty
 /// and a control inside it keeps its own identifier.
 ///
@@ -61,6 +62,10 @@ struct EditorScreen: View {
                 // Made anew every time the panel shows, so it starts on the part music.
                 SoundPanel(store: store)
                     .region("editor.soundRegion")
+            }
+            if store.state.showsClipPanel {
+                ClipPanel(store: store)
+                    .region("editor.clipRegion")
             }
             ZStack {
                 // slot: export
