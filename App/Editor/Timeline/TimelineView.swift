@@ -183,6 +183,32 @@ final class TimelineStripView: UIView {
         TrimHandle.layout(in: self, below: playhead)
         // end slot: handles
         // slot: reorder
+        // The block of a running press is drawn with its left end where the press puts it, above the others,
+        // larger and with a shadow, its tiles with it, and the others as above. Every container is set here
+        // with no transform first, since a frame set on a view with a transform is not its frame.
+        // https://developer.apple.com/documentation/uikit/uiview/transform
+        // https://developer.apple.com/documentation/quartzcore/calayer/zposition
+        // https://developer.apple.com/documentation/quartzcore/calayer/shadowopacity
+        let lifted: (clip: ClipID, left: Double)? = gestureRecognizers?.compactMap { ($0 as? ClipPress)?.lifted }.first
+        for (place, clip) in clips.enumerated() {
+            let container = containers[place]
+            let start: Time = state.project.start(of: clip.id) ?? Time.zero
+            let left: Double = lifted?.clip == clip.id ? lifted?.left ?? 0 : scale.x(of: start)
+            container.transform = .identity
+            container.frame = CGRect(x: CGFloat(left), y: 0, width: CGFloat(scale.width(of: clip.duration)), height: side)
+            if lifted?.clip == clip.id {
+                container.layer.zPosition = 1
+                container.clipsToBounds = false
+                container.layer.shadowOpacity = 0.5
+                container.layer.shadowRadius = 6
+                container.layer.shadowOffset = CGSize(width: 0, height: 3)
+                container.transform = CGAffineTransform(scaleX: 1.08, y: 1.08)
+            } else {
+                container.layer.zPosition = 0
+                container.clipsToBounds = true
+                container.layer.shadowOpacity = 0
+            }
+        }
         // end slot: reorder
         // slot: music-row
         MusicBar.layout(in: self, below: playhead)
