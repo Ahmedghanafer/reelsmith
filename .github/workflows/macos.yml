@@ -111,10 +111,6 @@ jobs:
           xcrun simctl privacy "$SIMULATOR" grant photos-add com.ghanafer.reelsmith
           own=$(sqlite3 -readonly "$HOME/Library/Developer/CoreSimulator/Devices/$SIMULATOR/data/Media/PhotoData/Photos.sqlite" "select count(*) from ZASSET where ZKIND = 0 and ZTRASHEDSTATE = 0") || own="could not be read"
           echo "Photos in the library before any addmedia: $own" | tee -a "$RUNNER_TEMP/library.txt"
-          # The simulator's own photos stand at the end of a grid that offers photos, so the UI tests skip them.
-          if [[ "$own" =~ ^[1-9][0-9]*$ ]]; then
-            echo "TEST_RUNNER_REELSMITH_OWN_PHOTOS=$own" >> "$GITHUB_ENV"
-          fi
           if xcrun simctl addmedia "$SIMULATOR" "$REELSMITH_CLIP_DIR/blue.mov" "$REELSMITH_CLIP_DIR/red.mov"; then
             echo "Clips into the library: taken" | tee -a "$RUNNER_TEMP/library.txt"
           else
@@ -130,6 +126,11 @@ jobs:
           echo "Videos in the library before the UI tests: $count" | tee -a "$RUNNER_TEMP/library.txt"
           photos=$(sqlite3 -readonly "$library" "select count(*) from ZASSET where ZKIND = 0 and ZTRASHEDSTATE = 0") || photos="could not be read"
           echo "Photos in the library before the UI tests: $photos" | tee -a "$RUNNER_TEMP/library.txt"
+          # The simulator's own photos stand at the end of a grid that offers photos, so the UI tests skip them:
+          # every photo but the test photo.
+          if [[ "$photos" =~ ^[1-9][0-9]*$ ]]; then
+            echo "TEST_RUNNER_REELSMITH_OWN_PHOTOS=$((photos - 1))" >> "$GITHUB_ENV"
+          fi
 
       - name: Write a tone file into the Files app of the simulator
         if: ${{ !cancelled() && steps.layer3.outcome == 'success' }}
