@@ -832,6 +832,12 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: flutter-editor-store -->
 
 <!-- slot: flutter-editor-screen -->
+### The editor screen in Flutter
+
+- `app/lib/editor/editor_screen.dart`: `EditorScreen({super.key, required EditorStore store, required WordsText words})`, the shell the root pushes with the store it made. The root `editor.root` and the regions are semantics containers whose children keep their own nodes: `editor.previewRegion`, `editor.timelineRegion`, `editor.toolsRegion`, then `editor.textRegion` while a text is selected, `editor.soundRegion` while the sound panel shows, `editor.clipRegion` while the clip panel shows, and `editor.exportRegion`. Each region is at least 44 points high and holds the slot of the story that fills it (`preview`, `timeline`, `tools`, `text`, `sound`, `clip`, `export`). The regions follow the direction of the language.
+- On a test start (a seed or `-drafts` in the values `launch` gave) the info lines `editor.seedInfo`, `editor.textInfo`, `editor.faceInfo` (what `faceNames` gives) and `editor.soundInfo` stand above the regions, as in `m6`.
+- The screen listens to `buildCount`: on a seeded start the value of `editor.picture` is the last count, 0 until the first. When the app leaves the resumed state it calls the store's `writeNow` and `makeCover`. A tap on `editor.projects` calls `close`, which writes, makes the cover and closes the store.
+- `app/lib/editor/preview/preview_pane.dart`: `PreviewPane`, fixed left to right in every language. `PreviewPicture` in the shape of the canvas, as large as fits and in the middle, and under it the row `editor.projects`, `editor.play` (labelled with `preview.play` or `preview.pause`, enabled by `canPlay`), `editor.time` (`timeLabel`, in the space up to undo), `editor.undo`, `editor.redo` (enabled by `canUndo` and `canRedo`) and `editor.save` (`draft.save`, writes the draft). Each button is a 44 point semantics button with the label of its word key.
 <!-- end slot: flutter-editor-screen -->
 
 <!-- slot: flutter-strip -->
