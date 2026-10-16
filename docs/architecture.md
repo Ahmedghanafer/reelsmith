@@ -751,7 +751,7 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 
 - `history.dart` now holds the whole of `History.swift`, `Editing` included, with the behaviour of "Undo and redo". `Editing(state)` starts with an empty history and `Editing.withHistory(state:, history:)` opens a history with its run ended. `after`, `afterDragStep`, `endingRun`, `undone`, `redone` and `written` return a new value, and `canUndo`, `canRedo`, `writesNow` and `unsaved` read it. `withoutBlankTexts` is the extension `ProjectWithoutBlankTexts`.
 - The steps of `UndoHistory` (`add`, `endRun`, `dropLastStep`, `undo`, `redo`) return a new history, with lists that cannot change. `undo` and `redo` give the history and the project as one record, null when there is nothing to take.
-- The ported tests: `UndoHistoryTests` and `UndoGuardTests` in `test/editor/`, and the tests of `ClipEditsTests` and `FramingTests` that call `Editing`, in their files. The tests of `Editing` with the draft codec wait for the shelf.
+- The ported tests: `UndoHistoryTests` and `UndoGuardTests` in `test/editor/`, and the tests of `ClipEditsTests` and `FramingTests` that call `Editing`, in their files. `DragRunTests`, which holds `afterDragStep` and `endingRun`, and the other tests of `Editing` with the draft codec are ported with the shelf.
 <!-- end slot: dart-history -->
 
 <!-- slot: dart-states -->
