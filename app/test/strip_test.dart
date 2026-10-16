@@ -112,7 +112,7 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('a scrub counts from where the finger came down, and the finger left after a pinch scrubs nothing', (
+  testWidgets('a scrub counts from where the finger came down, and a touch that had a second finger scrubs nothing', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
@@ -127,7 +127,7 @@ void main() {
     // 120 points are 2 seconds, the slop included.
     expect(store.state.playhead.ticks, 1200);
 
-    // A second finger that touches and lifts before the scrub starts does not move where it counts from.
+    // A touch that had a second finger scrubs nothing, whichever finger lifts first, as m6's pan of one touch.
     final brush = await tester.startGesture(_onBlocks(tester, 300));
     final other = await tester.startGesture(_onBlocks(tester, 275), pointer: 9);
     await other.up();
@@ -137,9 +137,8 @@ void main() {
     }
     await brush.up();
     await tester.pump();
-    expect(store.state.playhead.ticks, 1800);
+    expect(store.state.playhead.ticks, 1200);
 
-    // When the first finger lifts before the scrub starts, the finger left counts from where it came down.
     final lifted = await tester.startGesture(_onBlocks(tester, 300));
     final left = await tester.startGesture(_onBlocks(tester, 100), pointer: 10);
     await lifted.up();
@@ -149,7 +148,7 @@ void main() {
     }
     await left.up();
     await tester.pump();
-    expect(store.state.playhead.ticks, 2400);
+    expect(store.state.playhead.ticks, 1200);
 
     final first = await tester.startGesture(_onBlocks(tester, 151), pointer: 7);
     final second = await tester.startGesture(_onBlocks(tester, 251), pointer: 8);
@@ -166,7 +165,7 @@ void main() {
     }
     await second.up();
     await tester.pump();
-    expect(store.state.playhead.ticks, 2400);
+    expect(store.state.playhead.ticks, 1200);
     semantics.dispose();
   });
 

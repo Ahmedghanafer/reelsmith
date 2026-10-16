@@ -36,17 +36,14 @@ class StripState extends State<Strip> {
   core.TimelineScale _pinchStart = core.TimelineScale.standard;
   double _scrubStart = 0;
 
-  /// Where the scrubbing finger came down, so the slop before the recognizer starts is not lost.
+  /// Where the first finger of a touch came down, so the slop before the recognizer starts is not lost.
   double _downX = 0;
 
-  /// True from the moment a second pointer joins until the next first pointer comes down: the pointer left after
-  /// a pinch scrubs nothing, as `m6`'s pan of one touch did not.
-  bool _noScrub = false;
+  /// The pointers down on the strip.
+  final Set<int> _down = {};
 
-  /// Where each pointer down on the strip came down, by its pointer.
-  final Map<int, double> _downs = {};
-
-  /// True when a second pointer came down since the first: such a touch is no tap, as `m6`'s tap of one touch.
+  /// True from the moment a second pointer joins until the next first pointer comes down. Such a touch scrubs
+  /// nothing and is no tap, as `m6`'s pan and tap of one touch: two pointers only pinch.
   bool _many = false;
 
   EditorStore get store => widget.store;
@@ -68,15 +65,15 @@ class StripState extends State<Strip> {
             final left = middle - scale.x(store.state.playhead);
             return Listener(
               onPointerDown: (event) {
-                if (_downs.isEmpty) {
-                  _noScrub = false;
+                if (_down.isEmpty) {
                   _many = false;
+                  _downX = event.localPosition.dx;
                 }
-                _downs[event.pointer] = event.localPosition.dx;
-                _many = _many || _downs.length > 1;
+                _down.add(event.pointer);
+                _many = _many || _down.length > 1;
               },
-              onPointerUp: (event) => _downs.remove(event.pointer),
-              onPointerCancel: (event) => _downs.remove(event.pointer),
+              onPointerUp: (event) => _down.remove(event.pointer),
+              onPointerCancel: (event) => _down.remove(event.pointer),
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 excludeFromSemantics: true,
@@ -192,15 +189,12 @@ class StripState extends State<Strip> {
   /// pointer that comes or goes ends the gesture and starts it again with the new count.
   void _started(ScaleStartDetails details) {
     if (details.pointerCount > 1) {
-      _noScrub = true;
       _pinchStart = scale;
       return;
     }
-    if (_noScrub || _downs.length != 1) {
-      _noScrub = true;
+    if (_many) {
       return;
     }
-    _downX = _downs.values.single;
     _scrubStart = scale.x(store.state.playhead);
     store.send(core.EditorAction.pause);
   }
@@ -209,7 +203,7 @@ class StripState extends State<Strip> {
   /// Core keeps the time inside the project. A pinch sets the scale to the scale at its start times its factor,
   /// held by Core, and sends nothing: the playhead stays in the middle on its time.
   void _updated(ScaleUpdateDetails details) {
-    if (_noScrub) {
+    if (_many) {
       if (details.pointerCount > 1) {
         setState(() => scale = _pinchStart.zoomed(details.scale));
       }
