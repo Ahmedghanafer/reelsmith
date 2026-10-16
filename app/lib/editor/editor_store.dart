@@ -13,8 +13,9 @@ import '../engine/video_engine.dart';
 ///
 /// It keeps the preview player of Swift in step: from its making it listens to the events `playhead` and
 /// `playedToEnd`, makes the preview, and then calls `show` at every change of the project or of playing,
-/// with the playhead whenever Dart moved it and on every pause. A playhead the player reported is never sent
-/// back. Whoever made the store disposes it, which lets the preview go.
+/// with the playhead whenever Dart moved it. A playhead the player reported is never sent back as it comes:
+/// only a pause sends the store's playhead, so the player shows the time the store kept. Whoever made the
+/// store disposes it once it is closed, which lets the preview go.
 ///
 /// https://api.flutter.dev/flutter/foundation/ChangeNotifier-class.html
 /// https://api.dart.dev/stable/dart-async/Stream/listen.html
