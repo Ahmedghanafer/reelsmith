@@ -200,6 +200,14 @@ void main() {
     await tester.pump();
     expect(store.state.selection, isNull);
     expect(store.state.playhead.ticks, 2400);
+
+    // Two fingers that touch and lift without moving are no tap.
+    final one = await tester.startGesture(_rect(tester, 'editor.clip.2').center);
+    final two = await tester.startGesture(_rect(tester, 'editor.clip.2').center + const Offset(10, 0), pointer: 11);
+    await one.up();
+    await two.up();
+    await tester.pump();
+    expect(store.state.selection, isNull);
     semantics.dispose();
   });
 

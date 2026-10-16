@@ -46,6 +46,9 @@ class StripState extends State<Strip> {
   /// Where each pointer down on the strip came down, by its pointer.
   final Map<int, double> _downs = {};
 
+  /// True when a second pointer came down since the first: such a touch is no tap, as `m6`'s tap of one touch.
+  bool _many = false;
+
   EditorStore get store => widget.store;
 
   /// Every row of the strip, read by the blocks, the trim handles, the text row and the music row.
@@ -67,8 +70,10 @@ class StripState extends State<Strip> {
               onPointerDown: (event) {
                 if (_downs.isEmpty) {
                   _noScrub = false;
+                  _many = false;
                 }
                 _downs[event.pointer] = event.localPosition.dx;
+                _many = _many || _downs.length > 1;
               },
               onPointerUp: (event) => _downs.remove(event.pointer),
               onPointerCancel: (event) => _downs.remove(event.pointer),
@@ -217,6 +222,9 @@ class StripState extends State<Strip> {
   /// A tap on the row of blocks selects the clip under it. A tap anywhere else on the strip, beside the row or in
   /// the band above or below it, sends `clearSelection`.
   void _tapped(Offset point, double left) {
+    if (_many) {
+      return;
+    }
     final rows = this.rows;
     final x = point.dx - left;
     final inRow =
