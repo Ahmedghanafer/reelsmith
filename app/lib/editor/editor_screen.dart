@@ -9,6 +9,7 @@ import '../words/words.dart';
 import 'editor_store.dart';
 import 'export/export_button.dart';
 import 'preview/preview_pane.dart';
+import 'sound/sound_panel.dart';
 import 'strip/strip.dart';
 import 'tools/tools_row.dart';
 
@@ -136,6 +137,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   if (state.showsSound)
                     _region('editor.soundRegion', [
                       // slot: sound
+                      SoundPanel(store: store, words: widget.words),
                       // end slot: sound
                     ]),
                   if (state.showsClipPanel)
