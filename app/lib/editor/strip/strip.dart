@@ -4,6 +4,7 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../editor_store.dart';
 import 'clip_press.dart';
+import 'text_bars.dart';
 import 'trim_handles.dart';
 
 /// The clips as blocks in one row at the scale of the strip, under a playhead line that stays in the middle. One
@@ -128,6 +129,15 @@ class StripState extends State<Strip> {
                     // slot: music-row
                     // end slot: music-row
                     // slot: text-row
+                    ...textBars(
+                      store: store,
+                      scale: scale,
+                      rows: rows,
+                      left: left,
+                      shownWidth: constraints.maxWidth,
+                      drag: StripDrag.of(this),
+                      redraw: () => setState(() {}),
+                    ),
                     // end slot: text-row
                     Positioned(
                       left: middle - 1,
