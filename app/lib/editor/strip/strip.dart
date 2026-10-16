@@ -35,7 +35,7 @@ class StripState extends State<Strip> {
 
   core.TimelineScale _pinchStart = core.TimelineScale.standard;
   double _scrubStart = 0;
-  /// Where the last pointer came down, the start of a scrub, so the slop before the recognizer starts is not lost.
+  /// Where the first pointer came down, the start of a scrub, so the slop before the recognizer starts is not lost.
   double _downX = 0;
 
   /// True from the moment a second pointer joins until the next first pointer comes down: the pointer left after
@@ -66,9 +66,9 @@ class StripState extends State<Strip> {
               onPointerDown: (event) {
                 if (_pointers == 0) {
                   _pinching = false;
+                  _downX = event.localPosition.dx;
                 }
                 _pointers++;
-                _downX = event.localPosition.dx;
               },
               onPointerUp: (event) => _pointers--,
               onPointerCancel: (event) => _pointers--,

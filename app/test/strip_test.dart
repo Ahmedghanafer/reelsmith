@@ -127,6 +127,18 @@ void main() {
     // 120 points are 2 seconds, the slop included.
     expect(store.state.playhead.ticks, 1200);
 
+    // A second finger that touches and lifts before the scrub starts does not move where it counts from.
+    final brush = await tester.startGesture(_onBlocks(tester, 300));
+    final other = await tester.startGesture(_onBlocks(tester, 275), pointer: 9);
+    await other.up();
+    for (var step = 0; step < 6; step++) {
+      await brush.moveBy(const Offset(-10, 0));
+      await tester.pump();
+    }
+    await brush.up();
+    await tester.pump();
+    expect(store.state.playhead.ticks, 1800);
+
     final first = await tester.startGesture(_onBlocks(tester, 151), pointer: 7);
     final second = await tester.startGesture(_onBlocks(tester, 251), pointer: 8);
     for (var step = 0; step < 10; step++) {
@@ -142,7 +154,7 @@ void main() {
     }
     await second.up();
     await tester.pump();
-    expect(store.state.playhead.ticks, 1200);
+    expect(store.state.playhead.ticks, 1800);
     semantics.dispose();
   });
 
