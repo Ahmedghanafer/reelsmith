@@ -747,6 +747,13 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: flutter-words -->
 
 <!-- slot: engine-preview -->
+### The preview on a texture
+
+- `app/ios/Runner/Engine/Preview/PreviewPlayer.swift` is the player of `App/Editor/Preview/PlayerPicture.swift`, moved with its logic whole: `follow` by `sameFootage` and `sameTracks`, `refreshSound`, `refreshPicture`, the build numbers, one seek in flight, the item's starting time, the 15 second limit and the log lines that start `old picture`. Only where the frames are shown changed, and what tied it to SwiftUI: it holds the `EditorState` Dart last showed it, moved by its own time reports through `reduce` as the store's state was, sends `playhead`, `playedToEnd` and `buildCount` as events, and at the end of play brings itself to the paused state.
+- `PreviewTexture.swift` is the Flutter texture. Each item gets an `AVPlayerItemVideoOutput` (32BGRA, Metal compatible) before it goes into the player. A display link reads it on every refresh of the screen and hands each new frame to Flutter, so the frame of a paused seek is taken whenever it comes. The texture keeps the last frame it was given: over an item change that frame is the old picture, held until the first frame of the new item comes out of its output, which is when `old picture taken away ... the layer reported ready` is logged. An empty project, a failed build or the 15 second limit with no frame of the new item make it black.
+- After a picture refresh on the paused player the next seek goes one tick back (one frame on at the start) and then to the time, since a video output does not always get the refreshed frame from a seek to the time it stands on (E25).
+- `PreviewCalls.swift`: `createPreview` makes the player and its texture and gives the texture's id, `show` takes the project as the `project` member of the draft JSON, the media folder, a playhead only when Dart moved it, and playing, and `disposePreview` lets them go. A `show` with no playhead seeks nothing, so a playhead the player reported never comes back as a seek. `PreviewState` sets the audio session category `playback` at the start of the app, as the SwiftUI app did.
+- `app/lib/editor/preview/preview_picture.dart`: `PreviewPicture` shows the texture on black, left to right, filling the space it is given, with the identifier `editor.picture` and, when given, the count of builds as its value.
 <!-- end slot: engine-preview -->
 
 <!-- slot: engine-pickers -->
