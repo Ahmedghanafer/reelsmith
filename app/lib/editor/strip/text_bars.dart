@@ -10,7 +10,7 @@ import 'clip_press.dart';
 const double _handleWidth = 24;
 
 /// The breaks that end a line, as Swift's `isNewline`.
-final RegExp _lineBreak = RegExp('\r\n|[\n\r\u000B\u000C\u0085  ]');
+final RegExp _lineBreak = RegExp('\r\n|[\n\r\u000B\u000C\u0085\u{2028}\u{2029}]');
 
 /// The text row of the strip, for the slot `text-row`, `left` being the x of time zero and `shownWidth` the width of
 /// the strip on the screen. One bar for every text with a range, in the row under the blocks, and the two handles of
