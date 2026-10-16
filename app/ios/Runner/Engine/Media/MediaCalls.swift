@@ -1,5 +1,9 @@
 import ReelsmithEngine
 
+/// The state of the media, kept by `Engine` as long as the app runs. Empty until it is built.
+final class MediaState {
+}
+
 /// The calls of the media: the pickers, the copies and the facts. Each throws `EngineError.notBuilt` until it is
 /// built.
 extension Engine {

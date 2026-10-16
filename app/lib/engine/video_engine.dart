@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'engine_api.g.dart';
@@ -40,10 +41,30 @@ abstract class VideoEngine {
 }
 
 /// The engine of the app: every call goes through the generated Pigeon class, every event comes on its one
-/// event channel.
+/// event channel. The engine listens to that channel from its making for as long as the app runs, so Swift
+/// sends every event from the start, and hands each event to the broadcast stream of its kind. An event that
+/// no Dart listener takes is dropped.
 class PigeonVideoEngine implements VideoEngine {
+  PigeonVideoEngine() {
+    events().listen((event) {
+      switch (event) {
+        case PlayheadEvent():
+          _playhead.add(event.ticks);
+        case PlayedToEndEvent():
+          _playedToEnd.add(null);
+        case BuildCountEvent():
+          _buildCount.add(event.count);
+        case ExportProgressEvent():
+          _exportProgress.add(event.progress);
+      }
+    });
+  }
+
   final EngineApi _api = EngineApi();
-  final Stream<EngineEvent> _events = events();
+  final _playhead = StreamController<int>.broadcast();
+  final _playedToEnd = StreamController<void>.broadcast();
+  final _buildCount = StreamController<int>.broadcast();
+  final _exportProgress = StreamController<double>.broadcast();
 
   @override
   Future<String> launch() => _api.launch();
@@ -106,15 +127,14 @@ class PigeonVideoEngine implements VideoEngine {
       _api.confirm(question, confirmWords, cancelWords);
 
   @override
-  Stream<int> get playhead => _events.where((event) => event is PlayheadEvent).map((event) => (event as PlayheadEvent).ticks);
+  Stream<int> get playhead => _playhead.stream;
 
   @override
-  Stream<void> get playedToEnd => _events.where((event) => event is PlayedToEndEvent).map((_) {});
+  Stream<void> get playedToEnd => _playedToEnd.stream;
 
   @override
-  Stream<int> get buildCount => _events.where((event) => event is BuildCountEvent).map((event) => (event as BuildCountEvent).count);
+  Stream<int> get buildCount => _buildCount.stream;
 
   @override
-  Stream<double> get exportProgress => 
-      _events.where((event) => event is ExportProgressEvent).map((event) => (event as ExportProgressEvent).progress);
+  Stream<double> get exportProgress => _exportProgress.stream;
 }

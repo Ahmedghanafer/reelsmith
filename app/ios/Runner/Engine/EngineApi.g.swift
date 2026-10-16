@@ -503,6 +503,7 @@ protocol EngineApi {
   func faceNames() throws -> String
   /// Shows the question as a system alert with a destructive button and a cancel button. True when she
   /// confirmed.
+  /// Swift sets the identifiers `drafts.deleteConfirm` and `drafts.deleteCancel` on the two buttons.
   func confirm(question: String, confirmWords: String, cancelWords: String) async throws -> Bool
 }
 
@@ -819,6 +820,7 @@ class EngineApiSetup {
     }
     /// Shows the question as a system alert with a destructive button and a cancel button. True when she
     /// confirmed.
+    /// Swift sets the identifiers `drafts.deleteConfirm` and `drafts.deleteCancel` on the two buttons.
     let confirmChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.reelsmith.EngineApi.confirm\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       confirmChannel.setMessageHandler { message, reply in

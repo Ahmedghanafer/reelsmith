@@ -116,6 +116,7 @@ abstract class EngineApi {
 
   /// Shows the question as a system alert with a destructive button and a cancel button. True when she
   /// confirmed.
+  /// Swift sets the identifiers `drafts.deleteConfirm` and `drafts.deleteCancel` on the two buttons.
   @async
   bool confirm(String question, String confirmWords, String cancelWords);
 }

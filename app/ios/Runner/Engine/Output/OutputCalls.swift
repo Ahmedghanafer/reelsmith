@@ -1,6 +1,10 @@
 import Flutter
 import ReelsmithEngine
 
+/// The state of the outputs, kept by `Engine` as long as the app runs. Empty until it is built.
+final class OutputState {
+}
+
 /// The calls of the outputs: the export, the save, the cover, the frames of the blocks, the awake screen, the
 /// faces and the native question. Each throws `EngineError.notBuilt` until it is built.
 extension Engine {

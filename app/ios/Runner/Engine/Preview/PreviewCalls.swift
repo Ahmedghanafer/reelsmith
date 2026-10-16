@@ -1,5 +1,9 @@
 import ReelsmithEngine
 
+/// The state of the preview, kept by `Engine` as long as the app runs. Empty until it is built.
+final class PreviewState {
+}
+
 /// The calls of the preview. Each throws `EngineError.notBuilt` until the preview is built.
 extension Engine {
     func createPreview() throws -> Int64 {

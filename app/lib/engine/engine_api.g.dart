@@ -756,6 +756,7 @@ class EngineApi {
 
   /// Shows the question as a system alert with a destructive button and a cancel button. True when she
   /// confirmed.
+  /// Swift sets the identifiers `drafts.deleteConfirm` and `drafts.deleteCancel` on the two buttons.
   Future<bool> confirm(String question, String confirmWords, String cancelWords) async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.reelsmith.EngineApi.confirm$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
