@@ -820,6 +820,11 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: engine-outputs -->
 
 <!-- slot: flutter-start -->
+### The root and the start screen in Flutter
+
+- `app/lib/main.dart`: `ReelsmithApp` takes the `VideoEngine`, `PigeonVideoEngine` in the app and the fake in `flutter test`. The language is the first of English, Arabic and Swedish down her list of preferred languages, English when none is on it, as iOS picks it from `CFBundleLocalizations` in `Info.plist`. That locale is the app's locale, which gives the direction of every screen, and the one the words are loaded in. `StartRoot` reads `launch`, opens the shelf with `draftShelf`, empties its folder once on `drafts fresh`, and shows the start screen. The editor is pushed over it as `EditorScreen(store:, words:)` with no transition, by the seed start and by the start screen alike. When the store closes the root pops it, disposes the store after that frame, and makes the start screen anew, so the shape is landscape again and the drafts are read again.
+- `app/lib/start/seed_start.dart`: `seedStart` takes the seed from the launch values, never from the process arguments, has `writeSeedMedia` write its files, and builds the store on the Dart seed project with its selected text, its sound panel and the launch's playhead. With `drafts` the project becomes a new draft and each file it names is copied into the draft's media folder, a missing one logged and left out.
+- `app/lib/start/start_screen.dart`: the title, the two shapes in a row (the leading one first, so Arabic changes the sides) and New project, each carrying its identifier, the shapes the selected trait and New project its enabled state. New project calls `pick` for videos and photos with no limit, makes the draft, has `copyPicked` copy into its media folder, reads the facts it gives, writes the project on the chosen shape and opens the editor. Nothing chosen leaves the screen as it was. A draft that cannot be made or a copy with nothing readable shows the failed words and `start.ok`, and leaves no draft. With `drafts` set, `start.draftsInfo` shows `draftsInfo` of the shelf. The list of drafts goes in the slot `drafts`.
 <!-- end slot: flutter-start -->
 
 <!-- slot: flutter-editor-store -->
