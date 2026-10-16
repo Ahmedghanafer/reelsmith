@@ -46,27 +46,49 @@ class _PictureGesturesState extends State<PictureGestures> {
   /// The place of the fingers the distance moved is counted from.
   Offset _focal = Offset.zero;
 
-  /// With two fingers, true for a twist and false for a pinch, null until the first report decides.
+  /// With two fingers, true for a twist and false for a pinch, null until the fingers went far enough to tell.
   bool? _twist;
 
-  /// The fingers on the picture, the most of them since the first came down, and where the first came down.
-  int _fingers = 0;
+  /// The fingers on the picture by pointer, the most of them since the first came down, and where the first came
+  /// down.
+  final Map<int, Offset> _fingers = {};
   int _most = 0;
   Offset _down = Offset.zero;
+
+  /// The distance between the first two fingers when their number last changed, which the recognizer counts its
+  /// scale and angle from.
+  double _apart = 0;
+
+  /// The points the fingers go, apart or around, before two fingers are a pinch or a twist: as m6's pinch and twist,
+  /// the one that begins first takes the gesture.
+  static const double _travel = 10;
+
+  void _changed() {
+    final places = _fingers.values.take(2).toList();
+    _apart = places.length == 2 ? (places[0] - places[1]).distance : 0;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Listener(
       onPointerDown: (event) {
-        if (_fingers == 0) {
+        if (_fingers.isEmpty) {
           _most = 0;
           _down = event.localPosition;
         }
-        _fingers += 1;
-        _most = math.max(_most, _fingers);
+        _fingers[event.pointer] = event.localPosition;
+        _most = math.max(_most, _fingers.length);
+        _changed();
       },
-      onPointerUp: (_) => _fingers -= 1,
-      onPointerCancel: (_) => _fingers -= 1,
+      onPointerMove: (event) => _fingers[event.pointer] = event.localPosition,
+      onPointerUp: (event) {
+        _fingers.remove(event.pointer);
+        _changed();
+      },
+      onPointerCancel: (event) {
+        _fingers.remove(event.pointer);
+        _changed();
+      },
       // From the finger coming down, so the text stays under the finger and turns with it from the first move.
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -124,8 +146,8 @@ class _PictureGesturesState extends State<PictureGestures> {
   }
 
   /// One finger moves the text by the distance moved. Two size it by the scale or turn it by the angle, in degrees
-  /// clockwise as she sees it: not both, as m6's pinch and twist never ran together. The first report takes the one
-  /// the fingers went further in, apart for a pinch and around for a twist.
+  /// clockwise as she sees it: not both, as m6's pinch and twist never ran together. The first of the two whose way
+  /// passes `_travel` points takes the gesture, apart for a pinch and around for a twist, counted from the start.
   void _updated(ScaleUpdateDetails details) {
     final start = _start;
     final text = _text;
@@ -134,7 +156,13 @@ class _PictureGesturesState extends State<PictureGestures> {
     }
     final core.EditorState next;
     if (details.pointerCount >= 2) {
-      final twist = _twist ??= details.rotation.abs() > (details.scale - 1).abs();
+      // Apart: how far the distance between the fingers changed. Around: the arc of the angle at that distance.
+      final apart = _apart * (details.scale - 1).abs();
+      final around = _apart * details.scale * details.rotation.abs();
+      if (_twist == null && apart < _travel && around < _travel) {
+        return;
+      }
+      final twist = _twist ??= around > apart;
       next = core.reduce(
         start,
         core.EditorAction.text(
