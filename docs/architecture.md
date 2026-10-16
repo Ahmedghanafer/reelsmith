@@ -723,15 +723,35 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: dart-seeds-text-sound -->
 
 <!-- slot: dart-clip-edits -->
+### The editor in Dart
+
+- `lib/src/editor/`: `editor_state.dart` with every member of `EditorState.swift`, the four action files `editor_action.dart`, `text_action.dart`, `sound_action.dart` and `frame_action.dart`, `reduce.dart`, `edits.dart`, `clip_edits.dart`, `frame_edits.dart`, `timeline_geometry.dart` (`TimelineGeometry`, `StripRows`, `TimelineScale`) and `history.dart`, whose data `EditRun` and `UndoHistory` came here first and which "Undo and redo in Dart" completes.
+- An action enum is a sealed class with one subclass per case (`EditorActionTrimStart` and so on), made as `EditorAction.trimStart(clip, amount)`, and a case without values is a constant (`EditorAction.split`). `reduce` switches over every case, so a new case does not compile until it is routed. It is pure and synchronous and imports neither Flutter nor the bridge.
+- The edit functions `reduce` calls (`split`, `trimStart`, `reduceFrame`, `reduceText`, `settleTexts`, `reduceSound`, `settleSound` and their kin) are hidden from the package entry, as they are internal in Swift. The members Swift adds to `EditorState` and `Project` in another file are Dart extensions in that file (`EditorStateEdits`, `EditorStateClipEdits`, `ProjectClipEdits`, `EditorStateFrameEdits`).
+- `reduce` routes text and sound to `text_edits.dart` and `sound_edits.dart`, which hold `reduceText`, `settleTexts`, `reduceSound` and `settleSound`, and `text_geometry.dart` the three limits `reduceText` reads.
+- The ported tests: `EditorStateTests`, `ReduceTests`, `EditActionsTests`, `ClipEditsTests`, `ClipGuardTests`, `FramingGuardTests`, `TrackGuardTests`, `TimelineGeometryTests`, `TimelineScaleTests` and `StripRowsTests` in `test/editor/`, `CanvasTests` and `FramingTests` in `test/model/`. What reads `renderPlan`, `LaunchOptions`, `Editing` or the draft codec stays in Swift or waits for its story, and the guards run without their checks of the plan.
 <!-- end slot: dart-clip-edits -->
 
 <!-- slot: dart-text-edits -->
+### The text edits in Dart
+
+- `text_edits.dart` and `text_geometry.dart` now hold the whole of their Swift files. Beside `reduceText` and `settleTexts`, the extension `ProjectTextEdits` gives `textNearest(nearestToX:, y:, at:)`, the Swift `text(nearestToX:y:at:)`, named by what it takes since `Project.text` is taken. `TextGeometry` gives `wrapShare` and `canvasLength(ofPoints:, pictureWidth:, canvas:)` beside the three limits.
+- The ported tests: `TextEditsTests`, `TextGuardTests`, `TextStateTests` and `TextGeometryTests` in `test/editor/`. The test of `TextEditsTests` that reads `renderPlan` stays in Swift, and the guard runs without its check of the plan.
 <!-- end slot: dart-text-edits -->
 
 <!-- slot: dart-sound-edits -->
+### The sound edits in Dart
+
+- `sound_edits.dart` holds the whole of its Swift file: `reduceSound`, `settleSound` and the hold of a time to its limits. A level (the volume of the clips, the mute, the volume of a clip, the volume of the music and its two fades) lives in the project and reaches Swift inside it. Nothing reads a level back from Swift.
+- The ported tests: `SoundEditsTests`, `SoundGuardTests`, `SoundStateTests`, `LiveLevelsTests` and `ClipGainLimitTests` in `test/editor/`. The two tests of `SoundEditsTests` that read `renderPlan` stay in Swift, and the guard runs without its check of the plan.
 <!-- end slot: dart-sound-edits -->
 
 <!-- slot: dart-history -->
+### Undo and redo in Dart
+
+- `history.dart` now holds the whole of `History.swift`, `Editing` included, with the behaviour of "Undo and redo". `Editing(state)` starts with an empty history and `Editing.withHistory(state:, history:)` opens a history with its run ended. `after`, `afterDragStep`, `endingRun`, `undone`, `redone` and `written` return a new value, and `canUndo`, `canRedo`, `writesNow` and `unsaved` read it. `withoutBlankTexts` is the extension `ProjectWithoutBlankTexts`.
+- The steps of `UndoHistory` that are internal in Swift are private to `history.dart` (`_add`, `_endRun`, `_dropLastStep`, `_undo`, `_redo`), called only by `Editing`. Each returns a new history, with lists that cannot change. `_undo` and `_redo` give the history and the project as one record, null when there is nothing to take.
+- The ported tests: `UndoHistoryTests`, `UndoGuardTests` and the three tests of `DragRunTests` that need no codec in `test/editor/`, and the tests of `ClipEditsTests` and `FramingTests` that call `Editing`, in their files. The tests of `Editing` with the draft codec are ported with the shelf.
 <!-- end slot: dart-history -->
 
 <!-- slot: dart-states -->
