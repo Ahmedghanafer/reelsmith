@@ -703,9 +703,23 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: engine-bridge -->
 
 <!-- slot: dart-core-model -->
+## The Dart Core
+
+`packages/reelsmith_core/` is Core in pure Dart, with no Flutter import, `dart:io` only in the drafts shelf. Its dev dependencies are `test` and `lints` only. `lib/reelsmith_core.dart` exports every file of `lib/src/`. Each Dart file is one Swift file of `Sources/ReelsmithCore/`, in the folder of the same name in lower case and named in snake case, with the types and members of the Swift names. A Swift test file that is ported becomes one file in `test/`, in the folder of its Swift file, each test named as its Swift function: today `TimeTests`, `ExportSettingsTests` and `InstagramGuideTests`. One test of Dart's own, `test/model/value_semantics_test.dart`, holds that the lists and the map a value holds are unmodifiable copies, as Swift's values are. `dart test` in the package runs them, in the job `core` of the `Tests` workflow.
+
+- `lib/src/model/`: `time.dart`, `canvas.dart`, `media.dart`, `project.dart`, `framing.dart`, `words.dart`, `instagram_guide.dart`, `text.dart` and `sound.dart`. `lib/src/export/export_settings.dart`. `lib/src/seeds/test_clip.dart` with `RGB` and the five test clips.
+- Every model type is immutable and writes `==`, `hashCode` and `copyWith` by hand. `Project()` is the Swift `init(canvas:)`, and every other field changes through `copyWith`, whose `music` takes a function so that it can set no music: `copyWith(music: () => null)`.
+- A Swift enum without values is a Dart enum with its `allCases`, and one with String raw values carries `rawValue`. `TextSpan` is a sealed class with `TextSpan.whole` and `TextSpan.range(...)`.
+- Where Swift overloads a name, Dart adds what it takes: `ExportSettings.choosingSize` and `choosingRate`, `Project.positionOfClip` and `positionOfText`. Argument labels such as `start(of:)` or `width(on:)` are one positional argument.
 <!-- end slot: dart-core-model -->
 
 <!-- slot: dart-seeds-text-sound -->
+### The seeds in Dart
+
+- `lib/src/seeds/seed.dart`: `Seed`, the eight seed projects with their Swift names and raw values, `canvas`, `testClips`, `testTones`, `testPhotos`, `selectedText`, `showsSound` and `project`. `Seed.fromRawValue` is the Swift `init(rawValue:)`, null for an unknown name.
+- `lib/src/seeds/test_tone.dart` and `test_photo.dart`: `TestTone` with `long` and `short`, `TestPhoto` with `magenta`, beside the test clips of `test_clip.dart`. Dart holds only their values (names, lengths, sizes, pitches, colours). The files of the clips, tones and photos are written by the Swift writers.
+- Two members that ported tests read come ahead of their stories, in the files of their Swift files: `fileNames` of a project, the extension `ProjectFileNames` in `lib/src/drafts/draft.dart`, and `EditorState` with its fields and `timeLabel` in `lib/src/editor/editor_state.dart`.
+- The ported tests: `TextModelTests`, `SoundModelTests`, `ProjectTests` and `WordsTests` in `test/model/`, `SeedsTests`, `PhotoSeedTests`, `SoundSeedsTests` and `TextSeedsTests` in `test/seeds/`. The test of `TextSeedsTests` that reads `LaunchOptions` stays in Swift.
 <!-- end slot: dart-seeds-text-sound -->
 
 <!-- slot: dart-clip-edits -->
