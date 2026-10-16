@@ -767,6 +767,12 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: dart-draft-codec -->
 
 <!-- slot: dart-draft-shelf -->
+### The draft shelf in Dart
+
+- `lib/src/drafts/draft_shelf.dart` holds `DraftShelf` and `OpenDraft` of `DraftShelf.swift`, with the behaviour "The draft shelf" above gives them, and is the one file of the Dart Core that imports `dart:io`. The folder is a `Directory`, `mediaFolder` a `Directory` and `coverFile` a `File`. The two folders a shelf is made on are those `launch` gives, `<Application Support>/Drafts` and `<caches>/TestDrafts`, as in `m6`.
+- `OpenDraft.write` does what the atomic option of `Data.write` does: it writes the bytes of `encodeDraft` to a temporary name in the draft's own folder, flushes them, and renames that file over `draft.json`, so a write that is cut leaves the old `draft.json` whole. A failure, a number the codec cannot write among them, removes the temporary file and throws `DraftError.cannotWrite`.
+- The log lines of `NSLog` are printed. A new id is a random UUID in upper case, as Swift's `uuidString`.
+- A history that `open` gives back is opened in the editor only through `Editing.withHistory`, which ends its run.
 <!-- end slot: dart-draft-shelf -->
 
 <!-- slot: flutter-words -->
