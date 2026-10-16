@@ -3,6 +3,7 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../../words/words.dart';
 import '../editor_store.dart';
+import 'add_clips.dart';
 
 /// The row of the two edit buttons, the text button, the sound button, the button that adds clips and, at its
 /// trailing end, the button that folds the frames of the blocks, 20 points apart. It decides nothing: Core says
@@ -46,10 +47,16 @@ class ToolsRow extends StatelessWidget {
             state.canOpenSound ? () => store.send(const core.EditorAction.sound(core.SoundAction.open)) : null,
           ),
           // slot: add-clips
-          _icon('editor.addClips', 'tools.add', Icons.add, null),
+          AddClips(store: store, button: (tap) => _icon('editor.addClips', 'tools.add', Icons.add, tap)),
           // end slot: add-clips
           // slot: fold
-          _icon('editor.frames', 'tools.frames', Icons.view_week_outlined, null),
+          // Folds the blocks of the strip to thin ones and back. No action of Core: the fold is the store's.
+          _icon(
+            'editor.frames',
+            'tools.frames',
+            Icons.view_week_outlined,
+            () => store.framesFolded = !store.framesFolded,
+          ),
           // end slot: fold
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../editor_store.dart';
 import 'clip_press.dart';
+import 'frames_cache.dart';
 import 'music_bar.dart';
 import 'text_bars.dart';
 import 'trim_handles.dart';
@@ -181,21 +182,22 @@ class StripState extends State<Strip> {
     final width = scale.width(clip.duration);
     final words = '$position${_folded ? ' ' : '\n'}${clip.duration.clockText}';
     var x = left + scale.x(project.start(clip.id) ?? core.Time.zero);
-    Widget child = Semantics(
-      identifier: 'editor.clip.$position',
-      container: true,
-      label: words,
-      value: project.clipInfo(clip.id),
-      selected: selected,
-      excludeSemantics: true,
-      child: ClipRect(
-        child: ColoredBox(
-          color: theme.colorScheme.outline,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ..._tiles(clip, width, rows.clipHeight),
-              DecoratedBox(
+    // A container holding the tiles of its frames and, on top, the label of the block as siblings, as in m6.
+    Widget child = ClipRect(
+      child: ColoredBox(
+        color: theme.colorScheme.outline,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ..._tiles(clip, position, width, rows.clipHeight),
+            Semantics(
+              identifier: 'editor.clip.$position',
+              container: true,
+              label: words,
+              value: project.clipInfo(clip.id),
+              selected: selected,
+              excludeSemantics: true,
+              child: DecoratedBox(
                 // Painted above the label, as m6's layer border: a block of the shortest length shows only yellow.
                 // https://api.flutter.dev/flutter/widgets/DecoratedBox/position.html
                 position: DecorationPosition.foreground,
@@ -225,8 +227,8 @@ class StripState extends State<Strip> {
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -259,11 +261,66 @@ class StripState extends State<Strip> {
   }
 
   // slot: frames
-  /// The blocks are thin and show no frames.
-  bool get _folded => false;
+  /// The blocks are thin and show no frames: the fold of the store.
+  bool get _folded => store.framesFolded;
 
-  /// The tiles of frames on a block, under its label.
-  List<Widget> _tiles(core.Clip clip, double width, double height) => const [];
+  /// The frames of each media, made once while this strip lives.
+  late final FramesCache _frames = FramesCache(
+    engine: store.engine,
+    mediaFolder: store.mediaFolder.path,
+    changed: () {
+      if (mounted) {
+        setState(() {});
+      }
+    },
+  );
+
+  @override
+  void dispose() {
+    _frames.dispose();
+    super.dispose();
+  }
+
+  /// The tiles of frames on a block, under its label: squares as high as the row from its left end, each the made
+  /// frame of its time filling its square, `BlockFrames.tileCount` of them. The element `editor.frames.<position>`
+  /// with the value "<tiles> <drawn> <made>". A folded block shows no frames, asks for none and has no such element.
+  ///
+  /// https://api.flutter.dev/flutter/widgets/RawImage-class.html
+  /// https://api.flutter.dev/flutter/painting/BoxFit.html
+  List<Widget> _tiles(core.Clip clip, int position, double width, double side) {
+    if (_folded) {
+      return const [];
+    }
+    final media = store.state.project.media[clip.media];
+    final made = media == null ? null : _frames.frames(media);
+    final count = media == null ? 0 : core.BlockFrames.tileCount(width: width, tile: side);
+    var drawn = 0;
+    final tiles = <Widget>[];
+    for (var index = 0; index < count; index++) {
+      final time = core.BlockFrames.frameTime(of: clip, media: media!, index: index, tile: side, scale: scale);
+      final image = made?[time];
+      if (image != null) {
+        drawn += 1;
+        tiles.add(
+          Positioned(
+            left: index * side,
+            top: 0,
+            width: side,
+            height: side,
+            child: RawImage(image: image, fit: BoxFit.cover),
+          ),
+        );
+      }
+    }
+    return [
+      Semantics(
+        identifier: 'editor.frames.$position',
+        container: true,
+        value: '$count $drawn ${_frames.madeCount}',
+        child: Stack(clipBehavior: Clip.hardEdge, children: tiles),
+      ),
+    ];
+  }
   // end slot: frames
 
   /// One pointer starts a scrub: `pause`, and the playhead's x is kept. Two start a pinch from the scale now. A

@@ -915,6 +915,11 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: flutter-music -->
 
 <!-- slot: flutter-clips-frames -->
+### Clips and frames in Flutter
+- `app/lib/editor/tools/add_clips.dart`: `AddClips`, as `AddClips.swift`, the button `editor.addClips` in the slot `add-clips` of the tools row. It calls `pick` for videos and photos, then `copyPicked` into the media folder of the store, and sends one `addClips` with the facts it reads. Nothing is sent for a picker closed with nothing chosen, a copy that gives nothing or one that ends after the editor closed. The button is disabled while a copy runs.
+- The fold: `EditorStore.framesFolded` in the slot `fold` of the store, false when an editor opens, toggled by `editor.frames` in the slot `fold` of the tools row, with no undo step and never stored. The strip reads it for `StripRows`, and gives those rows to the trim handles, the text row and the music row.
+- `app/lib/editor/strip/frames_cache.dart`: `FramesCache`, as `FramesCache.swift`, held by the strip while it lives. The first ask for a media calls `blockFrames` with the JSON of its fact and decodes the PNG bytes. A throw, or a frame that does not decode, leaves the media with no frames, and it is not asked for again. The images are let go with the strip.
+- The slot `frames` of the strip: each block is a container that holds the tiles of its frames and, on top, its label `editor.clip.<n>` as siblings, so a lifted block carries its tiles. The tiles are `BlockFrames.tileCount` squares as high as the row, each the made frame at `BlockFrames.frameTime` at the strip's scale, in the element `editor.frames.<n>` with the value "<tiles> <drawn> <made>". A folded block has no tiles, asks for no frames and has no such element.
 <!-- end slot: flutter-clips-frames -->
 
 <!-- slot: flutter-clip-panel -->
