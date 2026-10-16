@@ -82,6 +82,7 @@ class _PictureGesturesState extends State<PictureGestures> {
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: (event) {
+          _probe('down', event);
           if (_fingers.isEmpty) {
             _most = 0;
             _down = event.localPosition;
@@ -90,12 +91,17 @@ class _PictureGesturesState extends State<PictureGestures> {
           _most = math.max(_most, _fingers.length);
           _from = null;
         },
-        onPointerMove: (event) => _fingers[event.pointer] = event.localPosition,
+        onPointerMove: (event) {
+          _probe('move', event);
+          _fingers[event.pointer] = event.localPosition;
+        },
         onPointerUp: (event) {
+          _probe('up', event);
           _fingers.remove(event.pointer);
           _from = null;
         },
         onPointerCancel: (event) {
+          _probe('cancel', event);
           _fingers.remove(event.pointer);
           _from = null;
         },
@@ -130,6 +136,7 @@ class _PictureGesturesState extends State<PictureGestures> {
   /// The recognizer starts at the first move, and ends and starts again when a finger comes or goes, so each part
   /// with one number of fingers is a gesture of its own. The first part counts from where the finger came down.
   void _started(ScaleStartDetails details) {
+    print('probe: start n=${details.pointerCount} focal=${details.localFocalPoint} most=$_most');
     final store = widget.store;
     final selected = store.state.selectedText;
     final text = selected == null ? null : store.state.project.text(selected);
@@ -150,6 +157,8 @@ class _PictureGesturesState extends State<PictureGestures> {
   /// clockwise as she sees it: not both, as m6's pinch and twist never ran together. The first of the two whose way
   /// passes `_travel` points takes the gesture, apart for a pinch and around for a twist, counted from the start.
   void _updated(ScaleUpdateDetails details) {
+    print('probe: update n=${details.pointerCount} scale=${details.scale.toStringAsFixed(3)} '
+        'fingers=${_fingers.length} ${_fingers.values.take(2).toList()} from=$_from twist=$_twist text=${_text != null}');
     final start = _start;
     final text = _text;
     if (start == null || text == null) {
@@ -213,6 +222,7 @@ class _PictureGesturesState extends State<PictureGestures> {
   /// Sends the one value that changed, the centre, the style or the rotation, so the gesture is one step of undo. An
   /// end while a finger stays sends too: a finger that comes or goes ends a gesture.
   void _ended(ScaleEndDetails details) {
+    print('probe: end n=${details.pointerCount} drawn=${_drawn != null}');
     final text = _text;
     final project = _drawn?.project;
     _start = null;
@@ -251,6 +261,11 @@ class _PictureGesturesState extends State<PictureGestures> {
     store.engine.show(id, json, store.mediaFolder.path, null, false).catchError((Object error) {
       print('editor: the preview was not shown: $error');
     });
+  }
+
+  void _probe(String kind, PointerEvent event) {
+    print('probe: $kind id=${event.pointer} kind=${event.kind.name} at=${event.localPosition} '
+        't=${event.timeStamp.inMilliseconds} fingers=${_fingers.length}');
   }
 
   // slot: punch-in
