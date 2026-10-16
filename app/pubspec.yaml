@@ -23,3 +23,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/words/en.lproj/Localizable.strings
+    - assets/words/ar.lproj/Localizable.strings
+    - assets/words/sv.lproj/Localizable.strings
