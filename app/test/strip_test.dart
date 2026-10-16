@@ -112,6 +112,40 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('a scrub counts from where the finger came down, and the finger left after a pinch scrubs nothing', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final store = await _show(tester);
+    final scrub = await tester.startGesture(_onBlocks(tester, 300));
+    for (var step = 0; step < 12; step++) {
+      await scrub.moveBy(const Offset(-10, 0));
+      await tester.pump();
+    }
+    await scrub.up();
+    await tester.pump();
+    // 120 points are 2 seconds, the slop included.
+    expect(store.state.playhead.ticks, 1200);
+
+    final first = await tester.startGesture(_onBlocks(tester, 151), pointer: 7);
+    final second = await tester.startGesture(_onBlocks(tester, 251), pointer: 8);
+    for (var step = 0; step < 10; step++) {
+      await first.moveBy(const Offset(-5, 0));
+      await second.moveBy(const Offset(5, 0));
+      await tester.pump();
+    }
+    await first.up();
+    await tester.pump();
+    for (var step = 0; step < 6; step++) {
+      await second.moveBy(const Offset(-10, 0));
+      await tester.pump();
+    }
+    await second.up();
+    await tester.pump();
+    expect(store.state.playhead.ticks, 1200);
+    semantics.dispose();
+  });
+
   testWidgets('a tap selects a block and leaves the playhead, a tap on empty strip clears the selection', (
     tester,
   ) async {

@@ -35,8 +35,15 @@ class StripState extends State<Strip> {
 
   core.TimelineScale _pinchStart = core.TimelineScale.standard;
   double _scrubStart = 0;
-  double _focalStart = 0;
+  /// Where the last pointer came down, the start of a scrub, so the slop before the recognizer starts is not lost.
+  double _downX = 0;
+
+  /// True from the moment a second pointer joins until the next first pointer comes down: the pointer left after
+  /// a pinch scrubs nothing, as `m6`'s pan of one touch did not.
   bool _pinching = false;
+
+  /// The pointers down on the strip.
+  int _pointers = 0;
 
   EditorStore get store => widget.store;
 
@@ -55,38 +62,49 @@ class StripState extends State<Strip> {
           builder: (context, constraints) {
             final middle = constraints.maxWidth / 2;
             final left = middle - scale.x(store.state.playhead);
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              excludeFromSemantics: true,
-              onScaleStart: _started,
-              onScaleUpdate: _updated,
-              onTapUp: (details) => _tapped(details.localPosition, left),
-              // slot: recognizers
-              // end slot: recognizers
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  for (final (index, clip) in store.state.project.clips.indexed) _block(context, clip, index + 1, left),
-                  // Views above the blocks go here, below the playhead, at `left` plus their x at the scale.
-                  // slot: handles
-                  // end slot: handles
-                  // slot: music-row
-                  // end slot: music-row
-                  // slot: text-row
-                  // end slot: text-row
-                  Positioned(
-                    left: middle - 1,
-                    top: 0,
-                    width: 2,
-                    height: rows.height,
-                    child: Semantics(
-                      identifier: 'editor.playhead',
-                      container: true,
-                      value: store.state.playhead.clockText,
-                      child: ColoredBox(color: Theme.of(context).colorScheme.onSurface),
+            return Listener(
+              onPointerDown: (event) {
+                if (_pointers == 0) {
+                  _pinching = false;
+                }
+                _pointers++;
+                _downX = event.localPosition.dx;
+              },
+              onPointerUp: (event) => _pointers--,
+              onPointerCancel: (event) => _pointers--,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                excludeFromSemantics: true,
+                onScaleStart: _started,
+                onScaleUpdate: _updated,
+                onTapUp: (details) => _tapped(details.localPosition, left),
+                // slot: recognizers
+                // end slot: recognizers
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (final (index, clip) in store.state.project.clips.indexed) _block(context, clip, index + 1, left),
+                    // Views above the blocks go here, below the playhead, at `left` plus their x at the scale.
+                    // slot: handles
+                    // end slot: handles
+                    // slot: music-row
+                    // end slot: music-row
+                    // slot: text-row
+                    // end slot: text-row
+                    Positioned(
+                      left: middle - 1,
+                      top: 0,
+                      width: 2,
+                      height: rows.height,
+                      child: Semantics(
+                        identifier: 'editor.playhead',
+                        container: true,
+                        value: store.state.playhead.clockText,
+                        child: ColoredBox(color: Theme.of(context).colorScheme.onSurface),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -168,13 +186,15 @@ class StripState extends State<Strip> {
   /// One pointer starts a scrub: `pause`, and the playhead's x is kept. Two start a pinch from the scale now. A
   /// pointer that comes or goes ends the gesture and starts it again with the new count.
   void _started(ScaleStartDetails details) {
-    _pinching = details.pointerCount > 1;
-    if (_pinching) {
+    if (details.pointerCount > 1) {
+      _pinching = true;
       _pinchStart = scale;
       return;
     }
+    if (_pinching) {
+      return;
+    }
     _scrubStart = scale.x(store.state.playhead);
-    _focalStart = details.localFocalPoint.dx;
     store.send(core.EditorAction.pause);
   }
 
@@ -183,10 +203,12 @@ class StripState extends State<Strip> {
   /// held by Core, and sends nothing: the playhead stays in the middle on its time.
   void _updated(ScaleUpdateDetails details) {
     if (_pinching) {
-      setState(() => scale = _pinchStart.zoomed(details.scale));
+      if (details.pointerCount > 1) {
+        setState(() => scale = _pinchStart.zoomed(details.scale));
+      }
       return;
     }
-    final x = _scrubStart - (details.localFocalPoint.dx - _focalStart);
+    final x = _scrubStart - (details.localFocalPoint.dx - _downX);
     store.send(core.EditorAction.movePlayhead(scale.time(x)));
   }
 
