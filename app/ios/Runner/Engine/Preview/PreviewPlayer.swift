@@ -74,9 +74,10 @@ final class PreviewPlayer: NSObject {
     /// True while one seek is in flight. A newer playhead waits in `target` until it lands.
     private var isSeeking = false
     private var timeObserver: Any?
-    /// True when the next seek goes one step aside first and then to its time: a paused player whose
+    /// True when the next seek goes one tick on first and then to its time: a paused player whose
     /// item was refreshed does not always give its video output a new frame for a seek to the time it
-    /// stands on, and a seek that first goes aside does (E25).
+    /// stands on, and a seek that first goes to another time does (E25). One tick on lies in the same
+    /// frame, so the frame it gives is the one sought.
     private var redraws = false
     /// Counts the items put into the player. What was registered for an older item does nothing.
     /// What is registered for the newest item reads the texture's flag of the moment.
@@ -106,7 +107,8 @@ final class PreviewPlayer: NSObject {
     /// Takes what Dart shows: the project, its media folder, a playhead only when Dart moved it, and
     /// playing. A show with no playhead seeks nothing: when the player stands on no playhead of the state
     /// and is not to play on, as after playing or after a seek that did not finish, it counts as standing
-    /// on the playhead it has, so a playhead the player reported never comes back as a seek.
+    /// on the playhead it has, so a playhead the player reported never comes back as a seek. Only a
+    /// refreshed picture still waiting to be drawn again is sought, at the playhead it has.
     func show(project shownProject: Project, mediaFolder folder: URL, playhead: Time?, playing: Bool) {
         mediaFolder = folder
         state.project = shownProject
@@ -114,7 +116,7 @@ final class PreviewPlayer: NSObject {
             state.playhead = playhead
         }
         state.isPlaying = playing
-        if playhead == nil, target == nil, !(playing && isPlaying) {
+        if playhead == nil, target == nil, !redraws, !(playing && isPlaying) {
             target = state.playhead
         }
         follow(state)
@@ -176,12 +178,12 @@ final class PreviewPlayer: NSObject {
 
     /// Gives the item the picture of the project, whose footage is the one the item was built from.
     /// It only sets the video composition of the item. False when the Engine refused: the item is then
-    /// as it was. For the item in the paused player, with no seek in flight, the player then stands on
-    /// no playhead and the next seek goes aside first, so the texture gets the frame drawn again.
+    /// as it was. For the item in the paused player, with no seek in flight to it, the player then stands
+    /// on no playhead and the next seek goes one tick on first, so the texture gets the frame drawn again.
     private func refresh(_ item: AVPlayerItem, to project: Project) -> Bool {
         do {
             try refreshPicture(of: item, plan: renderPlan(for: project), media: project.media)
-            if item === player.currentItem, !isPlaying, !isSeeking {
+            if item === player.currentItem, !isPlaying, !isSeeking || !isReady {
                 target = nil
                 sent = nil
                 redraws = true
@@ -369,11 +371,9 @@ final class PreviewPlayer: NSObject {
         isSeeking = true
         let number = build
         if redraws {
-            // One tick back, or one frame on from the start, then the time itself.
             redraws = false
             let time: Time = frameTime(of: wanted)
-            let aside: Time = time > .zero ? time - Time(ticks: 1) : time + Time.frame
-            player.seekExactly(to: aside) { [weak self] _ in
+            player.seekExactly(to: time + Time(ticks: 1)) { [weak self] _ in
                 guard let self, number == self.build else {
                     return
                 }

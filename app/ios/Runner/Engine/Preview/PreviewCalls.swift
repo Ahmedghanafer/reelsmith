@@ -39,7 +39,8 @@ extension Engine {
         }
     }
 
-    /// The project is the `project` member of the draft JSON. A project that cannot be read throws.
+    /// The project is the JSON of a project, as the `project` member of the draft JSON holds it. A project
+    /// that cannot be read throws.
     func show(textureId: Int64, project: String, mediaFolder: String, playhead: Int64?, playing: Bool) throws {
         let shown = try JSONDecoder().decode(Project.self, from: Data(project.utf8))
         MainActor.assumeIsolated {
