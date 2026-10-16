@@ -108,8 +108,8 @@ enum Seed {
       case Seed.textWide:
         // The middle line is Arabic with every vowel mark, written as scalars so no editor reorders it.
         const arabic =
-            'السَّلَامُ '
-            'عَلَيْكُمْ';
+            '\u0627\u0644\u0633\u0651\u064E\u0644\u064E\u0627\u0645\u064F\u0020'
+            '\u0639\u064E\u0644\u064E\u064A\u0652\u0643\u064F\u0645\u0652';
         return project.copyWith(
           texts: [
             const TextItem(
