@@ -30,16 +30,8 @@ enum Seed {
 
   const Seed(this.rawValue);
 
-  static const List<Seed> allCases = [
-    empty,
-    twoClips,
-    threeClips,
-    twoClipsWide,
-    textWide,
-    textBoxWide,
-    musicWide,
-    photoWide,
-  ];
+  /// The cases in their order, as Swift's CaseIterable gives them.
+  static const List<Seed> allCases = values;
 
   /// The Swift init(rawValue:): null for an unknown name.
   static Seed? fromRawValue(String rawValue) {
