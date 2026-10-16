@@ -857,6 +857,11 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: flutter-strip -->
 
 <!-- slot: flutter-trim-reorder -->
+### The trim handles and the lifted block in Flutter
+
+- `app/lib/editor/strip/trim_handles.dart`: `trimHandles(...)` gives the two handles `editor.trim.start` and `editor.trim.end` of the selected clip for the slot `handles` of the strip, 24 points wide outside its edges, labels `trim.start` and `trim.end`, none while nothing is selected or a block is lifted. A drag on a handle sends `pause`, draws `reduce` of the state from its start with `trimStart` or `trimEnd` of `trimAmount` of the points moved, and sends that one action on release. A tap on a handle does nothing, and a drag on it never scrubs.
+- `app/lib/editor/strip/clip_press.dart`: `ClipPress` lies over the row of blocks, below the handles and the text bars. A press of half a second on a block sends `pause`, then the strip draws `reduce` of the state from the start with `moveClip` to `dropPosition` of the block's left end moved by the finger, the pressed block lifted under the finger, larger, with a shadow and above the others, and one `moveClip` is sent on release. A cancel draws the store's state again and sends nothing. Since each gesture sends one action, a trim and a move are each one step of undo and one write of the draft.
+- `StripDrag`, one for each strip, holds the state a gesture draws. The slot `reorder` of the strip draws the blocks of that state in its place while a gesture runs, the lifted block painted last.
 <!-- end slot: flutter-trim-reorder -->
 
 <!-- slot: flutter-export -->

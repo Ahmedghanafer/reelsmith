@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../editor_store.dart';
+import 'clip_press.dart';
+import 'trim_handles.dart';
 
 /// The clips as blocks in one row at the scale of the strip, under a playhead line that stays in the middle. One
 /// scale recognizer reads the fingers: with one pointer it scrubs, with two it sets the scale. A tap on a block
@@ -99,6 +101,29 @@ class StripState extends State<Strip> {
                     for (final (index, clip) in store.state.project.clips.indexed) _block(context, clip, index + 1, left),
                     // Views above the blocks go here, below the playhead, at `left` plus their x at the scale.
                     // slot: handles
+                    // The press that lifts a block lies over the row of blocks, below the trim handles and the text
+                    // bars, so a press on them never reaches it.
+                    Positioned(
+                      key: const ValueKey<String>('clip-press'),
+                      left: left,
+                      top: rows.clipY,
+                      width: scale.width(store.state.project.duration),
+                      height: rows.clipHeight,
+                      child: ClipPress(
+                        store: store,
+                        scale: scale,
+                        drag: StripDrag.of(this),
+                        redraw: () => setState(() {}),
+                      ),
+                    ),
+                    ...trimHandles(
+                      store: store,
+                      scale: scale,
+                      rows: rows,
+                      left: left,
+                      drag: StripDrag.of(this),
+                      redraw: () => setState(() {}),
+                    ),
                     // end slot: handles
                     // slot: music-row
                     // end slot: music-row
@@ -184,6 +209,29 @@ class StripState extends State<Strip> {
       ),
     );
     // slot: reorder
+    // While a press or a drag of a trim handle runs, the blocks are those of the state it draws, painted with the
+    // lifted one last so it lies above the others: the block at this place is the drawn block painted here. Its left
+    // end is where the drawn state puts it, or for the lifted block where the press puts it, larger and with a shadow.
+    final drag = StripDrag.of(this);
+    final drawn = drag.drawn;
+    if (drawn != null) {
+      if (!drag.placing && position <= drag.painted.length) {
+        final shown = drag.painted[position - 1];
+        drag.placing = true;
+        try {
+          return _block(context, shown, drawn.project.positionOfClip(shown.id) ?? position, left);
+        } finally {
+          drag.placing = false;
+        }
+      }
+      final lifted = drag.lifted;
+      if (lifted != null && lifted.clip == clip.id) {
+        x = left + lifted.left;
+        child = liftedBlock(child);
+      } else {
+        x = left + scale.x(drawn.project.start(clip.id) ?? core.Time.zero);
+      }
+    }
     // end slot: reorder
     return Positioned(left: x, top: rows.clipY, width: width, height: rows.clipHeight, child: child);
   }
@@ -261,5 +309,13 @@ class _StripScale extends ScaleGestureRecognizer {
     if (event is PointerDownEvent && _pointers.length > 1) {
       resolve(GestureDisposition.accepted);
     }
+  }
+
+  /// A pointer another recognizer won, a trim handle's drag or the press that lifts a block, sends this recognizer no
+  /// more events, so its up never comes here: it is no longer counted, or every later touch would read as a pinch.
+  @override
+  void rejectGesture(int pointer) {
+    _pointers.remove(pointer);
+    super.rejectGesture(pointer);
   }
 }
