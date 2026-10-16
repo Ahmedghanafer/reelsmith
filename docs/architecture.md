@@ -805,6 +805,12 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: flutter-start -->
 
 <!-- slot: flutter-editor-store -->
+### The editor store in Flutter
+
+- `app/lib/editor/editor_store.dart`: `EditorStore`, a `ChangeNotifier` and the one store of the editor, with the members of `EditorStore.swift` by their names. It holds the Dart `Editing`, made only through `Editing.withHistory` with the history a draft was written with (none reads as an empty history), the media folder as a `Directory`, the values `launch` gave as `options`, the `OpenDraft` (null on a seeded start without `-drafts`) and `exportSettings`. A screen reads `store.state` and sends with `send`, `sendDragStep`, `endDrag`, `undo` and `redo`, and is told of every change by the notifier. `write`, `writeNow`, `makeCover` and `close` do what "Saving a draft" and "The project list" say, a write synchronous through `OpenDraft.write`, the cover through the call `writeCover`. A cover that throws is logged and the leave still ends.
+- The slots `leave`, `export-choice`, `fold` and `guide` stand empty at the end of the class for the stories that fill them.
+- `draftShelf(options)` makes the shelf on `testDraftsFolder` when the launch names `drafts`, else on `draftsFolder`, as `LaunchOptions.draftsFolder` chooses.
+- The store takes `VideoEngine`. At its making it listens to `playhead` and `playedToEnd`, then calls `createPreview` and keeps the id as `textureId`, and the first `show` carries its playhead. From then it calls `show` with the project as the `project` member of the draft JSON at every change of the project or of playing, with the playhead when Dart moved it (a scrub, a tap, an edit that clamps it, an undo, play from the end back to zero) and on every pause, so the player's copy of the state keeps the store's time. A `playhead` event moves the store's playhead while it plays and is never sent back, and one that comes after the store paused is dropped. `playedToEnd` moves the playhead to the end and pauses, and a second one in a row does nothing. `dispose` stops listening and lets the preview go with `disposePreview`.
 <!-- end slot: flutter-editor-store -->
 
 <!-- slot: flutter-editor-screen -->
