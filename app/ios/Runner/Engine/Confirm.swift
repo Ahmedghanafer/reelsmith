@@ -15,16 +15,19 @@ import UIKit
 /// https://developer.apple.com/documentation/swift/checkedcontinuation
 extension Engine {
     /// Shows the question with a destructive button `drafts.deleteConfirm` and a cancel button
-    /// `drafts.deleteCancel`, and gives true when she confirmed. With no view controller to show it on, or one that already shows
-    /// something, false.
+    /// `drafts.deleteCancel`, and gives true when she confirmed. It is shown on the topmost controller the view
+    /// controller of the registrar presents, since UIKit drops a presentation on one that already presents. With
+    /// no view controller at all it is logged and gives false.
     func confirm(question: String, confirmWords: String, cancelWords: String) async throws -> Bool {
         await withCheckedContinuation { continuation in
             Task { @MainActor in
-                // UIKit drops a second presentation, so a question asked while one shows gives false at once.
-                guard let viewController = self.registrar.viewController,
-                      viewController.presentedViewController == nil else {
+                guard var viewController = self.registrar.viewController else {
+                    NSLog("%@", "confirm: no view controller to show the question on")
                     continuation.resume(returning: false)
                     return
+                }
+                while let presented = viewController.presentedViewController {
+                    viewController = presented
                 }
                 let alert = UIAlertController(title: question, message: nil, preferredStyle: .alert)
                 let delete = UIAlertAction(title: confirmWords, style: .destructive) { _ in
