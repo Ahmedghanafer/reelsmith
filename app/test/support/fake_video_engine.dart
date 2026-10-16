@@ -25,6 +25,15 @@ class FakeVideoEngine implements VideoEngine {
   String faceNamesAnswer = '';
   bool confirmAnswer = false;
 
+  /// The arguments of each `show`, oldest first.
+  final List<({int textureId, String project, String mediaFolder, int? playhead, bool playing})> shows = [];
+
+  /// The file of each `writeCover`, oldest first.
+  final List<String> covers = [];
+
+  /// When set, `writeCover` throws it.
+  Object? writeCoverError;
+
   final _playhead = StreamController<int>.broadcast();
   final _playedToEnd = StreamController<void>.broadcast();
   final _buildCount = StreamController<int>.broadcast();
@@ -69,8 +78,16 @@ class FakeVideoEngine implements VideoEngine {
   Future<int> createPreview() => _answer('createPreview', createPreviewAnswer);
 
   @override
-  Future<void> show(int textureId, String project, String mediaFolder, int? playhead, bool playing) =>
-      _answer('show', null);
+  Future<void> show(int textureId, String project, String mediaFolder, int? playhead, bool playing) {
+    shows.add((
+      textureId: textureId,
+      project: project,
+      mediaFolder: mediaFolder,
+      playhead: playhead,
+      playing: playing,
+    ));
+    return _answer('show', null);
+  }
 
   @override
   Future<void> disposePreview(int textureId) => _answer('disposePreview', null);
@@ -83,7 +100,15 @@ class FakeVideoEngine implements VideoEngine {
   Future<SaveOutcome> saveToPhotos(String file) => _answer('saveToPhotos', saveToPhotosAnswer);
 
   @override
-  Future<void> writeCover(String project, String mediaFolder, String file) => _answer('writeCover', null);
+  Future<void> writeCover(String project, String mediaFolder, String file) {
+    covers.add(file);
+    final error = writeCoverError;
+    if (error != null) {
+      calls.add('writeCover');
+      return Future.error(error);
+    }
+    return _answer('writeCover', null);
+  }
 
   @override
   Future<Map<int, Uint8List>> blockFrames(String media, String mediaFolder) =>
