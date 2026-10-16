@@ -10,15 +10,13 @@ import 'text_more.dart';
 /// and under the row the part that shows. Which part shows is the one state of the panel: type when the text is
 /// blank at the moment the panel is made for it, look otherwise. Everything else is the state of the store. The done
 /// button only clears the selection, and Core removes a text that is left blank. The row lays out from leading to
-/// trailing, so Arabic mirrors it. While the keyboard is up the panel stands on a space as high as the keyboard, so
-/// the field stays above it.
+/// trailing, so Arabic mirrors it.
 ///
 /// The field shows the string of the store and sends every change of it whole. A change that would leave half of a
 /// character (an unpaired UTF-16 surrogate) has that half taken out first, since the draft could not be read back.
 ///
 /// https://api.flutter.dev/flutter/material/TextField-class.html
 /// https://api.flutter.dev/flutter/widgets/TextEditingController-class.html
-/// https://api.flutter.dev/flutter/widgets/MediaQuery/viewInsetsOf.html
 /// https://api.flutter.dev/flutter/material/TextButton-class.html
 /// https://api.flutter.dev/flutter/widgets/Semantics-class.html
 class TextPanel extends StatefulWidget {
@@ -90,7 +88,6 @@ class _TextPanelState extends State<TextPanel> {
           if (_part == _Part.type && selected != null) _typed(context, selected),
           if (_part == _Part.look) TextLook(store: store, words: widget.words),
           if (_part == _Part.more) TextMore(store: store, words: widget.words),
-          SizedBox(height: MediaQuery.viewInsetsOf(context).bottom),
         ],
       ),
     );

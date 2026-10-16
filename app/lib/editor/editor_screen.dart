@@ -90,7 +90,10 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      child: SafeArea(
+      // The column ends above the keyboard while it is up, as in m6.
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
         child: ListenableBuilder(
           listenable: store,
           builder: (context, _) {
@@ -155,6 +158,7 @@ class _EditorScreenState extends State<EditorScreen> {
               ),
             );
           },
+        ),
         ),
       ),
     );
