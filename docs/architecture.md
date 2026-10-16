@@ -880,6 +880,11 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: flutter-text-panel -->
 
 <!-- slot: flutter-text-bars -->
+### The text row in Flutter
+
+- `app/lib/editor/strip/text_bars.dart`: `textBars(...)` gives the text row for the slot `text-row` of the strip: a bar `TextBar` for every text with a range, `editor.text.<position>`, at `textY` of `StripRows`, 24 points high, from the x of its start for its length at the scale. Its label is `textRow.bar` with the position, its value the first line of the string (empty for a blank text), selected for the selected text with a yellow border of 3 points, the others one of 1 in the colour of the background. The writing stands where `TimelineGeometry.writing` puts it, from the left end of the part of the bar on the screen. A tap on a bar sends `select` of its text, and a drag that begins on it is a scrub.
+- `TextTrimHandle`: the two handles `editor.textTrim.start` and `editor.textTrim.end` of the selected bar, 24 points wide outside its edges, labels `textRow.trimStart` and `textRow.trimEnd`, none while no text is selected. A drag sends `pause`, draws `reduce` of the state from its start with `trimStart` or `trimEnd` of the text for `trimAmount` of the points moved through `StripDrag`, and sends that one action on release, so a trim is one step of undo. A tap on a handle does nothing.
+- The bars and handles are placed by the state `StripDrag` draws, so they follow a press that moves a block as the blocks do. Nothing in the row mirrors.
 <!-- end slot: flutter-text-bars -->
 
 <!-- slot: flutter-project-list -->
