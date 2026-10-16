@@ -713,6 +713,13 @@ The choice of size and rate belongs to the draft it was made on and comes back w
 <!-- end slot: dart-seeds-text-sound -->
 
 <!-- slot: dart-clip-edits -->
+### The editor in Dart
+
+- `lib/src/editor/`: `editor_state.dart` with every member of `EditorState.swift`, the four action files `editor_action.dart`, `text_action.dart`, `sound_action.dart` and `frame_action.dart`, `reduce.dart`, `edits.dart`, `clip_edits.dart`, `frame_edits.dart`, `timeline_geometry.dart` (`TimelineGeometry`, `StripRows`, `TimelineScale`) and `history.dart` with `EditRun` and `UndoHistory` as data, without `Editing`.
+- An action enum is a sealed class with one subclass per case (`EditorActionTrimStart` and so on), made as `EditorAction.trimStart(clip, amount)`, and a case without values is a constant (`EditorAction.split`). `reduce` switches over every case, so a new case does not compile until it is routed. It is pure and synchronous and imports neither Flutter nor the bridge.
+- The edit functions `reduce` calls (`split`, `trimStart`, `reduceFrame`, `reduceText`, `settleTexts`, `reduceSound`, `settleSound` and their kin) are hidden from the package entry, as they are internal in Swift. The members Swift adds to `EditorState` and `Project` in another file are Dart extensions in that file (`EditorStateEdits`, `EditorStateClipEdits`, `ProjectClipEdits`, `EditorStateFrameEdits`).
+- `reduce` routes text and sound to `text_edits.dart` and `sound_edits.dart`, which hold `reduceText`, `settleTexts`, `reduceSound` and `settleSound`, and `text_geometry.dart` the three limits `reduceText` reads.
+- The ported tests: `EditorStateTests`, `ReduceTests`, `EditActionsTests`, `ClipEditsTests`, `ClipGuardTests`, `FramingGuardTests`, `TrackGuardTests`, `TimelineGeometryTests`, `TimelineScaleTests` and `StripRowsTests` in `test/editor/`, `CanvasTests` and `FramingTests` in `test/model/`. What reads `renderPlan`, `LaunchOptions`, `Editing` or the draft codec stays in Swift or waits for its story, and the guards run without their checks of the plan.
 <!-- end slot: dart-clip-edits -->
 
 <!-- slot: dart-text-edits -->
