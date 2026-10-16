@@ -12,8 +12,8 @@ import UniformTypeIdentifiers
 extension Engine {
     /// Shows the browser on the topmost controller the view controller of the registrar presents, keeps the file
     /// she chose in `media.audio` and gives true. The file's URL carries the right to read it, which `importMusic`
-    /// holds while it copies. A browser she cancels or swipes away gives false. With no view controller, or a
-    /// browser UIKit did not show, the call is logged and gives false.
+    /// holds while it copies. A browser she cancels or swipes away gives false. With no view controller the call is
+    /// logged and gives false. A browser UIKit did not show gives false at the next call.
     func pickAudio() async throws -> Bool {
         await withCheckedContinuation { continuation in
             Task { @MainActor in
@@ -42,12 +42,9 @@ extension Engine {
                 }
                 self.media.audioPicker = browser
                 let controller = browser.makeUIViewController()
+                // The browser is a remote view: UIKit presents it only once that view has loaded, so it is not on
+                // screen yet when `present` returns. One UIKit never shows answers nothing chosen at the next call.
                 viewController.present(controller, animated: true)
-                // UIKit drops a presentation on a controller that is being dismissed, with only a warning.
-                if controller.presentingViewController == nil {
-                    NSLog("%@", "pickAudio: the browser was not shown")
-                    browser.report(nil)
-                }
             }
         }
     }

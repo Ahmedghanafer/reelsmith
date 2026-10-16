@@ -18,7 +18,7 @@ import UniformTypeIdentifiers
 extension Engine {
     /// Shows the picker on the topmost controller the view controller of the registrar presents, keeps what she
     /// chose in `media.picked` and gives its count. A picker she cancels or swipes away gives 0. With no view
-    /// controller, or a picker UIKit did not show, the call is logged and gives 0.
+    /// controller the call is logged and gives 0. A picker UIKit did not show gives 0 at the next call.
     func pick(photos: Bool, limit: Int64) async throws -> Int64 {
         await withCheckedContinuation { continuation in
             Task { @MainActor in
@@ -47,12 +47,9 @@ extension Engine {
                 }
                 self.media.videoPicker = picker
                 let controller = picker.makeUIViewController()
+                // The picker is a remote view: UIKit presents it only once that view has loaded, so it is not on
+                // screen yet when `present` returns. One UIKit never shows answers nothing chosen at the next call.
                 viewController.present(controller, animated: true)
-                // UIKit drops a presentation on a controller that is being dismissed, with only a warning.
-                if controller.presentingViewController == nil {
-                    NSLog("%@", "pick: the picker was not shown")
-                    picker.report([])
-                }
             }
         }
     }

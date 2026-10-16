@@ -4,6 +4,7 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 import '../../words/words.dart';
 import '../editor_store.dart';
 import 'music_levels.dart';
+import 'music_part.dart';
 import 'sound_clips.dart';
 
 /// The sound panel: one row with the three part buttons and, at its trailing end, the done button, and under the
@@ -79,6 +80,7 @@ class _SoundPanelState extends State<SoundPanel> {
                 children: [
                   if (_part == _Part.music) ...[
                     // slot: music
+                    MusicPart(store: store, words: widget.words),
                     // end slot: music
                   ],
                   if (_part == _Part.levels) ...[

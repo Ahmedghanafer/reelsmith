@@ -4,6 +4,7 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../editor_store.dart';
 import 'clip_press.dart';
+import 'music_bar.dart';
 import 'text_bars.dart';
 import 'trim_handles.dart';
 
@@ -127,6 +128,14 @@ class StripState extends State<Strip> {
                     ),
                     // end slot: handles
                     // slot: music-row
+                    ...musicBar(
+                      store: store,
+                      scale: scale,
+                      rows: rows,
+                      left: left,
+                      shownWidth: constraints.maxWidth,
+                      drag: StripDrag.of(this),
+                    ),
                     // end slot: music-row
                     // slot: text-row
                     ...textBars(
