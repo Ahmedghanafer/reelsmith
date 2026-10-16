@@ -78,7 +78,7 @@ String _fact(String name) => jsonEncode({
 });
 
 /// Starts the root and lets the launch, the words file and a seed start come in.
-Future<void> _start(WidgetTester tester, _Engine engine) async {
+Future<void> _start(WidgetTester tester, FakeVideoEngine engine) async {
   await tester.pumpWidget(ReelsmithApp(engine: engine));
   await _settle(tester);
 }
