@@ -41,13 +41,18 @@ class StripState extends State<Strip> {
   core.TimelineScale scale = core.TimelineScale.standard;
 
   core.TimelineScale _pinchStart = core.TimelineScale.standard;
+
+  /// The distance of the two fingers when the pinch started, and the distance its factor counts from once they
+  /// went 8 points further apart or closer, null until then.
+  double _pinchDown = 0;
+  double? _pinchFrom;
   double _scrubStart = 0;
 
   /// Where the first finger of a touch came down, so the slop before the recognizer starts is not lost.
   double _downX = 0;
 
-  /// The pointers down on the strip.
-  final Set<int> _down = {};
+  /// The pointers down on the strip, each where it is now.
+  final Map<int, Offset> _down = {};
 
   /// True from the moment a second pointer joins until the next first pointer comes down. Such a touch scrubs
   /// nothing and is no tap, as `m6`'s pan and tap of one touch: two pointers only pinch.
@@ -76,8 +81,13 @@ class StripState extends State<Strip> {
                   _many = false;
                   _downX = event.localPosition.dx;
                 }
-                _down.add(event.pointer);
+                _down[event.pointer] = event.localPosition;
                 _many = _many || _down.length > 1;
+              },
+              onPointerMove: (event) {
+                if (_down.containsKey(event.pointer)) {
+                  _down[event.pointer] = event.localPosition;
+                }
               },
               onPointerUp: (event) => _down.remove(event.pointer),
               onPointerCancel: (event) => _down.remove(event.pointer),
@@ -328,6 +338,8 @@ class StripState extends State<Strip> {
   void _started(ScaleStartDetails details) {
     if (details.pointerCount > 1) {
       _pinchStart = scale;
+      _pinchDown = _spread();
+      _pinchFrom = null;
       return;
     }
     if (_many) {
@@ -339,16 +351,31 @@ class StripState extends State<Strip> {
 
   /// A scrub sends `movePlayhead`: the strip follows the finger, so a drag to the left moves to a later time, and
   /// Core keeps the time inside the project. A pinch sets the scale to the scale at its start times its factor,
-  /// held by Core, and sends nothing: the playhead stays in the middle on its time.
+  /// held by Core, and sends nothing: the playhead stays in the middle on its time. As the pinch of iOS, the factor
+  /// starts once the fingers went 8 points apart or together from where they came down, and counts from that
+  /// distance, so the same fingers give the scale they give in `m6`.
   void _updated(ScaleUpdateDetails details) {
     if (_many) {
       if (details.pointerCount > 1) {
-        setState(() => scale = _pinchStart.zoomed(details.scale));
+        final spread = _spread();
+        if (_pinchFrom == null) {
+          if ((spread - _pinchDown).abs() < 8) {
+            return;
+          }
+          _pinchFrom = _pinchDown + (spread > _pinchDown ? 8 : -8);
+        }
+        setState(() => scale = _pinchStart.zoomed(spread / _pinchFrom!));
       }
       return;
     }
     final x = _scrubStart - (details.localFocalPoint.dx - _downX);
     store.send(core.EditorAction.movePlayhead(scale.time(x)));
+  }
+
+  /// The distance between the first two fingers down on the strip.
+  double _spread() {
+    final at = _down.values.take(2).toList();
+    return at.length < 2 ? 0 : (at[0] - at[1]).distance;
   }
 
   /// A tap on the row of blocks selects the clip under it. A tap anywhere else on the strip, beside the row or in
