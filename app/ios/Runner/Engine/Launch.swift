@@ -11,12 +11,16 @@ extension Engine {
     /// https://developer.apple.com/documentation/foundation/filemanager/urls(for:in:)
     /// https://developer.apple.com/documentation/foundation/jsonserialization/data(withjsonobject:options:)
     func launch() throws -> String {
-        // The debug guard of the launch values: only a debug build reads the process arguments.
-        #if DEBUG
-        let options = LaunchOptions(arguments: ProcessInfo.processInfo.arguments)
-        #else
-        let options = LaunchOptions(arguments: [])
-        #endif
+        // The debug guard of the launch values: only a debug build reads the process arguments. Runner's Debug
+        // configuration sets no Swift condition DEBUG, so the guard is an assert, whose body only a build without
+        // optimization runs.
+        // https://developer.apple.com/documentation/swift/assert(_:_:file:line:)
+        var debug = false
+        assert({
+            debug = true
+            return true
+        }())
+        let options = LaunchOptions(arguments: debug ? ProcessInfo.processInfo.arguments : [])
         let manager = FileManager.default
         let applicationSupport = manager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let caches = manager.urls(for: .cachesDirectory, in: .userDomainMask)[0]

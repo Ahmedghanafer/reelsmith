@@ -457,7 +457,7 @@ var engineApiPigeonMethodCodec = FlutterStandardMethodCodec(readerWriter: Engine
 /// A project crosses as the `project` member of the draft JSON of version 1, the export settings, a media fact
 /// and a music file as their JSON. A folder or a file is a path. A time is in ticks of 1/600 second.
 /// A call that is not built yet throws `EngineError.notBuilt`, which reaches Dart as a `PlatformException`
-/// with the code `notBuilt`. A refusal of the Engine reaches Dart the same way, with the name of its case.
+/// with the code `notBuilt`. A refusal of the Engine reaches Dart the same way, its code the Swift description of the error, as `protectedFile`.
 ///
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol EngineApi {
