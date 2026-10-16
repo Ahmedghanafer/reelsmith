@@ -124,3 +124,111 @@ This works: on 2026-10-12 an unsigned build of this project was installed with S
 6. Open Reelsmith. The start screen shows the name of the app, the two shapes and "New project".
 
 A free Apple ID install stops working after 7 days. Repeat step 3 with the same Apple ID to renew it. A renewal installs over the app, which keeps its drafts. Never delete the app before a renewal: that removes every draft. Whether the drafts survive a renewal is on the list of what is judged on the phone.
+
+<!-- slot: flutter-build -->
+## The Flutter build
+
+The app is the Flutter app in `app/`. Its iOS project `app/ios/Runner.xcodeproj` is committed, and its scheme `Runner` is built through `app/ios/Runner.xcworkspace`. The target `Runner` makes `Reelsmith.app` with the bundle id `com.ghanafer.reelsmith` and links the root Swift package by a local package reference to `../..`. The target `ReelsmithUITests` takes the folder `UITests/` as it stands. `App/` and `project.yml` are built by no workflow.
+
+The Flutter version is written once, in `.github/flutter-version`, and each of the three workflows installs that version.
+
+- `Tests` runs three jobs on Linux: `test` runs `swift test`, `app` runs `flutter test` in `app/`, and `core` runs `dart test` in `packages/reelsmith_core`, each step of it skipped while that folder has no `pubspec.yaml`.
+- `Compile check` runs `swift test` on macOS, builds the Flutter app for a simulator with `flutter build ios --simulator --debug`, builds the app and `ReelsmithUITests` with `xcodebuild build-for-testing` on the workspace, and lints the word files in `app/assets/words/`, red when it finds none. It stops itself after 23 minutes: a cold Flutter build for the simulator of 290 seconds and a build for testing of 115 seconds, both measured by the Flutter trial on the same runner, and the 622 seconds of `swift test` in the compile check of 2026-10-15, 1027 seconds in all, with a third added.
+- `macOS build` builds the Flutter app, then the app and the UI tests for testing, in layer 2, and makes the device build of layer 7 from the same workspace in the release configuration with no code signing. The input `build_only` stops a run after layer 3: it builds, installs and grants Photos as usual, runs no UI test and uploads what it has.
+
+```
+gh workflow run "macOS build" --ref <branch> -f build_only=true
+```
+
+During the port a run reads two folders. `.github/m7/smoke/` holds files of tests, one `<class>/<test>` a line, and a part run adds the union of those files as its smoke set. `.github/m7/classes/` holds files of classes, one class a line, and a split run deals only the union of those files into its three groups. A group that gets no class stops red.
+<!-- end slot: flutter-build -->
+
+<!-- slot: engine-bridge -->
+<!-- end slot: engine-bridge -->
+
+<!-- slot: dart-core-model -->
+<!-- end slot: dart-core-model -->
+
+<!-- slot: dart-seeds-text-sound -->
+<!-- end slot: dart-seeds-text-sound -->
+
+<!-- slot: dart-clip-edits -->
+<!-- end slot: dart-clip-edits -->
+
+<!-- slot: dart-text-edits -->
+<!-- end slot: dart-text-edits -->
+
+<!-- slot: dart-sound-edits -->
+<!-- end slot: dart-sound-edits -->
+
+<!-- slot: dart-history -->
+<!-- end slot: dart-history -->
+
+<!-- slot: dart-states -->
+<!-- end slot: dart-states -->
+
+<!-- slot: dart-draft-codec -->
+<!-- end slot: dart-draft-codec -->
+
+<!-- slot: dart-draft-shelf -->
+<!-- end slot: dart-draft-shelf -->
+
+<!-- slot: flutter-words -->
+<!-- end slot: flutter-words -->
+
+<!-- slot: engine-preview -->
+<!-- end slot: engine-preview -->
+
+<!-- slot: engine-pickers -->
+<!-- end slot: engine-pickers -->
+
+<!-- slot: engine-outputs -->
+<!-- end slot: engine-outputs -->
+
+<!-- slot: flutter-start -->
+<!-- end slot: flutter-start -->
+
+<!-- slot: flutter-editor-store -->
+<!-- end slot: flutter-editor-store -->
+
+<!-- slot: flutter-editor-screen -->
+<!-- end slot: flutter-editor-screen -->
+
+<!-- slot: flutter-strip -->
+<!-- end slot: flutter-strip -->
+
+<!-- slot: flutter-trim-reorder -->
+<!-- end slot: flutter-trim-reorder -->
+
+<!-- slot: flutter-export -->
+<!-- end slot: flutter-export -->
+
+<!-- slot: flutter-text-panel -->
+<!-- end slot: flutter-text-panel -->
+
+<!-- slot: flutter-text-bars -->
+<!-- end slot: flutter-text-bars -->
+
+<!-- slot: flutter-project-list -->
+<!-- end slot: flutter-project-list -->
+
+<!-- slot: flutter-text-gestures -->
+<!-- end slot: flutter-text-gestures -->
+
+<!-- slot: flutter-sound-panel -->
+<!-- end slot: flutter-sound-panel -->
+
+<!-- slot: flutter-music -->
+<!-- end slot: flutter-music -->
+
+<!-- slot: flutter-clips-frames -->
+<!-- end slot: flutter-clips-frames -->
+
+<!-- slot: flutter-clip-panel -->
+<!-- end slot: flutter-clip-panel -->
+
+<!-- slot: flutter-whole-paths -->
+<!-- end slot: flutter-whole-paths -->
+
+<!-- slot: flutter-suite -->
+<!-- end slot: flutter-suite -->

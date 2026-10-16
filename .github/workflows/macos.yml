@@ -19,6 +19,10 @@ on:
         description: Use the image's own iPhone 17 on iOS 26.5 if it has one
         type: boolean
         default: false
+      build_only:
+        description: Build, install and stop before the UI tests (layers 1 to 3 and the upload)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,16 +30,6 @@ permissions:
 defaults:
   run:
     shell: bash
-
-env:
-  # The smoke set, added to a run of named classes: a start with no seed, a start on a seed, the first
-  # frame of the preview, one edit on the strip and an export that reaches the saved panel.
-  SMOKE_TESTS: >-
-    StartTests/testWithNoSeedTheStartScreenShowsWithLandscapeChosen
-    HarnessTests/testASeedStartOpensTheShellAndWritesItsClips
-    PreviewTests/testTheFirstFrameIsInAnAreaOfTheShapeOfTheCanvas
-    ToolsTests/testASplitAtOneSecondThenADeleteOfTheFirstBlock
-    ExportPanelTests/testAnExportReachesTheSavedPanelAndDoneReturnsToTheEditorAsItWas
 
 jobs:
   build:
@@ -88,14 +82,27 @@ jobs:
           swift test
           ls -l "$REELSMITH_CLIP_DIR"
 
-      - name: "Layer 2: generate the project and build app and UI tests for testing"
+      - name: Read the Flutter version
+        id: flutter
+        if: ${{ !cancelled() }}
+        run: echo "version=$(cat .github/flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Flutter
+        id: install
+        if: ${{ !cancelled() }}
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          cache: true
+
+      - name: "Layer 2: build the Flutter app, then the app and UI tests for testing"
         id: layer2
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' && steps.install.outcome == 'success' }}
         run: |
           trap 'echo "layer 2: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
-          brew install xcodegen
-          xcodegen generate
-          xcodebuild build-for-testing -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$SIMULATOR" \
+          (cd app && flutter --version && flutter build ios --simulator --debug)
+          xcodebuild build-for-testing -workspace app/ios/Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" \
             -derivedDataPath build/simulator GIT_COMMIT="$(git rev-parse --short HEAD)"
 
       - name: "Layer 3: boot the simulator, install the app, grant Photos, add the clips"
@@ -133,7 +140,7 @@ jobs:
           fi
 
       - name: Write a tone file into the Files app of the simulator
-        if: ${{ !cancelled() && steps.layer3.outcome == 'success' }}
+        if: ${{ !cancelled() && !inputs.build_only && steps.layer3.outcome == 'success' }}
         continue-on-error: true
         run: |
           # The storage of the Files app is the app group whose metadata names the local storage of the file
@@ -160,7 +167,7 @@ jobs:
 
       - name: "Layer 4: record the simulator and run the UI tests"
         id: layer4
-        if: ${{ !cancelled() && steps.layer2.outcome == 'success' }}
+        if: ${{ !cancelled() && !inputs.build_only && steps.layer2.outcome == 'success' }}
         env:
           CLASSES: ${{ inputs.classes }}
           GROUP: ${{ matrix.group }}
@@ -194,6 +201,26 @@ jobs:
             echo "A test class in a folder under UITests would be in no group:" $deeper | tee "$RUNNER_TEMP/selection.txt"
             exit 1
           fi
+          # During the port the smoke set is the union of the files in .github/m7/smoke, one test a line,
+          # and a split run deals only the union of the classes in .github/m7/classes, one class a line.
+          shopt -s nullglob
+          smoke_files=(.github/m7/smoke/*.txt)
+          class_files=(.github/m7/classes/*.txt)
+          shopt -u nullglob
+          SMOKE_TESTS=""
+          if [ ${#smoke_files[@]} -gt 0 ]; then
+            SMOKE_TESTS=$(cat "${smoke_files[@]}" | xargs -n 1 | LC_ALL=C sort -u | xargs)
+          fi
+          dealt=""
+          if [ ${#class_files[@]} -gt 0 ]; then
+            dealt=$(cat "${class_files[@]}" | xargs -n 1 | LC_ALL=C sort -u | xargs)
+          fi
+          for class in $dealt; do
+            if [[ " $all " != *" $class "* ]]; then
+              echo "No UI test class is named $class, named in .github/m7/classes. The classes are:$all" | tee "$RUNNER_TEMP/selection.txt"
+              exit 1
+            fi
+          done
           tests_of() {
             for pair in $counts; do
               if [ "${pair%%=*}" = "$1" ]; then
@@ -236,7 +263,7 @@ jobs:
               tee "$RUNNER_TEMP/selection.txt"
           elif [ "$GROUP" != 0 ]; then
             number=0
-            for class in $(printf '%s\n' $all | LC_ALL=C sort); do
+            for class in $dealt; do
               if [ $((number % 3 + 1)) -eq "$GROUP" ]; then
                 chosen="$chosen $class"
                 only+=("-only-testing:ReelsmithUITests/$class")
@@ -288,7 +315,7 @@ jobs:
           cat "$RUNNER_TEMP/recorder.txt"
           echo "The start of the recording: $(cat recording/recording-start.txt)"
           status=0
-          xcodebuild test-without-building -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$SIMULATOR" \
+          xcodebuild test-without-building -workspace app/ios/Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" \
             -derivedDataPath build/simulator -parallel-testing-enabled NO \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 600 \
             -maximum-test-execution-time-allowance 600 \
@@ -471,7 +498,7 @@ jobs:
 
       - name: "Layer 6: count the videos in the library again"
         id: layer6
-        if: ${{ !cancelled() && steps.layer3.outcome != 'skipped' }}
+        if: ${{ !cancelled() && !inputs.build_only && steps.layer3.outcome != 'skipped' }}
         run: |
           trap 'echo "layer 6: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
           library="$HOME/Library/Developer/CoreSimulator/Devices/$SIMULATOR/data/Media/PhotoData/Photos.sqlite"
@@ -503,10 +530,11 @@ jobs:
 
       - name: "Layer 7: build for a device without code signing"
         id: layer7
-        if: ${{ !cancelled() && inputs.ipa && matrix.group < 2 && hashFiles('Reelsmith.xcodeproj/project.pbxproj') != '' }}
+        if: ${{ !cancelled() && inputs.ipa && matrix.group < 2 && steps.install.outcome == 'success' && hashFiles('app/ios/Runner.xcodeproj/project.pbxproj') != '' }}
         run: |
           trap 'echo "layer 7: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"' EXIT
-          xcodebuild build -project Reelsmith.xcodeproj -scheme Reelsmith -configuration Release \
+          (cd app && flutter build ios --release --no-codesign --config-only)
+          xcodebuild build -workspace app/ios/Runner.xcworkspace -scheme Runner -configuration Release \
             -destination "generic/platform=iOS" -derivedDataPath build/device \
             CODE_SIGNING_ALLOWED=NO GIT_COMMIT="$(git rev-parse --short HEAD)"
           mkdir Payload

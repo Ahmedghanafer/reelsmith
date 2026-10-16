@@ -685,3 +685,96 @@ The choice of size and rate belongs to the draft it was made on and comes back w
 - The words of the text button and the text panel, in the group `add-text`: the keys `tools.text`, `text.tab.type`, `text.tab.look`, `text.tab.more`, `text.done` and `text.field`, the last an accessibility label only.
 - The words of the text row of the strip, in the group `text-row`: the keys `textRow.bar`, with the position of the text at `%1$@`, `textRow.trimStart` and `textRow.trimEnd`, all three accessibility labels only.
 - The words of the export: the keys `export.button`, `export.exporting`, `export.saved`, `export.done`, `export.failed`, `export.notAllowed` and `export.close`.
+
+<!-- slot: flutter-build -->
+<!-- end slot: flutter-build -->
+
+<!-- slot: engine-bridge -->
+<!-- end slot: engine-bridge -->
+
+<!-- slot: dart-core-model -->
+<!-- end slot: dart-core-model -->
+
+<!-- slot: dart-seeds-text-sound -->
+<!-- end slot: dart-seeds-text-sound -->
+
+<!-- slot: dart-clip-edits -->
+<!-- end slot: dart-clip-edits -->
+
+<!-- slot: dart-text-edits -->
+<!-- end slot: dart-text-edits -->
+
+<!-- slot: dart-sound-edits -->
+<!-- end slot: dart-sound-edits -->
+
+<!-- slot: dart-history -->
+<!-- end slot: dart-history -->
+
+<!-- slot: dart-states -->
+<!-- end slot: dart-states -->
+
+<!-- slot: dart-draft-codec -->
+<!-- end slot: dart-draft-codec -->
+
+<!-- slot: dart-draft-shelf -->
+<!-- end slot: dart-draft-shelf -->
+
+<!-- slot: flutter-words -->
+<!-- end slot: flutter-words -->
+
+<!-- slot: engine-preview -->
+<!-- end slot: engine-preview -->
+
+<!-- slot: engine-pickers -->
+<!-- end slot: engine-pickers -->
+
+<!-- slot: engine-outputs -->
+<!-- end slot: engine-outputs -->
+
+<!-- slot: flutter-start -->
+<!-- end slot: flutter-start -->
+
+<!-- slot: flutter-editor-store -->
+<!-- end slot: flutter-editor-store -->
+
+<!-- slot: flutter-editor-screen -->
+<!-- end slot: flutter-editor-screen -->
+
+<!-- slot: flutter-strip -->
+<!-- end slot: flutter-strip -->
+
+<!-- slot: flutter-trim-reorder -->
+<!-- end slot: flutter-trim-reorder -->
+
+<!-- slot: flutter-export -->
+<!-- end slot: flutter-export -->
+
+<!-- slot: flutter-text-panel -->
+<!-- end slot: flutter-text-panel -->
+
+<!-- slot: flutter-text-bars -->
+<!-- end slot: flutter-text-bars -->
+
+<!-- slot: flutter-project-list -->
+<!-- end slot: flutter-project-list -->
+
+<!-- slot: flutter-text-gestures -->
+<!-- end slot: flutter-text-gestures -->
+
+<!-- slot: flutter-sound-panel -->
+<!-- end slot: flutter-sound-panel -->
+
+<!-- slot: flutter-music -->
+<!-- end slot: flutter-music -->
+
+<!-- slot: flutter-clips-frames -->
+<!-- end slot: flutter-clips-frames -->
+
+<!-- slot: flutter-clip-panel -->
+<!-- end slot: flutter-clip-panel -->
+
+<!-- slot: flutter-whole-paths -->
+<!-- end slot: flutter-whole-paths -->
+
+<!-- slot: flutter-suite -->
+<!-- end slot: flutter-suite -->
