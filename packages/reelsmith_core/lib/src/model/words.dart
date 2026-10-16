@@ -5,7 +5,8 @@ class Words {
   /// Put into the text at %1$@, %2$@ and so on. Numbers are handed over as text with the digits 0 to 9.
   final List<String> arguments;
 
-  const Words(this.key, [this.arguments = const []]);
+  /// The arguments are copied into an unmodifiable list, so a list changed later changes no value.
+  Words(this.key, [List<String> arguments = const []]) : arguments = List<String>.unmodifiable(arguments);
 
   Words copyWith({String? key, List<String>? arguments}) =>
       Words(key ?? this.key, arguments ?? this.arguments);

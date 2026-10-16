@@ -18,9 +18,9 @@ enum ExportSize {
   };
 
   Words get words => switch (this) {
-    ExportSize.hd720 => const Words('export.size.720'),
-    ExportSize.hd1080 => const Words('export.size.1080'),
-    ExportSize.uhd4K => const Words('export.size.4K'),
+    ExportSize.hd720 => Words('export.size.720'),
+    ExportSize.hd1080 => Words('export.size.1080'),
+    ExportSize.uhd4K => Words('export.size.4K'),
   };
 
   /// The keys of `words`, in the order of the cases.
@@ -48,8 +48,8 @@ enum ExportRate {
   };
 
   Words get words => switch (this) {
-    ExportRate.thirty => const Words('export.rate.30'),
-    ExportRate.sixty => const Words('export.rate.60'),
+    ExportRate.thirty => Words('export.rate.30'),
+    ExportRate.sixty => Words('export.rate.60'),
   };
 
   /// The keys of `words`, in the order of the cases.

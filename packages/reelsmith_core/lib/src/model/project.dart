@@ -117,17 +117,21 @@ class Project {
       clipsMuted = false,
       music = null;
 
-  const Project._({
+  /// The clips, the media and the texts are copied into unmodifiable collections, so a list or map changed
+  /// later changes no value, as with Swift's value types.
+  Project._({
     required this.canvas,
-    required this.clips,
-    required this.media,
+    required List<Clip> clips,
+    required Map<MediaID, MediaInfo> media,
     required this.nextClipID,
-    required this.texts,
+    required List<TextItem> texts,
     required this.nextTextID,
     required this.clipVolume,
     required this.clipsMuted,
     required this.music,
-  });
+  }) : clips = List<Clip>.unmodifiable(clips),
+       media = Map<MediaID, MediaInfo>.unmodifiable(media),
+       texts = List<TextItem>.unmodifiable(texts);
 
   /// The sum of the clip lengths.
   Time get duration {

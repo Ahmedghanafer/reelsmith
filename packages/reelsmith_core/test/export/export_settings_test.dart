@@ -10,14 +10,14 @@ void main() {
   });
 
   test('testTheWordsOfEachSizeAndRateAndAllWordsInTheOrderOfTheCases', () {
-    expect(ExportSize.hd720.words, const Words('export.size.720'));
-    expect(ExportSize.hd1080.words, const Words('export.size.1080'));
-    expect(ExportSize.uhd4K.words, const Words('export.size.4K'));
+    expect(ExportSize.hd720.words, Words('export.size.720'));
+    expect(ExportSize.hd1080.words, Words('export.size.1080'));
+    expect(ExportSize.uhd4K.words, Words('export.size.4K'));
     expect(ExportSize.allWords, ['export.size.720', 'export.size.1080', 'export.size.4K']);
     expect(ExportSize.allWords, ExportSize.allCases.map((size) => size.words.key).toList());
 
-    expect(ExportRate.thirty.words, const Words('export.rate.30'));
-    expect(ExportRate.sixty.words, const Words('export.rate.60'));
+    expect(ExportRate.thirty.words, Words('export.rate.30'));
+    expect(ExportRate.sixty.words, Words('export.rate.60'));
     expect(ExportRate.allWords, ['export.rate.30', 'export.rate.60']);
     expect(ExportRate.allWords, ExportRate.allCases.map((rate) => rate.words.key).toList());
   });

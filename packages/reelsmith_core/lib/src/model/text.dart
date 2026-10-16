@@ -36,9 +36,9 @@ enum TextFont {
   static const List<TextFont> allCases = [naskh, naskhBold, system];
 
   Words get words => switch (this) {
-    TextFont.naskh => const Words('text.font.naskh'),
-    TextFont.naskhBold => const Words('text.font.naskhBold'),
-    TextFont.system => const Words('text.font.system'),
+    TextFont.naskh => Words('text.font.naskh'),
+    TextFont.naskhBold => Words('text.font.naskhBold'),
+    TextFont.system => Words('text.font.system'),
   };
 
   static const List<String> allWords = ['text.font.naskh', 'text.font.naskhBold', 'text.font.system'];

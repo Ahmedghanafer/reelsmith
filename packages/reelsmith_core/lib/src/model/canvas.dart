@@ -23,8 +23,8 @@ enum Canvas {
   };
 
   Words get words => switch (this) {
-    Canvas.landscape => const Words('start.landscape'),
-    Canvas.portrait => const Words('start.portrait'),
+    Canvas.landscape => Words('start.landscape'),
+    Canvas.portrait => Words('start.portrait'),
   };
 
   static const List<String> allWords = ['start.landscape', 'start.portrait'];
