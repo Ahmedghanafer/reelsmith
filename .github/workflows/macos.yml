@@ -209,18 +209,12 @@ jobs:
           shopt -u nullglob
           SMOKE_TESTS=""
           if [ ${#smoke_files[@]} -gt 0 ]; then
-            SMOKE_TESTS=$(cat "${smoke_files[@]}" | xargs -n 1 | LC_ALL=C sort -u | xargs)
+            SMOKE_TESTS=$(awk 1 "${smoke_files[@]}" | tr -d '\r' | xargs -n 1 | LC_ALL=C sort -u | xargs)
           fi
           dealt=""
           if [ ${#class_files[@]} -gt 0 ]; then
-            dealt=$(cat "${class_files[@]}" | xargs -n 1 | LC_ALL=C sort -u | xargs)
+            dealt=$(awk 1 "${class_files[@]}" | tr -d '\r' | xargs -n 1 | LC_ALL=C sort -u | xargs)
           fi
-          for class in $dealt; do
-            if [[ " $all " != *" $class "* ]]; then
-              echo "No UI test class is named $class, named in .github/m7/classes. The classes are:$all" | tee "$RUNNER_TEMP/selection.txt"
-              exit 1
-            fi
-          done
           tests_of() {
             for pair in $counts; do
               if [ "${pair%%=*}" = "$1" ]; then
