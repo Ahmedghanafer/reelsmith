@@ -874,6 +874,12 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: flutter-text-bars -->
 
 <!-- slot: flutter-project-list -->
+### The project list in Flutter
+
+- `app/lib/start/draft_list.dart`: `DraftList`, moved from `DraftList.swift`, with the summaries, the shelf for the cover files, the engine for `confirm`, the words, `enabled`, `open` and `delete`. A column of rows in the order given. Row n, from 1, carries the identifier `drafts.row.<n>`, the button trait and the label of `drafts.row` with the date and the length: a box of 64 by 64 points with the cover fitted whole on black, empty with no cover or a file that is no picture, then the date over the length, fixed left to right. An unreadable row shows `drafts.unreadable` and is disabled. The list evicts the pictures of its cover files when it is made, since a leave writes a new cover over the same file.
+- A horizontal drag towards the leading edge, on an unreadable row too, shows `drafts.delete` at the trailing edge, so in Arabic the swipe goes to the right. Let go past half of the button, or flicked, it stays open, else it closes, and a full swipe alone deletes nothing. One row shows it at a time, and a tap on any row while it shows only closes it. A tap on it asks through `confirm`, the system alert of "The outputs", with `drafts.deleteQuestion`, `drafts.delete` and `drafts.deleteCancel`, and only the destructive answer calls `delete`.
+- The slot `drafts` of `start_screen.dart` shows, while the summaries are not empty, the title `drafts.title` and `DraftList`, disabled while a new project is copied. `open` calls `shelf.open` and opens a store with the project, the media folder, the `OpenDraft`, the export settings and the history of the draft. An open that throws is logged and reads the list again. `delete` calls `shelf.delete` and reads the list again, also when it throws.
+- Its class file `.github/m7/classes/` names `DraftDeleteTests`.
 <!-- end slot: flutter-project-list -->
 
 <!-- slot: flutter-text-gestures -->
