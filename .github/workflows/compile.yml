@@ -66,3 +66,35 @@ jobs:
             exit 1
           fi
           plutil -lint "${files[@]}"
+
+  fixtures:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+      - name: Write the fixtures of Swift
+        env:
+          REELSMITH_WRITE_FIXTURES: "1"
+        run: swift test --filter DraftFixtureTests
+      - name: Read the Flutter version
+        id: flutter
+        run: echo "version=$(cat .github/flutter-version)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ steps.flutter.outputs.version }}
+      - name: Write the fixtures of Dart
+        env:
+          REELSMITH_WRITE_FIXTURES: "1"
+        working-directory: packages/reelsmith_core
+        run: |
+          dart pub get
+          dart test test/drafts/draft_fixture_test.dart
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: draft-fixtures
+          path: Tests/Fixtures/Drafts
