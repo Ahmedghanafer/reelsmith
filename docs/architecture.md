@@ -693,6 +693,14 @@ The choice of size and rate belongs to the draft it was made on and comes back w
 <!-- end slot: engine-bridge -->
 
 <!-- slot: dart-core-model -->
+## The Dart Core
+
+`packages/reelsmith_core/` is Core in pure Dart, with no Flutter import, `dart:io` only in the drafts shelf. Its dev dependencies are `test` and `lints` only. `lib/reelsmith_core.dart` exports every file of `lib/src/`. Each Dart file is one Swift file of `Sources/ReelsmithCore/`, in the folder of the same name in lower case and named in snake case, with the types and members of the Swift names. A Swift test file that is ported becomes one file in `test/`, in the folder of its Swift file, each test named as its Swift function: today `TimeTests`, `ExportSettingsTests` and `InstagramGuideTests`. One test of Dart's own, `test/model/value_semantics_test.dart`, holds that the lists and the map a value holds are unmodifiable copies, as Swift's values are. `dart test` in the package runs them, in the job `core` of the `Tests` workflow.
+
+- `lib/src/model/`: `time.dart`, `canvas.dart`, `media.dart`, `project.dart`, `framing.dart`, `words.dart`, `instagram_guide.dart`, `text.dart` and `sound.dart`. `lib/src/export/export_settings.dart`. `lib/src/seeds/test_clip.dart` with `RGB` and the five test clips.
+- Every model type is immutable and writes `==`, `hashCode` and `copyWith` by hand. `Project()` is the Swift `init(canvas:)`, and every other field changes through `copyWith`, whose `music` takes a function so that it can set no music: `copyWith(music: () => null)`.
+- A Swift enum without values is a Dart enum with its `allCases`, and one with String raw values carries `rawValue`. `TextSpan` is a sealed class with `TextSpan.whole` and `TextSpan.range(...)`.
+- Where Swift overloads a name, Dart adds what it takes: `ExportSettings.choosingSize` and `choosingRate`, `Project.positionOfClip` and `positionOfText`. Argument labels such as `start(of:)` or `width(on:)` are one positional argument.
 <!-- end slot: dart-core-model -->
 
 <!-- slot: dart-seeds-text-sound -->
