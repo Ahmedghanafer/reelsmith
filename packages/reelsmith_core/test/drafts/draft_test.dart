@@ -4,8 +4,6 @@ import 'package:reelsmith_core/reelsmith_core.dart';
 import 'package:test/test.dart';
 
 // Holds the stored form of a project: `Draft`, its coding, the files a project names, the summary and its lines.
-//
-// testAHistoryOfThreeStepsReadBackUndoesTheSameThree is ported with the draft shelf.
 void main() {
   /// 2026-10-14 21:05:09 in UTC.
   final date = DateTime.fromMillisecondsSinceEpoch(1792011909 * 1000, isUtc: true);
@@ -121,6 +119,53 @@ void main() {
       expect(kept.clipsMuted, text.clipsMuted);
       expect(kept.nextClipID, text.nextClipID);
     }
+  });
+
+  test('testAHistoryOfThreeStepsReadBackUndoesTheSameThree', () {
+    final state = EditorState(Seed.textWide.project).copyWith(selectedText: () => const TextID(1));
+    var editing = Editing(state);
+    final style = Seed.textWide.project.texts[0].style.copyWith(outline: true);
+    editing = editing.after(EditorAction.text(TextAction.setStyle(const TextID(1), style)));
+    editing = editing.after(EditorAction.select(const ClipID(2)));
+    editing = editing.after(EditorAction.deleteSelected);
+    editing = editing.after(const EditorAction.text(TextAction.setString(TextID(1), 'Peace')));
+    expect(editing.history.past.length, 3);
+    expect(editing.history.run, const EditRun.typing(TextID(1)));
+
+    final undone = <Project>[];
+    var stepping = editing;
+    while (stepping.canUndo) {
+      stepping = stepping.undone();
+      undone.add(stepping.state.project);
+    }
+    expect(undone.length, 3);
+
+    final draft = Draft(
+      project: editing.state.project,
+      exportSettings: ExportSettings.startChoice,
+      changed: date,
+      history: editing.history,
+    );
+    final back = roundTrip(draft);
+    expect(back, draft);
+
+    final history = back.history;
+    expect(history, isNotNull);
+    var opened = Editing.withHistory(state: EditorState(back.project), history: history!);
+    expect(opened.history.run, isNull);
+    expect(opened.unsaved, isFalse);
+    final undoneAfterOpen = <Project>[];
+    while (opened.canUndo) {
+      opened = opened.undone();
+      undoneAfterOpen.add(opened.state.project);
+    }
+
+    expect(undoneAfterOpen, undone);
+    expect(
+      roundTrip(Draft(project: Seed.textWide.project, exportSettings: ExportSettings.startChoice, changed: date))
+          .history,
+      isNull,
+    );
   });
 
   test('testTheSummaryOfADraft', () {

@@ -1,7 +1,6 @@
 import 'package:reelsmith_core/reelsmith_core.dart';
 import 'package:test/test.dart';
 
-// testADraftWithAnOpenDragRunRoundTripsAndOpensWithNoRun is ported with the draft shelf: it reads the codec.
 void main() {
   /// The editing of a start on music-wide with the video playing.
   Editing playing() =>
@@ -78,5 +77,25 @@ void main() {
     // A drag that changes the project keeps its one step.
     final moved = dragged(start, [0.4, 0.3], 0).endingRun();
     expect(moved.history.past.length, 2);
+  });
+
+  test('testADraftWithAnOpenDragRunRoundTripsAndOpensWithNoRun', () {
+    final editing = playing().afterDragStep(EditorAction.sound(SoundAction.setClipVolume(0.5)));
+    expect(editing.history.run, EditRun.drag);
+    final draft = Draft(
+      project: editing.state.project,
+      exportSettings: ExportSettings.startChoice,
+      changed: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      history: editing.history,
+    );
+    final back = decodeDraft(encodeDraft(draft));
+    expect(back, draft);
+    expect(back.history?.run, EditRun.drag);
+
+    final history = back.history;
+    expect(history, isNotNull);
+    final opened = Editing.withHistory(state: EditorState(back.project), history: history!);
+    expect(opened.history.run, isNull);
+    expect(opened.history.past, editing.history.past);
   });
 }
