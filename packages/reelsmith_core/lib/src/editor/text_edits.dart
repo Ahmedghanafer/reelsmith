@@ -1,4 +1,4 @@
-// The text actions and the blank rule.
+// The text actions, the blank rule and the nearest text.
 
 import 'dart:math';
 
@@ -115,6 +115,31 @@ EditorState settleTexts(EditorState before, EditorState after) {
   // selected and was given a blank string.
   final texts = after.project.texts.where((text) => !(text.isBlank && text.id != after.selectedText)).toList();
   return after.copyWith(project: after.project.copyWith(texts: texts));
+}
+
+extension ProjectTextEdits on Project {
+  /// The Swift text(nearestToX:y:at:). Among the texts that are not blank and whose range holds the time, the one
+  /// whose centre is nearest in canvas pixels, the later of the list on a tie. Null when there is none.
+  TextID? textNearest({required double nearestToX, required double y, required Time at}) {
+    final x = nearestToX;
+    TextID? nearest;
+    var least = double.infinity;
+    for (final text in texts) {
+      if (text.isBlank) {
+        continue;
+      }
+      final seen = range(text.id);
+      if (seen == null || !(seen.start <= at) || !(at < seen.start + seen.duration)) {
+        continue;
+      }
+      final distance = (text.x - x) * (text.x - x) + (text.y - y) * (text.y - y);
+      if (distance <= least) {
+        nearest = text.id;
+        least = distance;
+      }
+    }
+    return nearest;
+  }
 }
 
 int? _place(TextID text, EditorState state) {
