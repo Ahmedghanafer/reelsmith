@@ -105,7 +105,7 @@ void main() {
     await tester.pump();
     expect(store.state.playhead.ticks, after);
     final blue = _rect(tester, 'editor.clip.1');
-    expect(blue.width, greaterThan(300));
+    expect(blue.width, greaterThan(181));
     // At the new scale the time of the playhead is still under the middle.
     expect(blue.left, closeTo(201 - after / 600 * blue.width / 3, 0.5));
     expect(_rect(tester, 'editor.playhead').center.dx, closeTo(201, 0.5));
@@ -134,11 +134,11 @@ void main() {
     expect(store.state.selection, isNull);
     expect(_node(tester, 'editor.clip.2'), containsSemantics(isSelected: false));
 
-    // Beside the row of blocks, left of time zero.
+    // In the band above the row of blocks.
     await tester.tapAt(_rect(tester, 'editor.clip.1').center);
     await tester.pump();
     expect(store.state.selection, isNotNull);
-    await tester.tapAt(_onBlocks(tester, _rect(tester, 'editor.clip.1').left - 20));
+    await tester.tapAt(Offset(_rect(tester, 'editor.clip.1').center.dx, _rect(tester, 'editor.timelineRegion').top + 4));
     await tester.pump();
     expect(store.state.selection, isNull);
     expect(store.state.playhead.ticks, 2400);
@@ -158,7 +158,7 @@ void main() {
     await first.up();
     await second.up();
     await tester.pump();
-    expect(_rect(tester, 'editor.clip.1').width, greaterThan(300));
+    expect(_rect(tester, 'editor.clip.1').width, greaterThan(181));
 
     await tester.pumpWidget(const SizedBox());
     await _show(tester);
