@@ -3,6 +3,7 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../../words/words.dart';
 import '../editor_store.dart';
+import 'picture_gestures.dart';
 import 'preview_picture.dart';
 
 /// The preview of the editor: the picture in the shape of the project's canvas, and under it the row of the
@@ -42,7 +43,7 @@ class PreviewPane extends StatelessWidget {
             child: Center(
               child: AspectRatio(
                 aspectRatio: canvas.width / canvas.height,
-                child: PreviewPicture(textureId: store.textureId, builds: builds),
+                child: PictureGestures(store: store, child: PreviewPicture(textureId: store.textureId, builds: builds)),
               ),
             ),
           ),
