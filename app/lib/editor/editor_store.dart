@@ -278,6 +278,14 @@ class EditorStore extends ChangeNotifier {
   // end slot: export-choice
 
   // slot: fold
+  /// The blocks of the strip are thin and show no frames. False when an editor opens, toggled by `editor.frames`,
+  /// with no undo step, and never stored.
+  bool get framesFolded => _framesFolded;
+  bool _framesFolded = false;
+  set framesFolded(bool folded) {
+    _framesFolded = folded;
+    notifyListeners();
+  }
   // end slot: fold
 
   // slot: guide
