@@ -149,12 +149,12 @@ class _ExportButtonState extends State<ExportButton> {
     }
     store.send(core.EditorAction.pause);
     _move(core.ExportStateEvent.started);
-    final (:project, :settings) = _exportJson(store.state.project, store.exportSettings);
     final engine = store.engine;
     final progress = engine.exportProgress.listen((value) => _move(core.ExportStateEvent.progress(value)));
     String? facts;
     core.ExportStateEvent end;
     try {
+      final (:project, :settings) = _exportJson(store.state.project, store.exportSettings);
       final exported = await engine.export(project, settings, store.mediaFolder.path, store.options['exportFails'] == true);
       facts = exported.facts;
       end = switch (await engine.saveToPhotos(exported.file)) {
