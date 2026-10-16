@@ -257,6 +257,13 @@ class EditorStore extends ChangeNotifier {
   // end slot: leave
 
   // slot: export-choice
+  /// Sets the export choice and writes the draft with it. The choice is no part of the history, so nothing
+  /// is left unsaved and `writeNow` would write nothing.
+  void choose(core.ExportSettings settings) {
+    _exportSettings = settings;
+    notifyListeners();
+    write();
+  }
   // end slot: export-choice
 
   // slot: fold

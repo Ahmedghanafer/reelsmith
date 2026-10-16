@@ -865,6 +865,11 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: flutter-trim-reorder -->
 
 <!-- slot: flutter-export -->
+### The export in Flutter
+- `app/lib/editor/export/export_button.dart`: `ExportButton({super.key, required EditorStore store, required WordsText words})`, in the slot `export` of the editor screen: `editor.exportSettings` (the words of the size and the rate of `store.exportSettings`) and `editor.export` (`export.button`, enabled by `ExportState.canStart`), each a semantics button with an equal share of one row that mirrors in Arabic. A tap on the choice shows `ExportSettingsSheet` in a modal bottom sheet. A tap on Export pauses, moves the state to exporting and pushes the panel as a full screen route, then calls `export` with the project and the choice as the members `project` and `exportSettings` of the draft JSON, follows `exportProgress` while it runs, and hands the written file to `saveToPhotos`: `saved` ends saved, `notAllowed` ends `failed(notAllowed: true)` and `failed` or any throw of either call ends `failed(notAllowed: false)`. `keepAwake` is called at every change of `keepsScreenAwake`: true at the start, false at each ending. Done or Close moves the state to idle and pops the panel. There is no cancel.
+- `app/lib/editor/export/export_panel.dart`: `ExportPanel`, the words of the state (`export.words`), the percent fixed left to right (`export.percent`), on the saved panel `export.fileInfo` (the facts of the file, or "none", on a test start only) and `export.done`, on the failed panel `export.close`. A back gesture does not close it.
+- `app/lib/editor/export/export_settings_sheet.dart`: `ExportSettingsSheet`, as `ExportSettingsSheet.swift` above: the rows `export.size.<case>` and `export.rate.<case>`, the chosen one with the selected trait and a filled background, and `export.settingsDone`. A tap calls `choose` with `choosingSize` or `choosingRate` of its case.
+- The store's slot `export-choice` holds `choose`, which sets the choice, tells the screens and writes the draft, as "The choice kept with a draft" says.
 <!-- end slot: flutter-export -->
 
 <!-- slot: flutter-text-panel -->

@@ -23,7 +23,7 @@ final class ExportPanelTests: XCTestCase {
         let export = region.descendants(matching: .any)["editor.export"]
 
         XCTAssertTrue(export.exists)
-        XCTAssertEqual(region.buttons.allElementsBoundByIndex.map { $0.identifier }, ["editor.exportSettings", "editor.export"])
+        XCTAssertEqual(region.descendants(matching: .any).matching(NSPredicate(format: "identifier != ''")).allElementsBoundByIndex.map { $0.identifier }, ["editor.exportSettings", "editor.export"])
         XCTAssertEqual(export.label, "Export")
         XCTAssertTrue(export.isEnabled)
         XCTAssertFalse(element(app, "export.words").exists)
