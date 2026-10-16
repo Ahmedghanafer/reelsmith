@@ -10,6 +10,28 @@ import '../words/words.dart';
 import 'seed_start.dart';
 import 'start_screen.dart';
 
+/// The theme of one appearance with the colours of iOS: the system background (white, black) as the page and
+/// the surface, the label colour (black, white) on it, `systemGray` as the outline and `systemGray4` as the
+/// disabled colour.
+///
+/// https://api.flutter.dev/flutter/material/ThemeData-class.html
+/// https://developer.apple.com/design/human-interface-guidelines/color
+ThemeData appTheme(Brightness brightness) {
+  final light = brightness == Brightness.light;
+  final background = light ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
+  final label = light ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+  return ThemeData(
+    brightness: brightness,
+    scaffoldBackgroundColor: background,
+    disabledColor: light ? const Color(0xFFD1D1D6) : const Color(0xFF3A3A3C),
+    colorScheme: (light ? const ColorScheme.light() : const ColorScheme.dark()).copyWith(
+      surface: background,
+      onSurface: label,
+      outline: const Color(0xFF8E8E93),
+    ),
+  );
+}
+
 /// English, Arabic and Swedish, the languages of the word files, English first.
 const List<Locale> languages = [Locale('en'), Locale('ar'), Locale('sv')];
 

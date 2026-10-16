@@ -41,7 +41,6 @@ class StartScreen extends StatefulWidget {
 }
 
 const Color _accent = Color(0xFF0A84FF);
-const Color _line = Color(0xFF8E8E93);
 
 class _StartScreenState extends State<StartScreen> {
   core.StartState _state = core.StartState.idle;
@@ -96,7 +95,7 @@ class _StartScreenState extends State<StartScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
-                        color: idle ? _accent : const Color(0xFFD1D1D6),
+                        color: idle ? _accent : Theme.of(context).disabledColor,
                         borderRadius: BorderRadius.circular(22),
                       ),
                       child: Text(
@@ -164,7 +163,7 @@ class _StartScreenState extends State<StartScreen> {
           decoration: BoxDecoration(
             color: chosen ? _accent : null,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _line),
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
           ),
           child: Text(
             _text(shape.words),

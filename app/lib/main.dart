@@ -32,8 +32,8 @@ class ReelsmithApp extends StatelessWidget {
       locale: locale,
       supportedLocales: languages,
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      theme: ThemeData(brightness: Brightness.light),
-      darkTheme: ThemeData(brightness: Brightness.dark),
+      theme: appTheme(Brightness.light),
+      darkTheme: appTheme(Brightness.dark),
       home: StartRoot(engine: engine, locale: locale),
     );
     // end slot: start
