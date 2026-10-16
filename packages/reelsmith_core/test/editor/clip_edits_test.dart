@@ -1,7 +1,6 @@
 import 'package:reelsmith_core/reelsmith_core.dart';
 import 'package:test/test.dart';
 
-// testAMoveOfGreenToTheFirstPlaceSelectsItKeepsThePlayheadPausesAndUndoesInOneStep is ported with Editing.
 void main() {
   const blue = ClipID(1);
   const red = ClipID(2);
@@ -13,6 +12,20 @@ void main() {
   EditorState playing(int ticks, {ClipID? selected}) => EditorState(
     Seed.threeClips.project,
   ).copyWith(playhead: Time(ticks: ticks), selection: () => selected, isPlaying: true);
+
+  test('testAMoveOfGreenToTheFirstPlaceSelectsItKeepsThePlayheadPausesAndUndoesInOneStep', () {
+    final start = playing(600);
+
+    final moved = reduce(start, EditorAction.moveClip(green, 1));
+
+    expect(order(moved), ['green', 'blue', 'red']);
+    expect(moved.selection, green);
+    expect(moved.playhead, const Time(ticks: 600));
+    expect(moved.isPlaying, isFalse);
+
+    final undone = Editing(start).after(EditorAction.moveClip(green, 1)).undone();
+    expect(order(undone.state), ['blue', 'red', 'green']);
+  });
 
   test('testAMoveIsHeldBetweenTheFirstAndTheLastPlace', () {
     final start = playing(600);

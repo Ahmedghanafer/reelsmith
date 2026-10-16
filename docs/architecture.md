@@ -725,7 +725,7 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- slot: dart-clip-edits -->
 ### The editor in Dart
 
-- `lib/src/editor/`: `editor_state.dart` with every member of `EditorState.swift`, the four action files `editor_action.dart`, `text_action.dart`, `sound_action.dart` and `frame_action.dart`, `reduce.dart`, `edits.dart`, `clip_edits.dart`, `frame_edits.dart`, `timeline_geometry.dart` (`TimelineGeometry`, `StripRows`, `TimelineScale`) and `history.dart` with `EditRun` and `UndoHistory` as data, without `Editing`.
+- `lib/src/editor/`: `editor_state.dart` with every member of `EditorState.swift`, the four action files `editor_action.dart`, `text_action.dart`, `sound_action.dart` and `frame_action.dart`, `reduce.dart`, `edits.dart`, `clip_edits.dart`, `frame_edits.dart`, `timeline_geometry.dart` (`TimelineGeometry`, `StripRows`, `TimelineScale`) and `history.dart`, whose data `EditRun` and `UndoHistory` came here first and which "Undo and redo in Dart" completes.
 - An action enum is a sealed class with one subclass per case (`EditorActionTrimStart` and so on), made as `EditorAction.trimStart(clip, amount)`, and a case without values is a constant (`EditorAction.split`). `reduce` switches over every case, so a new case does not compile until it is routed. It is pure and synchronous and imports neither Flutter nor the bridge.
 - The edit functions `reduce` calls (`split`, `trimStart`, `reduceFrame`, `reduceText`, `settleTexts`, `reduceSound`, `settleSound` and their kin) are hidden from the package entry, as they are internal in Swift. The members Swift adds to `EditorState` and `Project` in another file are Dart extensions in that file (`EditorStateEdits`, `EditorStateClipEdits`, `ProjectClipEdits`, `EditorStateFrameEdits`).
 - `reduce` routes text and sound to `text_edits.dart` and `sound_edits.dart`, which hold `reduceText`, `settleTexts`, `reduceSound` and `settleSound`, and `text_geometry.dart` the three limits `reduceText` reads.
@@ -747,6 +747,11 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: dart-sound-edits -->
 
 <!-- slot: dart-history -->
+### Undo and redo in Dart
+
+- `history.dart` now holds the whole of `History.swift`, `Editing` included, with the behaviour of "Undo and redo". `Editing(state)` starts with an empty history and `Editing.withHistory(state:, history:)` opens a history with its run ended. `after`, `afterDragStep`, `endingRun`, `undone`, `redone` and `written` return a new value, and `canUndo`, `canRedo`, `writesNow` and `unsaved` read it. `withoutBlankTexts` is the extension `ProjectWithoutBlankTexts`.
+- The steps of `UndoHistory` that are internal in Swift are private to `history.dart` (`_add`, `_endRun`, `_dropLastStep`, `_undo`, `_redo`), called only by `Editing`. Each returns a new history, with lists that cannot change. `_undo` and `_redo` give the history and the project as one record, null when there is nothing to take.
+- The ported tests: `UndoHistoryTests`, `UndoGuardTests` and the three tests of `DragRunTests` that need no codec in `test/editor/`, and the tests of `ClipEditsTests` and `FramingTests` that call `Editing`, in their files. The tests of `Editing` with the draft codec are ported with the shelf.
 <!-- end slot: dart-history -->
 
 <!-- slot: dart-states -->

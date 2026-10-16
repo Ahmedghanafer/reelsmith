@@ -7,8 +7,7 @@ import 'package:test/test.dart';
 // Stay in Swift, since they read the plan through segments: testThePlanOfTwoClipsAtTheStandardFramingIsTheFitOfToday,
 // testFillCoversTheCanvasWithBlue, testFitAtZoomTwoDoublesBlueAroundTheCentre, testAnOffsetPastTheEdgeIsStoredHeld,
 // testABlurredBackdropFillsTheCanvasOnlyWhereThePictureLeavesBars and testThePlanAt4KHasEveryRectangleTwiceAsLarge.
-// Ported with Editing: testEachFrameActionChangesOnlyTheNamedClipPausesAndIsOneUndoStep and
-// testApplyToAllGivesEveryClipTheFitAndBackdropAndKeepsTheirZoomAndOffset. Ported with the draft codec:
+// Ported with the draft codec:
 // testAVersionOneTextWhoseClipsLackFramingDecodesToTheStandardFraming and
 // testADraftOfTwoClipsWithBlueFilledBlurredAndZoomedRoundTrips.
 void main() {
@@ -28,6 +27,28 @@ void main() {
   EditorState playing(EditorState state) => state.copyWith(isPlaying: true);
 
   EditorState frame(EditorState state, FrameAction action) => reduce(state, EditorAction.frame(action));
+
+  test('testEachFrameActionChangesOnlyTheNamedClipPausesAndIsOneUndoStep', () {
+    final start = playing(seeded());
+    final actions = <(FrameAction, Framing)>[
+      (FrameAction.setFit(blue, Fit.fill), const Framing(fit: Fit.fill)),
+      (FrameAction.setBackdrop(blue, Backdrop.blurred), const Framing(backdrop: Backdrop.blurred)),
+      (FrameAction.setZoom(blue, 2.5), const Framing(zoom: 2.5)),
+      (FrameAction.setOffset(blue, 0, 0.25), const Framing(y: 0.25)),
+    ];
+    for (final (action, framing) in actions) {
+      final after = frame(start, action);
+
+      expect(after.project.clips[0].framing, framing, reason: '$action');
+      expect(after.project.clips[1], start.project.clips[1], reason: '$action');
+      expect(after.isPlaying, isFalse, reason: '$action');
+
+      final edited = Editing(start).after(EditorAction.frame(action));
+      expect(edited.history.past.length, 1, reason: '$action');
+      expect(edited.state.project, after.project, reason: '$action');
+      expect(edited.undone().state.project, start.project, reason: '$action');
+    }
+  });
 
   test('testSetZoomHoldsItsValueAndTheOffsetAgain', () {
     expect(
@@ -61,6 +82,22 @@ void main() {
     for (var index = 0; index < refused.length; index++) {
       expect(frame(start, refused[index]), start, reason: 'action $index');
     }
+  });
+
+  test('testApplyToAllGivesEveryClipTheFitAndBackdropAndKeepsTheirZoomAndOffset', () {
+    var start = seeded(blue: const Framing(fit: Fit.fill, backdrop: Backdrop.blurred));
+    start = start.copyWith(project: framed(start.project, 1, const Framing(zoom: 2, x: 0.3, y: -0.2)));
+
+    final edited = Editing(start).after(EditorAction.frame(FrameAction.applyToAll(blue)));
+    final after = edited.state;
+
+    expect(after.project.clips[0].framing, const Framing(fit: Fit.fill, backdrop: Backdrop.blurred));
+    expect(
+      after.project.clips[1].framing,
+      const Framing(fit: Fit.fill, backdrop: Backdrop.blurred, zoom: 2, x: 0.3, y: -0.2),
+    );
+    expect(edited.history.past.length, 1);
+    expect(edited.undone().state.project, start.project);
   });
 
   test('testApplyToAllHoldsTheOffsetOfEachClipAgain', () {
