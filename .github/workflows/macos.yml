@@ -31,6 +31,16 @@ defaults:
   run:
     shell: bash
 
+env:
+  # The smoke set, added to a run of named classes: a start with no seed, a start on a seed, the first
+  # frame of the preview, one edit on the strip and an export that reaches the saved panel.
+  SMOKE_TESTS: >-
+    StartTests/testWithNoSeedTheStartScreenShowsWithLandscapeChosen
+    HarnessTests/testASeedStartOpensTheShellAndWritesItsClips
+    PreviewTests/testTheFirstFrameIsInAnAreaOfTheShapeOfTheCanvas
+    ToolsTests/testASplitAtOneSecondThenADeleteOfTheFirstBlock
+    ExportPanelTests/testAnExportReachesTheSavedPanelAndDoneReturnsToTheEditorAsItWas
+
 jobs:
   build:
     # Group 0 is the one machine of a run that is not split, and keeps the names of today.
@@ -201,20 +211,6 @@ jobs:
             echo "A test class in a folder under UITests would be in no group:" $deeper | tee "$RUNNER_TEMP/selection.txt"
             exit 1
           fi
-          # During the port the smoke set is the union of the files in .github/m7/smoke, one test a line,
-          # and a split run deals only the union of the classes in .github/m7/classes, one class a line.
-          shopt -s nullglob
-          smoke_files=(.github/m7/smoke/*.txt)
-          class_files=(.github/m7/classes/*.txt)
-          shopt -u nullglob
-          SMOKE_TESTS=""
-          if [ ${#smoke_files[@]} -gt 0 ]; then
-            SMOKE_TESTS=$(awk 1 "${smoke_files[@]}" | tr -d '\r' | xargs -n 1 | LC_ALL=C sort -u | xargs)
-          fi
-          dealt=""
-          if [ ${#class_files[@]} -gt 0 ]; then
-            dealt=$(awk 1 "${class_files[@]}" | tr -d '\r' | xargs -n 1 | LC_ALL=C sort -u | xargs)
-          fi
           tests_of() {
             for pair in $counts; do
               if [ "${pair%%=*}" = "$1" ]; then
@@ -257,7 +253,7 @@ jobs:
               tee "$RUNNER_TEMP/selection.txt"
           elif [ "$GROUP" != 0 ]; then
             number=0
-            for class in $dealt; do
+            for class in $(printf '%s\n' $all | LC_ALL=C sort); do
               if [ $((number % 3 + 1)) -eq "$GROUP" ]; then
                 chosen="$chosen $class"
                 only+=("-only-testing:ReelsmithUITests/$class")

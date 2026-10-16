@@ -1,6 +1,0 @@
-ClipPanelTests
-ClipGainTests
-FramingPanelTests
-GuideTests
-PunchInTests
-FollowFingerTests

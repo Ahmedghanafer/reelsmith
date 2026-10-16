@@ -17,7 +17,7 @@ What comes back from the simulator run:
 - Before the UI tests the run puts `blue.mov` and `red.mov` into the simulator's photo library, then the test photo `magenta.png` in a call of its own, and grants the app the right to add to Photos, so no test meets the system's question. The two clips and the photo are written under `REELSMITH_CLIP_DIR` by `TestClipMakerTests`. The simulator holds photos of its own, older than blue, which stand at the end of a grid that offers photos: the run counts the photos once the test photo is in and hands that count less one to the UI tests as `TEST_RUNNER_REELSMITH_OWN_PHOTOS`, which the test runner reads as `REELSMITH_OWN_PHOTOS`.
 - The run prints the count of photos before any media is added, which reads "could not be read" on a new simulator whose library is made by the first addition, and the counts of videos and of photos in the library before and after the UI tests. The count of photos does not change. The count of videos grows by thirteen, one for each export that is saved: one in `ExportChoiceTests`, one in `ExportKeptTests`, three in `ExportPanelTests`, two in `WholeExportPathTests`, three in `WholePathTests`, one in `WholeTextPathTests`, one in `WholeSoundPathTests` and one in `WholeDraftPathTests`.
 
-The simulator run has three kinds, started as `docs/operations.md` tells. With no input it runs every UI test on one machine. With classes named it is a part run: the named classes and the smoke set, the union of the files in `.github/m7/smoke/`, which is empty during the port until the screen stories fill it. A part run proves its classes and that the app still starts, shows a picture, edits and saves, and says nothing about the other tests, so the count of videos grows only by the exports it ran. During the port a split run deals only the classes of `.github/m7/classes/` into three groups on three machines, and the saved videos are counted in the groups that hold the exporting classes among them. The line `UI tests of this run:` in the log of layer 4 and in the Summary tells which kind a run was.
+The simulator run has three kinds, started as `docs/operations.md` tells. With no input it runs every UI test on one machine. With classes named it is a part run: the named classes and the smoke set, five tests listed as `SMOKE_TESTS` in `.github/workflows/macos.yml` (a start with no seed, a start on a seed, the first frame of the preview, a split and a delete on the strip, an export to the saved panel). A part run proves its classes and that the app still starts, shows a picture, edits and saves, and says nothing about the other tests, so the count of videos grows only by the exports it ran. A split run deals every test class into three groups on three machines and proves the same as the run on one machine, with the thirteen saved videos counted in the groups that hold the eight exporting classes. The line `UI tests of this run:` in the log of layer 4 and in the Summary tells which kind a run was.
 
 ## The shared helpers of the UI tests
 
@@ -1072,7 +1072,6 @@ Screenshots: `clip-path-01-strip` (the strip after the music, the photo first an
 - The UI tests stay in `UITests/`. The target `ReelsmithUITests` of `app/ios/Runner.xcodeproj` takes that folder as a synchronized folder, so a new test file edits no project file, and its tests run against `Reelsmith.app` of the Flutter build.
 - The Core tests that read the word files read them from `app/assets/words/<en, ar, sv>.lproj/Localizable.strings`.
 - A debug build of Runner copies `Tests/Fixtures/Drafts/` into the folder `DraftFixtures` of the app bundle, in a build phase of its own. A release build copies nothing.
-- The smoke set of a part run and the classes of a split run come from `.github/m7/`, as `docs/operations.md` says.
 <!-- end slot: flutter-build -->
 
 <!-- slot: engine-bridge -->
@@ -1180,4 +1179,7 @@ Screenshots: `clip-path-01-strip` (the strip after the music, the photo first an
 <!-- end slot: flutter-whole-paths -->
 
 <!-- slot: flutter-suite -->
+### The whole suite on the Flutter build
+
+Every class of `UITests/` runs on the Flutter build, and a split run deals all of them again, as `docs/operations.md` says. The two starts, the first frame, the split and delete and the export of the smoke set are the five tests they were in `m6`.
 <!-- end slot: flutter-suite -->

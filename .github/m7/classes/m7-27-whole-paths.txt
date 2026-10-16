@@ -1,9 +1,0 @@
-FoldTests
-DraftListTests
-WholePathTests
-WholeTextPathTests
-WholeSoundPathTests
-WholeExportPathTests
-WholeDraftPathTests
-WholeClipPathTests
-DraftFixtureTests
