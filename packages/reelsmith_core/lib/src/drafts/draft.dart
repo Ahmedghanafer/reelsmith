@@ -236,8 +236,9 @@ class DraftSummary {
 }
 
 /// "2026-10-14 21:05": the Gregorian calendar, 24 hours, the digits 0 to 9 in every language. The Swift
-/// dateText(_:in:), whose zone is here the date's own: UTC for a UTC DateTime, the phone's zone for a local one.
-String dateText(DateTime date) {
+/// dateText(_:in:) with the two zones Dart knows: UTC when inUtc, else the phone's own zone.
+String dateText(DateTime moment, {required bool inUtc}) {
+  final date = inUtc ? moment.toUtc() : moment.toLocal();
   String padded(int value, int width) => value.toString().padLeft(width, '0');
   return '${padded(date.year, 4)}-${padded(date.month, 2)}-${padded(date.day, 2)} '
       '${padded(date.hour, 2)}:${padded(date.minute, 2)}';

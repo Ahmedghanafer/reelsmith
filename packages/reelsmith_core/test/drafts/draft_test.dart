@@ -152,11 +152,14 @@ void main() {
   });
 
   test('testDateText', () {
-    expect(dateText(date), '2026-10-14 21:05');
-    expect(dateText(DateTime.fromMillisecondsSinceEpoch(1767323040 * 1000, isUtc: true)), '2026-01-02 03:04');
+    expect(dateText(date, inUtc: true), '2026-10-14 21:05');
+    expect(
+      dateText(DateTime.fromMillisecondsSinceEpoch(1767323040 * 1000, isUtc: true), inUtc: true),
+      '2026-01-02 03:04',
+    );
 
     final digits = '0123456789 -:'.split('').toSet();
-    expect(dateText(date).split('').every(digits.contains), isTrue);
+    expect(dateText(date, inUtc: true).split('').every(digits.contains), isTrue);
   });
 
   test('testDraftsInfo', () {
