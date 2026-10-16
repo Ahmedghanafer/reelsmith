@@ -82,16 +82,17 @@ enum Seed {
     if (this == Seed.photoWide) {
       infos.insert(1, TestPhoto.magenta.info);
     }
-    final media = <MediaID, MediaInfo>{};
-    final clips = <Clip>[];
-    var nextClipID = 1;
+    final start = Project(canvas: canvas);
+    final media = <MediaID, MediaInfo>{...start.media};
+    final clips = <Clip>[...start.clips];
+    var nextClipID = start.nextClipID;
     for (final info in infos) {
       final duration = info.kind == MediaKind.photo ? MediaInfo.photoLength : info.duration;
       media[info.id] = info;
       clips.add(Clip(id: ClipID(nextClipID), media: info.id, sourceStart: Time.zero, duration: duration));
       nextClipID += 1;
     }
-    final project = Project(canvas: canvas).copyWith(clips: clips, media: media, nextClipID: nextClipID);
+    final project = start.copyWith(clips: clips, media: media, nextClipID: nextClipID);
     switch (this) {
       case Seed.empty || Seed.twoClips || Seed.threeClips || Seed.twoClipsWide || Seed.photoWide:
         return project;
