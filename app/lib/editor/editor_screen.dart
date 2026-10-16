@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -9,6 +8,7 @@ import '../words/words.dart';
 import 'editor_store.dart';
 import 'export/export_button.dart';
 import 'preview/preview_pane.dart';
+import 'sound/sound_panel.dart';
 import 'strip/strip.dart';
 import 'text/text_panel.dart';
 import 'tools/tools_row.dart';
@@ -41,9 +41,7 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> {
-  late final StreamSubscription<int> _builds;
   late final AppLifecycleListener _lifecycle;
-  int _built = 0;
   String _faceNames = '';
 
   EditorStore get store => widget.store;
@@ -53,7 +51,6 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   void initState() {
     super.initState();
-    _builds = store.engine.buildCount.listen((count) => setState(() => _built = count));
     // Once a leave: on the way out and back the phases inactive, hidden and paused each come in turn.
     var phase = SchedulerBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
     _lifecycle = AppLifecycleListener(
@@ -82,7 +79,6 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   void dispose() {
-    _builds.cancel();
     _lifecycle.dispose();
     super.dispose();
   }
@@ -117,7 +113,7 @@ class _EditorScreenState extends State<EditorScreen> {
                       PreviewPane(
                         store: store,
                         words: widget.words,
-                        builds: store.options['seed'] != null ? _built : null,
+                        builds: store.options['seed'] != null ? store.builds : null,
                       ),
                       // end slot: preview
                     ]),
@@ -142,6 +138,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   if (state.showsSound)
                     _region('editor.soundRegion', [
                       // slot: sound
+                      SoundPanel(store: store, words: widget.words),
                       // end slot: sound
                     ]),
                   if (state.showsClipPanel)

@@ -34,6 +34,11 @@ class EditorStore extends ChangeNotifier {
        _exportSettings = exportSettings {
     _playheads = engine.playhead.listen(_reported);
     _ends = engine.playedToEnd.listen((_) => _playedToEnd());
+    // Before the preview is made, so the count of its first build is never missed.
+    _buildCounts = engine.buildCount.listen((count) {
+      _builds = count;
+      notifyListeners();
+    });
     engine.createPreview().then(
       (id) {
         if (_disposed) {
@@ -69,6 +74,11 @@ class EditorStore extends ChangeNotifier {
   int? _textureId;
   late final StreamSubscription<int> _playheads;
   late final StreamSubscription<void> _ends;
+  late final StreamSubscription<int> _buildCounts;
+
+  /// The last `buildCount` the engine sent, 0 until the first.
+  int get builds => _builds;
+  int _builds = 0;
   bool _disposed = false;
 
   void send(core.EditorAction action) {
@@ -246,6 +256,7 @@ class EditorStore extends ChangeNotifier {
     _disposed = true;
     _playheads.cancel();
     _ends.cancel();
+    _buildCounts.cancel();
     final id = _textureId;
     if (id != null) {
       _disposePreview(id);
