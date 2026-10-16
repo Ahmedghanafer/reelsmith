@@ -908,6 +908,10 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: flutter-sound-panel -->
 
 <!-- slot: flutter-music -->
+### Music in Flutter
+- `app/lib/editor/sound/music_part.dart`: `MusicPart`, as `MusicPart.swift`, in the slot `music` of the sound panel. With music, `sound.musicTitle` (the title as given) and `sound.musicLabel` (the times of `musicLabel`, fixed left to right) in one row, then the row `sound.addMusic` (`music.add`, or `music.replace` with music), `sound.removeMusic` and `sound.addFromVideo`. Its one state is the `MusicImport` of a file that comes in: `sound.importWords` while it is not idle, the add buttons disabled while copying, and `sound.importOk` after a refusal. The add button calls `pickAudio`, then `importMusic` into the media folder of the store. `addMusic` decodes the JSON of the music file and sends `setMusic`, and a `PlatformException` with the code `protectedFile` is the protected refusal, every other error the plain one. A copy that ends after the part is gone still sets the music, and its event is dropped.
+- `app/lib/editor/sound/music_from_video.dart`: `MusicFromVideo`, the button `sound.addFromVideo`, which calls `pick` for one video and then `musicFromVideo`, through the same `addMusic`.
+- `app/lib/editor/strip/music_bar.dart`: `musicBar`, in the slot `music-row` of the strip, and `MusicBar`, `editor.music`: one bar from time zero for `Project.heardMusic` at the strip's scale in the row at `musicY`, none with no heard music or while a text is selected. It shows the title on the part of the bar on the screen, its label is `musicRow.bar`, and a tap sends `sound(open)` while a drag on it scrubs. It reads the state the strip draws, so it follows a trim while a handle drags.
 <!-- end slot: flutter-music -->
 
 <!-- slot: flutter-clips-frames -->

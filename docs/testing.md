@@ -1160,6 +1160,8 @@ Screenshots: `clip-path-01-strip` (the strip after the music, the photo first an
 <!-- end slot: flutter-sound-panel -->
 
 <!-- slot: flutter-music -->
+### Music on the Flutter build
+`AddMusicTests`, `MusicRowTests`, `MusicVideoTests` and `SoundPanelTests` run on the Flutter build with `TimelineTests` and `ZoomTests`, their files unchanged. The title and the times of the music are leaf semantics nodes with a label, which XCUITest reports as static texts.
 <!-- end slot: flutter-music -->
 
 <!-- slot: flutter-clips-frames -->
