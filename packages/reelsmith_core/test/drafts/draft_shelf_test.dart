@@ -180,6 +180,23 @@ void main() {
     expect(File('${open.mediaFolder.path}/red.mov').readAsBytesSync(), [1, 2, 3]);
   });
 
+  /// Not a Swift test: it holds that a write is whole or not at all, and that a draft not made leaves no folder.
+  test('aFailedWriteLeavesTheOldDraftWholeAndAFailedCreateNoFolder', () {
+    final shelf = makeShelf();
+    final made = draft(Seed.twoClipsWide);
+    final open = shelf.create(made);
+    final json = File('${folderOf(open.id, shelf).path}/draft.json');
+    final before = json.readAsBytesSync();
+    final broken = made.copyWith(project: made.project.copyWith(clipVolume: double.nan));
+
+    expect(() => open.write(broken), throwsA(DraftError.cannotWrite));
+    expect(json.readAsBytesSync(), before);
+    expect(names(folderOf(open.id, shelf)), ['Media', 'draft.json']);
+
+    expect(() => shelf.create(broken), throwsA(DraftError.cannotWrite));
+    expect(names(shelf.folder), [open.id.raw]);
+  });
+
   test('testDeleteRemovesOneDraftAndRemoveAllTheShelf', () {
     final shelf = makeShelf();
     final gone = shelf.create(draft(Seed.twoClipsWide, hour: 10));

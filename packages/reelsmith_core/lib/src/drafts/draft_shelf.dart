@@ -189,13 +189,14 @@ class OpenDraft {
   File get coverFile => shelf.coverFile(id);
 
   /// `encodeDraft`, then `<folder>/<id>/draft.json` written whole or not at all, as the atomic option of Swift's
-  /// `Data.write`: the bytes go to a temporary name in the same folder, flushed, then renamed over the old file. A
-  /// rename in one folder replaces the file in one step (https://api.dart.dev/stable/dart-io/File/renameSync.html),
-  /// so a cut write leaves the old draft.json whole. Every failure, a number the codec cannot write among them,
-  /// throws cannotWrite and leaves no temporary file.
+  /// `Data.write`: the bytes go to the temporary file `.draft.json.new` in the same folder, flushed, then renamed
+  /// over the old file. A rename in one folder replaces the file in one step
+  /// (https://api.dart.dev/stable/dart-io/File/renameSync.html), so a cut write leaves the old draft.json whole, and
+  /// the next write takes over a temporary file a cut write left. Every failure, a number the codec cannot write
+  /// among them, throws cannotWrite and leaves no temporary file.
   void write(Draft draft) {
     final file = shelf._draftFile(id);
-    final temporary = File('${shelf._draftFolder(id).path}/.draft.json.${_uuidString()}');
+    final temporary = File('${shelf._draftFolder(id).path}/.draft.json.new');
     try {
       temporary.writeAsBytesSync(encodeDraft(draft), flush: true);
       temporary.renameSync(file.path);
