@@ -740,6 +740,10 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: dart-text-edits -->
 
 <!-- slot: dart-sound-edits -->
+### The sound edits in Dart
+
+- `sound_edits.dart` holds the whole of its Swift file: `reduceSound`, `settleSound` and the hold of a time to its limits. A level (the volume of the clips, the mute, the volume of a clip, the volume of the music and its two fades) lives in the project and reaches Swift inside it. Nothing reads a level back from Swift.
+- The ported tests: `SoundEditsTests`, `SoundGuardTests`, `SoundStateTests`, `LiveLevelsTests` and `ClipGainLimitTests` in `test/editor/`. The two tests of `SoundEditsTests` that read `renderPlan` stay in Swift, and the guard runs without its check of the plan.
 <!-- end slot: dart-sound-edits -->
 
 <!-- slot: dart-history -->
