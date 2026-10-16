@@ -36,7 +36,7 @@ class EditorStore extends ChangeNotifier {
     engine.createPreview().then(
       (id) {
         if (_disposed) {
-          engine.disposePreview(id);
+          _disposePreview(id);
           return;
         }
         _textureId = id;
@@ -174,7 +174,9 @@ class EditorStore extends ChangeNotifier {
     writeNow();
     await makeCover();
     _isOpen = false;
-    notifyListeners();
+    if (!_disposed) {
+      notifyListeners();
+    }
   }
 
   /// Takes the next editing and shows it to the player when the project or playing changed, or when the
@@ -218,11 +220,24 @@ class EditorStore extends ChangeNotifier {
       return;
     }
     final now = state;
+    final String project;
+    try {
+      project = _projectJson(now.project);
+    } catch (error) {
+      print('editor: the preview was not shown: $error');
+      return;
+    }
     engine
-        .show(id, _projectJson(now.project), mediaFolder.path, withPlayhead ? now.playhead.ticks : null, now.isPlaying)
+        .show(id, project, mediaFolder.path, withPlayhead ? now.playhead.ticks : null, now.isPlaying)
         .catchError((Object error) {
           print('editor: the preview was not shown: $error');
         });
+  }
+
+  void _disposePreview(int id) {
+    engine.disposePreview(id).catchError((Object error) {
+      print('editor: the preview was not let go: $error');
+    });
   }
 
   @override
@@ -232,7 +247,7 @@ class EditorStore extends ChangeNotifier {
     _ends.cancel();
     final id = _textureId;
     if (id != null) {
-      engine.disposePreview(id);
+      _disposePreview(id);
     }
     super.dispose();
   }
