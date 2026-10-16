@@ -873,6 +873,10 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: flutter-export -->
 
 <!-- slot: flutter-text-panel -->
+### The text panel in Flutter
+- `app/lib/editor/text/text_panel.dart`: `TextPanel({super.key, required EditorStore store, required WordsText words})`, in the slot `text` of the editor screen, keyed by the selected text so it is made anew for each one. The row `text.tab.type`, `text.tab.look`, `text.tab.more` (the part that shows bold and selected) and `text.done` at its trailing end, which sends `clearSelection`. The part type shows when the text is blank as the panel is made, look otherwise. The part type is the field `text.field`, 88 points high, many lines: it shows the string of the store (so an undo shows in it) and sends `setString` at every change, with any unpaired UTF-16 surrogate taken out first, since the draft would not decode in Swift. While the keyboard is up the editor column ends above it (a bottom padding of the keyboard's height in `editor_screen.dart`), so the panel and the export row stand above the keyboard, as in m6.
+- `app/lib/editor/text/text_look.dart`: `TextLook`, the faces `text.font.<rawValue>` by the words of `TextFont`, the swatches `text.colour.<n>` of `TextStyle.palette` and the slider `text.size` from `TextGeometry.minimumSize` to `maximumSize` in steps of 2. `text_more.dart`: `TextMore`, the sides `text.align.<rawValue>` in a row fixed left to right, the slider `text.spacing` from 0 to 2 in steps of 0.1 and the toggles `text.outline`, `text.shadow`, `text.box`. Each control sends `setStyle` with the style the text has at the call, changed in one value. A slider is one semantics node with the slider flag, its word as label and the place of the thumb in percent as value.
+- Flutter draws no face of the text on the picture: the compositor does (The preview and text). `faceNames` in `app/ios/Runner/Engine/Output/OutputCalls.swift` gives the PostScript names of the two bundled faces as the Engine makes them, the line `editor.faceInfo` of a test start.
 <!-- end slot: flutter-text-panel -->
 
 <!-- slot: flutter-text-bars -->

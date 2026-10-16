@@ -107,7 +107,7 @@ final class UndoTests: XCTestCase {
         let app = startUndo(seed: "text-wide")
         let undo = element(app, "editor.undo")
         let redo = element(app, "editor.redo")
-        let field = app.textViews["text.field"]
+        let field = app.descendants(matching: .any)["text.field"]
         XCTAssertTrue(element(app, "text.tab.look").isSelected)
 
         element(app, "text.tab.type").tap()

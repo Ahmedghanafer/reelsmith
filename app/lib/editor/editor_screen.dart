@@ -10,6 +10,7 @@ import 'export/export_button.dart';
 import 'preview/preview_pane.dart';
 import 'sound/sound_panel.dart';
 import 'strip/strip.dart';
+import 'text/text_panel.dart';
 import 'tools/tools_row.dart';
 
 /// The editor shell, in the colours of the theme, light or dark as the system is: four regions from top to bottom, each with the slot of the story that fills it, and between
@@ -85,7 +86,10 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      child: SafeArea(
+      // The column ends above the keyboard while it is up, as in m6.
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(
         child: ListenableBuilder(
           listenable: store,
           builder: (context, _) {
@@ -127,6 +131,8 @@ class _EditorScreenState extends State<EditorScreen> {
                   if (state.selectedText != null)
                     _region('editor.textRegion', [
                       // slot: text
+                      // Made anew for every text that gets selected, so it starts on the part of that text.
+                      TextPanel(key: ValueKey(state.selectedText), store: store, words: widget.words),
                       // end slot: text
                     ]),
                   if (state.showsSound)
@@ -150,6 +156,7 @@ class _EditorScreenState extends State<EditorScreen> {
             );
           },
         ),
+        ),
       ),
     );
   }
@@ -171,7 +178,8 @@ class _EditorScreenState extends State<EditorScreen> {
     return Semantics(
       identifier: identifier,
       container: true,
-      child: Text(line, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
+      // The line as high as m6's footnote, not the taller line of the Material theme, so the picture keeps its room.
+      child: Text(line, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, height: 1.2)),
     );
   }
 
