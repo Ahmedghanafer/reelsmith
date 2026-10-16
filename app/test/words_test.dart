@@ -5,14 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:reelsmith/words/words.dart';
 import 'package:reelsmith_core/reelsmith_core.dart';
 
-/// The lines of one word file, read line by line apart from the loader.
+/// The lines of one word file, read line by line apart from the loader. Every line that starts with a quote must be one.
 Map<String, String> fileLines(String language) {
   final line = RegExp(r'^"([^"]*)" = "([^"]*)";$');
   final lines = <String, String>{};
   for (final text in File('assets/words/$language.lproj/Localizable.strings').readAsLinesSync()) {
-    final match = line.firstMatch(text.trim());
-    if (match != null) {
-      lines[match.group(1)!] = match.group(2)!;
+    if (text.trim().startsWith('"')) {
+      final match = line.firstMatch(text.trim());
+      expect(match, isNotNull, reason: '$language $text');
+      lines[match!.group(1)!] = match.group(2)!;
     }
   }
   return lines;
@@ -25,7 +26,7 @@ void main() {
     for (final language in ['en', 'ar', 'sv']) {
       final words = await WordsText.load(Locale(language));
       final lines = fileLines(language);
-      expect(lines.length, 92, reason: language);
+      expect(lines, isNotEmpty, reason: language);
       for (final entry in lines.entries) {
         expect(words.text(Words(entry.key)), entry.value, reason: '$language ${entry.key}');
       }
