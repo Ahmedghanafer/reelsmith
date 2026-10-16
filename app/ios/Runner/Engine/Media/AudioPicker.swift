@@ -17,6 +17,12 @@ extension Engine {
     func pickAudio() async throws -> Bool {
         await withCheckedContinuation { continuation in
             Task { @MainActor in
+                // One browser shows at a time, as the one file importer of m6: a call while one shows gives false.
+                guard self.media.audioPicker == nil else {
+                    NSLog("%@", "pickAudio: a browser shows already")
+                    continuation.resume(returning: false)
+                    return
+                }
                 let browser = AudioPicker { file in
                     self.media.audio = file
                     self.media.audioPicker = nil

@@ -22,6 +22,12 @@ extension Engine {
     func pick(photos: Bool, limit: Int64) async throws -> Int64 {
         await withCheckedContinuation { continuation in
             Task { @MainActor in
+                // One picker shows at a time, as the one sheet of m6: a call while one shows gives 0.
+                guard self.media.videoPicker == nil else {
+                    NSLog("%@", "pick: a picker shows already")
+                    continuation.resume(returning: 0)
+                    return
+                }
                 let picker = VideoPicker(closed: { items in
                     self.media.picked = items
                     self.media.videoPicker = nil
