@@ -1071,7 +1071,7 @@ Screenshots: `clip-path-01-strip` (the strip after the music, the photo first an
 - The job `core` runs `dart test` in `packages/reelsmith_core` once that folder holds a package.
 - The UI tests stay in `UITests/`. The target `ReelsmithUITests` of `app/ios/Runner.xcodeproj` takes that folder as a synchronized folder, so a new test file edits no project file, and its tests run against `Reelsmith.app` of the Flutter build.
 - The Core tests that read the word files read them from `app/assets/words/<en, ar, sv>.lproj/Localizable.strings`.
-- A debug build of Runner copies `Tests/Fixtures/Drafts/` into the folder `DraftFixtures` of the app bundle, in a build phase of its own. A release build copies nothing. The folder holds one placeholder file until the fixtures are written.
+- A debug build of Runner copies `Tests/Fixtures/Drafts/` into the folder `DraftFixtures` of the app bundle, in a build phase of its own. A release build copies nothing.
 - The smoke set of a part run and the classes of a split run come from `.github/m7/`, as `docs/operations.md` says.
 <!-- end slot: flutter-build -->
 
@@ -1100,6 +1100,12 @@ Screenshots: `clip-path-01-strip` (the strip after the music, the photo first an
 <!-- end slot: dart-states -->
 
 <!-- slot: dart-draft-codec -->
+## The draft fixtures
+
+- `Tests/Fixtures/Drafts/swift/` holds drafts written by Swift's `encodeDraft`, the encoder the SwiftUI app ships: `version-one.json` (the literal of `DraftVersionOneTests`, as it was written), `seed-<seed>.json` for each of the eight seeds after a clip added and a text typed (an undo history of two steps, its run typing), and `photo-framing-text-4k.json` (`photo-wide` with blue framed, a text with every member set and 4K at 60). `dart/` holds Dart's encoding of each, under the same name.
+- `DraftFixtureTests.swift` holds that every file of both folders decodes to its expected value, and that each folder holds exactly those names. `test/drafts/draft_fixture_test.dart` holds that each file of `swift/` decodes in Dart to the same expected value, built by the Dart Core, and that each file of `dart/` equals the Dart encoding of its file of `swift/` and decodes to that value.
+- With `REELSMITH_WRITE_FIXTURES` set, the Swift test writes `swift/` and the Dart test writes `dart/` instead of holding them. They were written once, on `macos-26`, and are committed. A fixture never changes: a new field of a draft brings a new fixture.
+- `test/drafts/` also holds the ports of `DraftTests` and `DraftVersionOneTests`, and `test/model/` those of `ClipModelTests` and the two codec tests of `FramingTests`. The test of `DraftTests` that reads `Editing` back from a draft is ported with the shelf. The two tests of `ClipModelTests` that read the plan stay in Swift.
 <!-- end slot: dart-draft-codec -->
 
 <!-- slot: dart-draft-shelf -->
