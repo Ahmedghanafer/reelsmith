@@ -11,6 +11,7 @@ import UIKit
 /// https://developer.apple.com/documentation/uikit/uiaccessibilityidentification/accessibilityidentifier
 /// https://developer.apple.com/documentation/uikit/uiviewcontroller/present(_:animated:completion:)
 /// https://developer.apple.com/documentation/uikit/uiviewcontroller/presentedviewcontroller
+/// https://developer.apple.com/documentation/uikit/uiviewcontroller/presentingviewcontroller
 /// https://api.flutter.dev/ios-embedder/protocol_flutter_plugin_registrar-p.html
 /// https://developer.apple.com/documentation/swift/checkedcontinuation
 extension Engine {
@@ -41,6 +42,12 @@ extension Engine {
                 alert.addAction(delete)
                 alert.addAction(cancel)
                 viewController.present(alert, animated: true)
+                // UIKit drops a presentation on a controller that is being dismissed, with only a warning. A dropped
+                // alert has no presenting controller and no button can answer, so the answer is false.
+                if alert.presentingViewController == nil {
+                    NSLog("%@", "confirm: the question was not shown")
+                    continuation.resume(returning: false)
+                }
             }
         }
     }
