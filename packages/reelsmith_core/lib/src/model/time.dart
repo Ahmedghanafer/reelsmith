@@ -44,7 +44,4 @@ class Time implements Comparable<Time> {
 
   @override
   int get hashCode => ticks.hashCode;
-
-  @override
-  String toString() => 'Time(ticks: $ticks)';
 }

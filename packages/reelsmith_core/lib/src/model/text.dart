@@ -14,9 +14,6 @@ class TextID {
 
   @override
   int get hashCode => raw.hashCode;
-
-  @override
-  String toString() => 'TextID($raw)';
 }
 
 enum TextFont {
@@ -144,11 +141,6 @@ class TextStyle {
 
   @override
   int get hashCode => Object.hash(font, size, colour, align, lineSpacing, outline, shadow, box);
-
-  @override
-  String toString() =>
-      'TextStyle(font: $font, size: $size, colour: $colour, align: $align, lineSpacing: $lineSpacing, '
-      'outline: $outline, shadow: $shadow, box: $box)';
 }
 
 class TextRange {
@@ -168,9 +160,6 @@ class TextRange {
 
   @override
   int get hashCode => Object.hash(start, duration);
-
-  @override
-  String toString() => 'TextRange(start: $start, duration: $duration)';
 }
 
 /// The Swift enum with the cases whole and range(TextRange).
@@ -191,9 +180,6 @@ final class TextSpanWhole extends TextSpan {
 
   @override
   int get hashCode => (TextSpanWhole).hashCode;
-
-  @override
-  String toString() => 'TextSpan.whole';
 }
 
 final class TextSpanRange extends TextSpan {
@@ -208,9 +194,6 @@ final class TextSpanRange extends TextSpan {
 
   @override
   int get hashCode => range.hashCode;
-
-  @override
-  String toString() => 'TextSpan.range($range)';
 }
 
 class TextItem {
@@ -276,8 +259,4 @@ class TextItem {
 
   @override
   int get hashCode => Object.hash(id, string, span, x, y, rotation, style);
-
-  @override
-  String toString() =>
-      'TextItem(id: $id, string: $string, span: $span, x: $x, y: $y, rotation: $rotation, style: $style)';
 }

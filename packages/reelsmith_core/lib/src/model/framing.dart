@@ -102,9 +102,6 @@ class Framing {
 
   @override
   int get hashCode => Object.hash(fit, backdrop, zoom, x, y);
-
-  @override
-  String toString() => 'Framing(fit: $fit, backdrop: $backdrop, zoom: $zoom, x: $x, y: $y)';
 }
 
 /// The near edge of a picture of that length on that axis, centred plus the share of the canvas, held between

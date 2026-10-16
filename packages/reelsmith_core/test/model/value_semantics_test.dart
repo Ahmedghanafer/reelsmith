@@ -1,11 +1,16 @@
 import 'package:reelsmith_core/reelsmith_core.dart';
 import 'package:test/test.dart';
 
-// Holds a bug found in review: Swift's model types are values, so a list or map changed after a value was made
-// must change no value, and the lists a value holds cannot be changed.
+// Holds the value semantics of Swift's model types: a list or map changed after a value was made changes no value,
+// and the lists and the map a value holds cannot be changed.
 void main() {
   test('aListOrMapChangedAfterTheValueWasMadeChangesNoValue', () {
-    final clip = Clip(id: const ClipID(1), media: TestClip.blue.info.id, sourceStart: Time.zero, duration: TestClip.blue.duration);
+    final clip = Clip(
+      id: const ClipID(1),
+      media: TestClip.blue.info.id,
+      sourceStart: Time.zero,
+      duration: TestClip.blue.duration,
+    );
     final clips = [clip];
     final media = {TestClip.blue.info.id: TestClip.blue.info};
     final text = TextItem(

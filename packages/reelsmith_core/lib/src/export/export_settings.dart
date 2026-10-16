@@ -91,7 +91,4 @@ class ExportSettings {
 
   @override
   int get hashCode => Object.hash(size, rate);
-
-  @override
-  String toString() => 'ExportSettings(size: $size, rate: $rate)';
 }

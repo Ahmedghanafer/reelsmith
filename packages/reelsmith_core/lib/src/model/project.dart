@@ -17,9 +17,6 @@ class ClipID {
 
   @override
   int get hashCode => raw.hashCode;
-
-  @override
-  String toString() => 'ClipID($raw)';
 }
 
 class Clip {
@@ -71,11 +68,6 @@ class Clip {
 
   @override
   int get hashCode => Object.hash(id, media, sourceStart, duration, volume, framing);
-
-  @override
-  String toString() =>
-      'Clip(id: $id, media: $media, sourceStart: $sourceStart, duration: $duration, volume: $volume, '
-      'framing: $framing)';
 }
 
 class Project {
@@ -308,11 +300,6 @@ class Project {
     clipsMuted,
     music,
   );
-
-  @override
-  String toString() =>
-      'Project(canvas: $canvas, clips: $clips, media: $media, nextClipID: $nextClipID, texts: $texts, '
-      'nextTextID: $nextTextID, clipVolume: $clipVolume, clipsMuted: $clipsMuted, music: $music)';
 }
 
 /// The clip with the standard framing, all else kept.

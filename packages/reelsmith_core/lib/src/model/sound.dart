@@ -33,9 +33,6 @@ class MusicFile {
 
   @override
   int get hashCode => Object.hash(id, fileName, title, duration);
-
-  @override
-  String toString() => 'MusicFile(id: $id, fileName: $fileName, title: $title, duration: $duration)';
 }
 
 class Music {
@@ -53,14 +50,16 @@ class Music {
   /// Whole frames, 0 to SoundGeometry.maximumFade.
   final Time fadeOut;
 
-  /// The defaults are the Swift init(file:): start zero, volume 1, both fades zero.
   const Music({
     required this.file,
-    this.start = Time.zero,
-    this.volume = 1,
-    this.fadeIn = Time.zero,
-    this.fadeOut = Time.zero,
+    required this.start,
+    required this.volume,
+    required this.fadeIn,
+    required this.fadeOut,
   });
+
+  /// Start zero, volume 1, both fades zero.
+  const Music.file(this.file) : start = Time.zero, volume = 1, fadeIn = Time.zero, fadeOut = Time.zero;
 
   /// The length of the file less SoundGeometry.minimumMusic, rounded down to a whole frame.
   /// Zero for a file not longer than minimumMusic.
@@ -88,9 +87,6 @@ class Music {
 
   @override
   int get hashCode => Object.hash(file, start, volume, fadeIn, fadeOut);
-
-  @override
-  String toString() => 'Music(file: $file, start: $start, volume: $volume, fadeIn: $fadeIn, fadeOut: $fadeOut)';
 }
 
 abstract final class SoundGeometry {

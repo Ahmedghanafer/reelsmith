@@ -13,9 +13,6 @@ class MediaID {
 
   @override
   int get hashCode => raw.hashCode;
-
-  @override
-  String toString() => 'MediaID($raw)';
 }
 
 enum MediaKind {
@@ -98,9 +95,4 @@ class MediaInfo {
 
   @override
   int get hashCode => Object.hash(id, fileName, width, height, duration, quarterTurns, hasSound, kind);
-
-  @override
-  String toString() =>
-      'MediaInfo(id: $id, fileName: $fileName, width: $width, height: $height, duration: $duration, '
-      'quarterTurns: $quarterTurns, hasSound: $hasSound, kind: $kind)';
 }

@@ -26,7 +26,4 @@ class Words {
 
   @override
   int get hashCode => Object.hash(key, Object.hashAll(arguments));
-
-  @override
-  String toString() => 'Words($key, $arguments)';
 }

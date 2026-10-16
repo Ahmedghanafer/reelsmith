@@ -15,9 +15,6 @@ class RGB {
 
   @override
   int get hashCode => Object.hash(r, g, b);
-
-  @override
-  String toString() => 'RGB(r: $r, g: $g, b: $b)';
 }
 
 class TestClip {
@@ -158,7 +155,4 @@ class TestClip {
   @override
   int get hashCode =>
       Object.hash(name, storedWidth, storedHeight, duration, framesPerSecond, quarterTurns, hasSound, left, right);
-
-  @override
-  String toString() => 'TestClip($name)';
 }
