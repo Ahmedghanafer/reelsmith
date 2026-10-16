@@ -310,4 +310,12 @@ class _StripScale extends ScaleGestureRecognizer {
       resolve(GestureDisposition.accepted);
     }
   }
+
+  /// A pointer another recognizer won, a trim handle's drag or the press that lifts a block, sends this recognizer no
+  /// more events, so its up never comes here: it is no longer counted, or every later touch would read as a pinch.
+  @override
+  void rejectGesture(int pointer) {
+    _pointers.remove(pointer);
+    super.rejectGesture(pointer);
+  }
 }
