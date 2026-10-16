@@ -733,6 +733,10 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: dart-clip-edits -->
 
 <!-- slot: dart-text-edits -->
+### The text edits in Dart
+
+- `text_edits.dart` and `text_geometry.dart` now hold the whole of their Swift files. Beside `reduceText` and `settleTexts`, the extension `ProjectTextEdits` gives `textNearest(nearestToX:, y:, at:)`, the Swift `text(nearestToX:y:at:)`, named by what it takes since `Project.text` is taken. `TextGeometry` gives `wrapShare` and `canvasLength(ofPoints:, pictureWidth:, canvas:)` beside the three limits.
+- The ported tests: `TextEditsTests`, `TextGuardTests`, `TextStateTests` and `TextGeometryTests` in `test/editor/`. The test of `TextEditsTests` that reads `renderPlan` stays in Swift, and the guard runs without its check of the plan.
 <!-- end slot: dart-text-edits -->
 
 <!-- slot: dart-sound-edits -->
