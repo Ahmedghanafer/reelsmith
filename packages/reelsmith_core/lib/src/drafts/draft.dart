@@ -95,11 +95,13 @@ enum DraftError implements Exception {
 /// a double, and an optional that is null is left out.
 Uint8List encodeDraft(Draft draft) => utf8.encode(jsonEncode(_sorted(_draftJson(draft))));
 
-/// Every failure, and a version above Draft.currentVersion, throws unreadable.
+/// Every failure, and a version above Draft.currentVersion, throws unreadable. A UTF-8 byte order mark at the start
+/// is passed over, as Swift's decoder passes it over.
 Draft decodeDraft(List<int> data) {
+  final marked = data.length >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF;
   final Draft draft;
   try {
-    draft = _draft(jsonDecode(utf8.decode(data)));
+    draft = _draft(jsonDecode(utf8.decode(marked ? data.sublist(3) : data)));
   } catch (_) {
     throw DraftError.unreadable;
   }
@@ -428,28 +430,40 @@ T _rawCase<T>(Object? json, List<T> values, String Function(T) rawValue) {
   return values.firstWhere((value) => rawValue(value) == raw);
 }
 
+/// Swift's Int and Int64: any JSON number of a whole value (`1800`, `1800.0`, `1.8e3`), never a fraction.
+int _int(Object? json) {
+  final number = json as num;
+  if (number is int) {
+    return number;
+  }
+  if (!number.isFinite || number != number.truncateToDouble() || number.abs() >= 9223372036854775808.0) {
+    throw const FormatException('not a whole number');
+  }
+  return number.toInt();
+}
+
 /// Swift's UInt8.
 int _byte(Object? json) {
-  final value = json as int;
+  final value = _int(json);
   if (value < 0 || value > 255) {
     throw const FormatException('not a byte');
   }
   return value;
 }
 
-Time _time(Object? json) => Time(ticks: _object(json)['ticks'] as int);
+Time _time(Object? json) => Time(ticks: _int(_object(json)['ticks']));
 
 MediaID _mediaID(Object? json) => MediaID(_object(json)['raw'] as String);
 
-ClipID _clipID(Object? json) => ClipID(_object(json)['raw'] as int);
+ClipID _clipID(Object? json) => ClipID(_int(_object(json)['raw']));
 
-TextID _textID(Object? json) => TextID(_object(json)['raw'] as int);
+TextID _textID(Object? json) => TextID(_int(_object(json)['raw']));
 
 Draft _draft(Object? json) {
   final object = _object(json);
   final settings = _object(object['exportSettings']);
   return Draft._(
-    version: object['version'] as int,
+    version: _int(object['version']),
     project: _project(object['project']),
     exportSettings: ExportSettings(
       size: _bareCase(settings['size'], ExportSize.values),
@@ -476,9 +490,9 @@ Project _project(Object? json) {
   return Project(canvas: _bareCase(object['canvas'], Canvas.values)).copyWith(
     clips: [for (final clip in object['clips'] as List<Object?>) _clip(clip)],
     media: media,
-    nextClipID: object['nextClipID'] as int,
+    nextClipID: _int(object['nextClipID']),
     texts: [for (final text in object['texts'] as List<Object?>) _text(text)],
-    nextTextID: object['nextTextID'] as int,
+    nextTextID: _int(object['nextTextID']),
     clipVolume: _double(object['clipVolume']),
     clipsMuted: object['clipsMuted'] as bool,
     music: () => _optional(object, 'music', _music),
@@ -515,10 +529,10 @@ MediaInfo _mediaInfo(Object? json) {
   return MediaInfo(
     id: _mediaID(object['id']),
     fileName: object['fileName'] as String,
-    width: object['width'] as int,
-    height: object['height'] as int,
+    width: _int(object['width']),
+    height: _int(object['height']),
     duration: _time(object['duration']),
-    quarterTurns: object['quarterTurns'] as int,
+    quarterTurns: _int(object['quarterTurns']),
     hasSound: object['hasSound'] as bool,
     kind: _optional(object, 'kind', (kind) => _rawCase(kind, MediaKind.values, (value) => value.rawValue)) ??
         MediaKind.video,
