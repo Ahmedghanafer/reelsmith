@@ -1168,6 +1168,8 @@ Screenshots: `clip-path-01-strip` (the strip after the music, the photo first an
 <!-- end slot: flutter-clips-frames -->
 
 <!-- slot: flutter-clip-panel -->
+### The clip panel on the Flutter build
+`ClipPanelTests`, `ClipGainTests`, `FramingPanelTests`, `GuideTests`, `PunchInTests` and `FollowFingerTests` run on the Flutter build. `clip.volume` and the sound sliders are found through `descendants(matching: .any)`, since a Flutter slider reports as another kind of element, and where a test moved `clip.volume` with `adjust(toNormalizedSliderPosition:)` it presses its middle and drags to the place.
 <!-- end slot: flutter-clip-panel -->
 
 <!-- slot: flutter-whole-paths -->

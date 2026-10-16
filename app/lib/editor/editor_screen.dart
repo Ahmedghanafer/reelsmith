@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../words/words.dart';
+import 'clip/clip_panel.dart';
 import 'editor_store.dart';
 import 'export/export_button.dart';
 import 'preview/preview_pane.dart';
@@ -144,6 +145,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   if (state.showsClipPanel)
                     _region('editor.clipRegion', [
                       // slot: clip
+                      ClipPanel(store: store, words: widget.words),
                       // end slot: clip
                     ]),
                   _region('editor.exportRegion', [

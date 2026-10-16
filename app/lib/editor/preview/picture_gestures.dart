@@ -13,7 +13,9 @@ import '../editor_store.dart';
 /// A gesture that begins with a text selected sends `pause`, then draws `reduce` of the state from its start under
 /// the fingers: the compositor draws every pixel of a text, so each drawn project goes to the player through `show`
 /// and the store keeps its state. On release the gesture sends the one value it changed, the text's centre, size or
-/// rotation, so it is one step of undo. With no text selected they send nothing.
+/// rotation, so it is one step of undo. With no text selected one finger moves and two fingers zoom the clip framed
+/// by hand (`framedByHand`) the same way, and on release send its zoom and offset as the steps of one drag. With
+/// neither they send nothing.
 ///
 /// https://api.flutter.dev/flutter/widgets/Listener-class.html
 /// https://api.flutter.dev/flutter/gestures/DragStartBehavior.html
@@ -146,6 +148,7 @@ class _PictureGesturesState extends State<PictureGestures> {
     _drawn = null;
     _twist = null;
     _from = null;
+    _beginClip();
     if (text == null) {
       return;
     }
@@ -168,6 +171,7 @@ class _PictureGesturesState extends State<PictureGestures> {
 
   /// One finger moves the text by the distance moved.
   void _updated(ScaleUpdateDetails details) {
+    _dragClip(details);
     final start = _start;
     final text = _text;
     if (details.pointerCount >= 2 || _pair || start == null || text == null) {
@@ -198,6 +202,7 @@ class _PictureGesturesState extends State<PictureGestures> {
       _pair = true;
       _begin();
     }
+    _pinchClip();
     final start = _start;
     final text = _text;
     if (start == null || text == null) {
@@ -262,6 +267,7 @@ class _PictureGesturesState extends State<PictureGestures> {
   /// Sends the one value that changed, the centre, the style or the rotation, so the gesture is one step of undo. An
   /// end while a finger stays sends too: a finger that comes or goes ends a gesture.
   void _finish() {
+    _finishClip();
     final text = _text;
     final project = _drawn?.project;
     _start = null;
@@ -303,6 +309,110 @@ class _PictureGesturesState extends State<PictureGestures> {
   }
 
   // slot: punch-in
+  /// The state after the `pause` a gesture on the clip framed by hand began with, null while none runs (rule 90).
+  core.EditorState? _clipStart;
+
+  /// The clip framed by hand in `_clipStart`.
+  core.Clip? _clip;
+
+  /// The state drawn last, null until the fingers changed the clip.
+  core.EditorState? _clipDrawn;
+
+  /// With no text selected, takes the clip framed by hand (`framedByHand`) and sends `pause` when there is one.
+  void _beginClip() {
+    _clipStart = null;
+    _clip = null;
+    _clipDrawn = null;
+    final store = widget.store;
+    final id = store.state.framedByHand;
+    if (id == null) {
+      return;
+    }
+    store.send(core.EditorAction.pause);
+    _clipStart = store.state;
+    for (final clip in store.state.project.clips) {
+      if (clip.id == id) {
+        _clip = clip;
+      }
+    }
+  }
+
+  /// One finger moves the clip: the offset at the start plus the distance moved in shares of the picture's size.
+  void _dragClip(ScaleUpdateDetails details) {
+    final start = _clipStart;
+    final clip = _clip;
+    final size = context.size;
+    if (details.pointerCount >= 2 || _pair || start == null || clip == null || size == null || size.isEmpty) {
+      return;
+    }
+    final moved = details.localFocalPoint - _focal;
+    final framing = clip.framing;
+    _drawClip(
+      core.reduce(
+        start,
+        core.EditorAction.frame(
+          core.FrameAction.setOffset(clip.id, framing.x + moved.dx / size.width, framing.y + moved.dy / size.height),
+        ),
+      ),
+    );
+  }
+
+  /// Two fingers zoom the clip: the zoom at the start times the scale of the fingers, counted from their line once
+  /// they are `_floor` points apart, with the offset of the start held again. A twist does nothing to a clip.
+  void _pinchClip() {
+    final start = _clipStart;
+    final clip = _clip;
+    if (start == null || clip == null) {
+      return;
+    }
+    final places = _fingers.values.take(2).toList();
+    final line = places[0] - places[1];
+    final from = _from ??= line.distance >= _floor ? line : null;
+    if (from == null) {
+      return;
+    }
+    final framing = clip.framing;
+    final zoomed = core.reduce(
+      start,
+      core.EditorAction.frame(core.FrameAction.setZoom(clip.id, framing.zoom * line.distance / from.distance)),
+    );
+    _drawClip(core.reduce(zoomed, core.EditorAction.frame(core.FrameAction.setOffset(clip.id, framing.x, framing.y))));
+  }
+
+  /// Shows the state when its project differs from the one drawn last.
+  void _drawClip(core.EditorState next) {
+    final start = _clipStart;
+    if (start != null && next.project != (_clipDrawn ?? start).project) {
+      _clipDrawn = next;
+      _show(next.project);
+    }
+  }
+
+  /// Sends the zoom and the offset drawn last as the steps of one drag and ends the run, so the gesture is one step
+  /// of undo. A gesture that changed nothing sends nothing.
+  void _finishClip() {
+    final clip = _clip;
+    final drawn = _clipDrawn;
+    _clipStart = null;
+    _clip = null;
+    _clipDrawn = null;
+    if (clip == null || drawn == null) {
+      return;
+    }
+    core.Framing? framing;
+    for (final each in drawn.project.clips) {
+      if (each.id == clip.id) {
+        framing = each.framing;
+      }
+    }
+    if (framing == null || framing == clip.framing) {
+      return;
+    }
+    final store = widget.store;
+    store.sendDragStep(core.EditorAction.frame(core.FrameAction.setZoom(clip.id, framing.zoom)));
+    store.sendDragStep(core.EditorAction.frame(core.FrameAction.setOffset(clip.id, framing.x, framing.y)));
+    store.endDrag();
+  }
   // end slot: punch-in
 }
 

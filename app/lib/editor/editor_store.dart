@@ -289,6 +289,14 @@ class EditorStore extends ChangeNotifier {
   // end slot: fold
 
   // slot: guide
+  /// The Instagram guide shows over the picture. False when an editor opens, toggled by `clip.guide`, with no undo
+  /// step, and never stored.
+  bool get showsGuide => _showsGuide;
+  bool _showsGuide = false;
+  set showsGuide(bool shows) {
+    _showsGuide = shows;
+    notifyListeners();
+  }
   // end slot: guide
 }
 
