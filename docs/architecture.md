@@ -777,6 +777,14 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: engine-preview -->
 
 <!-- slot: engine-pickers -->
+### The pickers
+
+The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in `MediaCalls.swift` keeps, on the main thread, the items of the last `pick`, the file of the last `pickAudio` and the picker that shows. Both pickers are shown on the topmost controller that the view controller of the plugin registrar presents, and a picker she cancels or swipes away, or one UIKit did not show, answers as nothing chosen.
+
+- `Picker.swift`: `pick` shows `VideoPicker`, the system photo picker of `App/Start/VideoPicker.swift` with the same configuration (videos, photos too when asked, the order of choosing kept with no limit), and gives the count she chose. `copyPicked` copies those items into the folder with `copyPicked(_:into:)` of `App/Start/PickedVideos.swift`, each file inside the provider's handler, a photo brought in as a still movie by `importPhoto`, and gives the JSON of each media fact in the order of choosing. An item that cannot be copied, read or imported is left out.
+- `AudioPicker.swift`: `pickAudio` shows the system file browser for one audio file, opened in place as the file importer of `App/Editor/Sound/MusicPart.swift` did, and gives true when she chose one.
+- `MusicImport.swift`: `importMusic` copies that file with the Engine's `importMusic`, with no title, and `musicFromVideo` copies the video of the last `pick` through a folder under the temporary folder and imports its sound with the video's suggested name as the title, as `App/Editor/Sound/MusicFromVideo.swift` did. Each gives the JSON of the music file. A refused file throws the Engine's error, which reaches Dart with the code `protectedFile` for a protected file, and nothing is added.
+- `MediaCalls.swift`: `readMediaInfo` gives the JSON of the media fact of a file as the Engine reads it.
 <!-- end slot: engine-pickers -->
 
 <!-- slot: engine-outputs -->
