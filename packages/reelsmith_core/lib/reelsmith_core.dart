@@ -1,4 +1,5 @@
 export 'src/drafts/draft.dart';
+export 'src/drafts/draft_shelf.dart';
 export 'src/editor/clip_edits.dart' hide moveClip, cutBefore, cutAfter;
 export 'src/editor/editor_action.dart';
 export 'src/editor/editor_state.dart';

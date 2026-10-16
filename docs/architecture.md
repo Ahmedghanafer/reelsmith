@@ -758,9 +758,21 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: dart-states -->
 
 <!-- slot: dart-draft-codec -->
+### The draft JSON in Dart
+
+- `lib/src/drafts/draft.dart` holds the whole of `Draft.swift` but the shelf: `DraftID`, `Draft`, `DraftError`, `encodeDraft`, `decodeDraft`, `fileNames` and `keepingFiles` of a project, `DraftSummary`, `dateText` and `draftsInfo`. The Swift static `Draft.version` is `Draft.currentVersion`, since a Dart class cannot give a static and an instance member one name. `changed` is a `DateTime`, and two drafts are equal when their times are the same moment. `dateText` takes the two zones Dart knows, `inUtc: true` for UTC and `false` for the phone's own zone.
+- The codec is written by hand and writes the shapes Swift's synthesized `Codable` writes, so a draft of the SwiftUI app opens in Dart and Swift reads what Dart writes: every key sorted, a case without values as an object of its name holding an empty object (`{"landscape":{}}`), the value of a case as `_0` (`{"range":{"_0":{...}}}`, `{"typing":{"_0":{"raw":1}}}`), the media of a project as one array of key and value in turn, the date as seconds since 2001-01-01 in UTC, a double, and an optional that is null left out. A whole number read where a double is stored reads as that double.
+- `decodeDraft` reads the UTF-8 drafts Swift's decoder reads: a byte order mark at the start is passed over, and an integer field reads any JSON number of a whole value (`1800`, `1800.0`, `1.8e3`). It throws `DraftError.unreadable` for everything else, never another error: bytes that are not JSON, a missing key or a null where a value is needed, a value of another type, a fraction in an integer field, an unknown case, a colour byte out of 0 to 255, and a version above 1. UTF-16 and UTF-32 files, which Swift also reads and no writer of ours writes, read as unreadable. A clip without `volume` reads as 1, one without `framing` as the standard framing, and a media fact without `kind` as a video.
+- Swift keeps a date as a double of seconds, Dart as whole microseconds. A date with digits below the microsecond, as the time of a write on the phone has, comes back from Dart rounded to the microsecond.
 <!-- end slot: dart-draft-codec -->
 
 <!-- slot: dart-draft-shelf -->
+### The draft shelf in Dart
+
+- `lib/src/drafts/draft_shelf.dart` holds `DraftShelf` and `OpenDraft` of `DraftShelf.swift`, with the behaviour "The draft shelf" above gives them, and is the one file of the Dart Core that imports `dart:io`. The folder is a `Directory`, `mediaFolder` a `Directory` and `coverFile` a `File`. The two folders a shelf is made on are those `launch` gives, `<Application Support>/Drafts` and `<caches>/TestDrafts`, as in `m6`.
+- `OpenDraft.write` does what the atomic option of `Data.write` does: it writes the bytes of `encodeDraft` to a temporary name in the draft's own folder, flushes them, and renames that file over `draft.json`, so a write that is cut leaves the old `draft.json` whole. A failure, a number the codec cannot write among them, removes the temporary file and throws `DraftError.cannotWrite`. The shelf is called from one isolate, so the temporary name `.draft.json.new` is fixed, and a write takes over one that a cut write left.
+- The log lines of `NSLog` are printed. A new id is a random UUID in upper case, as Swift's `uuidString`.
+- A history that `open` gives back is opened in the editor only through `Editing.withHistory`, which ends its run.
 <!-- end slot: dart-draft-shelf -->
 
 <!-- slot: flutter-words -->
