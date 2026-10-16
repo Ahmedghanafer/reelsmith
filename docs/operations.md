@@ -58,7 +58,7 @@ A change that touches a few test classes is checked sooner with a part run, star
 gh workflow run "macOS build" --ref <branch> -f classes="TrimTests ToolsTests"
 ```
 
-Layer 4 then runs only the named classes and the smoke set, chosen with `-only-testing` of `xcodebuild`. During the port the smoke set is the union of the files in `.github/m7/smoke/`, one test a line, empty until the screen stories add theirs. It is there so that a part run still shows that the app starts, shows a picture, takes an edit and saves a video. A part run proves the named classes and that much, and nothing about the other tests. A name that is no test class fails layer 4 before the warm start with a line that starts with `No UI test class is named`.
+Layer 4 then runs only the named classes and the smoke set, chosen with `-only-testing` of `xcodebuild`. The smoke set is five tests named in one place, `SMOKE_TESTS` at the top of `.github/workflows/macos.yml`: the start with no seed of `StartTests`, the seed start of `HarnessTests`, the first frame of `PreviewTests`, the split and delete of `ToolsTests` and the export to the saved panel of `ExportPanelTests`. It is there so that a part run still shows that the app starts, shows a picture, takes an edit and saves a video. A part run proves the named classes and that much, and nothing about the other tests. A name that is no test class fails layer 4 before the warm start with a line that starts with `No UI test class is named`.
 
 The whole suite runs sooner as a split run, which waits for the slowest of three machines:
 
@@ -66,7 +66,7 @@ The whole suite runs sooner as a split run, which waits for the slowest of three
 gh workflow run "macOS build" --ref dev -f split=true
 ```
 
-It starts three jobs, `build 1` to `build 3`, each with its own build, simulator, recording and artifacts. During the port the classes dealt are the union of the files in `.github/m7/classes/`, one class a line, put in the order of their names and dealt out one by one, and a group that gets no class fails layer 4. A file of `UITests/` with tests that does not hold exactly one test class, or a test class in a folder under `UITests/`, fails layer 4 of every group and of a part run, because that class would be in no group. The three groups together prove what the run on one machine proves. `classes` and `split` together fail layer 4. With `ipa=true` the first group makes the device build.
+It starts three jobs, `build 1` to `build 3`, each with its own build, simulator, recording and artifacts. The test classes are read from the files of `UITests/` when the run starts, put in the order of their names, and dealt out one by one, so a new class is in a group without a change to the workflow. A file of `UITests/` with tests that does not hold exactly one test class, or a test class in a folder under `UITests/`, fails layer 4 of every group and of a part run, because that class would be in no group. The three groups together prove what the run on one machine proves. `classes` and `split` together fail layer 4. With `ipa=true` the first group makes the device build.
 
 Every run says what it ran in one line that starts with `UI tests of this run:`, in the log of layer 4 and in the Summary: the classes asked for or the classes of the group, and the count of tests selected. After the tests a line `UI tests executed:` gives the count the test run reported. A part run or a group whose two counts differ fails layer 4, so a selection that ran nothing is never green.
 
@@ -128,7 +128,7 @@ A free Apple ID install stops working after 7 days. Repeat step 3 with the same 
 <!-- slot: flutter-build -->
 ## The Flutter build
 
-The app is the Flutter app in `app/`. Its iOS project `app/ios/Runner.xcodeproj` is committed, and its scheme `Runner` is built through `app/ios/Runner.xcworkspace`. The target `Runner` makes `Reelsmith.app` with the bundle id `com.ghanafer.reelsmith` and links the root Swift package by a local package reference to `../..`. The target `ReelsmithUITests` takes the folder `UITests/` as it stands. `App/` and `project.yml` are built by no workflow.
+The app is the Flutter app in `app/`. Its iOS project `app/ios/Runner.xcodeproj` is committed, and its scheme `Runner` is built through `app/ios/Runner.xcworkspace`. The target `Runner` makes `Reelsmith.app` with the bundle id `com.ghanafer.reelsmith` and links the root Swift package by a local package reference to `../..`. The target `ReelsmithUITests` takes the folder `UITests/` as it stands.
 
 The Flutter version is written once, in `.github/flutter-version`, and each of the three workflows installs that version.
 
@@ -139,8 +139,6 @@ The Flutter version is written once, in `.github/flutter-version`, and each of t
 ```
 gh workflow run "macOS build" --ref <branch> -f build_only=true
 ```
-
-During the port a run reads two folders. `.github/m7/smoke/` holds files of tests, one `<class>/<test>` a line, and a part run adds the union of those files as its smoke set. `.github/m7/classes/` holds files of classes, one class a line, and a split run deals only the union of those files into its three groups. A group that gets no class stops red.
 <!-- end slot: flutter-build -->
 
 <!-- slot: engine-bridge -->
@@ -231,4 +229,7 @@ During the port a run reads two folders. `.github/m7/smoke/` holds files of test
 <!-- end slot: flutter-whole-paths -->
 
 <!-- slot: flutter-suite -->
+## The whole suite and the device file
+
+Once the port is done the whole suite runs on the Flutter build as a split run on `dev`, every class of `UITests/` dealt over the three machines. The file for the phone comes from a run with `-f ipa=true`, as the artifact `ipa` that holds `Reelsmith.ipa`.
 <!-- end slot: flutter-suite -->

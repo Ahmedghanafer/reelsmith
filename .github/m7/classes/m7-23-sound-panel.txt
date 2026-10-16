@@ -1,3 +1,0 @@
-SoundClipsTests
-LiveLevelsTests
-MusicLevelsTests
