@@ -11,20 +11,38 @@ import 'seed_start.dart';
 import 'start_screen.dart';
 
 /// The theme of one appearance with the colours of iOS: the system background (white, black) as the page and
-/// the surface, the label colour (black, white) on it, `systemGray` as the outline and `systemGray4` as the
-/// disabled colour.
+/// the surface, the label colour (black, white) on it, `systemGray` as the outline, `systemGray4` as the
+/// disabled colour and `systemBlue` as the tint of every button. A tapped button leaves no ripple and no
+/// highlight, as on iOS.
 ///
 /// https://api.flutter.dev/flutter/material/ThemeData-class.html
+/// https://api.flutter.dev/flutter/material/NoSplash-class.html
+/// https://api.flutter.dev/flutter/material/ButtonStyle/overlayColor.html
 /// https://developer.apple.com/design/human-interface-guidelines/color
 ThemeData appTheme(Brightness brightness) {
   final light = brightness == Brightness.light;
   final background = light ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
   final label = light ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+  final tint = light ? const Color(0xFF007AFF) : const Color(0xFF0A84FF);
+  const still = ButtonStyle(
+    splashFactory: NoSplash.splashFactory,
+    overlayColor: WidgetStatePropertyAll(Colors.transparent),
+  );
   return ThemeData(
     brightness: brightness,
     scaffoldBackgroundColor: background,
+    splashFactory: NoSplash.splashFactory,
+    splashColor: Colors.transparent,
+    highlightColor: Colors.transparent,
+    textButtonTheme: const TextButtonThemeData(style: still),
+    iconButtonTheme: IconButtonThemeData(
+      style: still.merge(
+        IconButton.styleFrom(foregroundColor: tint, disabledForegroundColor: label.withValues(alpha: 0.38)),
+      ),
+    ),
     disabledColor: light ? const Color(0xFFD1D1D6) : const Color(0xFF3A3A3C),
     colorScheme: (light ? const ColorScheme.light() : const ColorScheme.dark()).copyWith(
+      primary: tint,
       surface: background,
       onSurface: label,
       outline: const Color(0xFF8E8E93),
