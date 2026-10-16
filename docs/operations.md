@@ -14,7 +14,7 @@ gh run view <run id> --log
 
 ## Ask for a compile check
 
-The `Compile check` workflow compiles a pull request's Apple code on a macOS runner with Xcode 26.6. It generates the project, runs `swift test` for the package (the Engine tests run here, with no simulator), builds the app and the UI tests for a simulator with `xcodebuild build-for-testing`, and runs `plutil -lint` over the word files. Every part runs even when an earlier one failed, and the check is red if any part is. No simulator is booted and no UI test runs. It stops itself after 15 minutes.
+The `Compile check` workflow compiles a pull request's Apple code on a macOS runner with Xcode 26.6 and the Flutter version of `.github/flutter-version`. It runs `swift test` for the package (the Engine tests run here, with no simulator), builds the Flutter app for a simulator with `flutter build ios --simulator --debug`, builds the app and the UI tests for testing with `xcodebuild build-for-testing` on `app/ios/Runner.xcworkspace`, and runs `plutil -lint` over the word files in `app/assets/words/`, red when it finds none. Every part runs even when an earlier one failed, and the check is red if any part is. No simulator is booted and no UI test runs. It stops itself after 23 minutes.
 
 Put the label `compile` on the pull request to start it. A new commit does not start a run. To run it again after a fix, take the label off and put it back:
 
@@ -50,7 +50,7 @@ gh workflow run "macOS build" --ref dev
 gh workflow run "macOS build" --ref dev -f ipa=true
 ```
 
-The second form also makes the unsigned build for the phone. Both run every UI test on one machine, which proves the whole app and takes the longest.
+The second form also makes the unsigned build for the phone. Both run every UI test on one machine, which proves the whole app and takes the longest. With `-f build_only=true` a run stops after layer 3: it builds, installs and grants Photos, runs no UI test and uploads what it has.
 
 A change that touches a few test classes is checked sooner with a part run, started on its branch with the classes named, separated by spaces or commas:
 
@@ -58,7 +58,7 @@ A change that touches a few test classes is checked sooner with a part run, star
 gh workflow run "macOS build" --ref <branch> -f classes="TrimTests ToolsTests"
 ```
 
-Layer 4 then runs only the named classes and the smoke set, chosen with `-only-testing` of `xcodebuild`. The smoke set is five tests named in one place, `SMOKE_TESTS` at the top of `.github/workflows/macos.yml`: the start with no seed of `StartTests`, the seed start of `HarnessTests`, the first frame of `PreviewTests`, the split and delete of `ToolsTests` and the export to the saved panel of `ExportPanelTests`. It is there so that a part run still shows that the app starts, shows a picture, takes an edit and saves a video. A part run proves the named classes and that much, and nothing about the other tests. A name that is no test class fails layer 4 before the warm start with a line that starts with `No UI test class is named`.
+Layer 4 then runs only the named classes and the smoke set, chosen with `-only-testing` of `xcodebuild`. During the port the smoke set is the union of the files in `.github/m7/smoke/`, one test a line, empty until the screen stories add theirs. It is there so that a part run still shows that the app starts, shows a picture, takes an edit and saves a video. A part run proves the named classes and that much, and nothing about the other tests. A name that is no test class fails layer 4 before the warm start with a line that starts with `No UI test class is named`.
 
 The whole suite runs sooner as a split run, which waits for the slowest of three machines:
 
@@ -66,7 +66,7 @@ The whole suite runs sooner as a split run, which waits for the slowest of three
 gh workflow run "macOS build" --ref dev -f split=true
 ```
 
-It starts three jobs, `build 1` to `build 3`, each with its own build, simulator, recording and artifacts. The test classes are read from the files of `UITests/` when the run starts, put in the order of their names, and dealt out one by one, so a new class is in a group without a change to the workflow. A file of `UITests/` with tests that does not hold exactly one test class, or a test class in a folder under `UITests/`, fails layer 4 of every group and of a part run, because that class would be in no group. The three groups together prove what the run on one machine proves. `classes` and `split` together fail layer 4. With `ipa=true` the first group makes the device build.
+It starts three jobs, `build 1` to `build 3`, each with its own build, simulator, recording and artifacts. During the port the classes dealt are the union of the files in `.github/m7/classes/`, one class a line, put in the order of their names and dealt out one by one, and a group that gets no class fails layer 4. A file of `UITests/` with tests that does not hold exactly one test class, or a test class in a folder under `UITests/`, fails layer 4 of every group and of a part run, because that class would be in no group. The three groups together prove what the run on one machine proves. `classes` and `split` together fail layer 4. With `ipa=true` the first group makes the device build.
 
 Every run says what it ran in one line that starts with `UI tests of this run:`, in the log of layer 4 and in the Summary: the classes asked for or the classes of the group, and the count of tests selected. After the tests a line `UI tests executed:` gives the count the test run reported. A part run or a group whose two counts differ fails layer 4, so a selection that ran nothing is never green.
 
@@ -81,12 +81,12 @@ gh run view <run id> --log
 The run creates one simulator, an iPhone 17 on the iOS 26.5 runtime, and works through seven layers in order. The setup step prints the simulators the runner image holds. With `-f image_simulator=true` the run uses the image's own iPhone 17 on that runtime in place of a new one, if there is one. Layer 3 prints `the boot, inside layer 3,` with the seconds of the boot and which simulator it was, and the line is in the Summary too:
 
 1. `swift test` builds the package and runs its tests on macOS, the Engine tests among them. `REELSMITH_CLIP_DIR` is set, so the clip maker test leaves `blue.mov` and `red.mov` there.
-2. The project is generated, and the app and the UI tests are built for testing.
+2. The Flutter app is built for a simulator with `flutter build ios --simulator --debug`, then the app and the UI tests are built for testing from `app/ios/Runner.xcworkspace`.
 3. The simulator boots, the built app is installed, the right to add to Photos is granted to the app, the two clips are put into the photo library, and the count of videos in the library is printed.
 4. The app is started once on the seed `three-clips` and ended again (the warm start, below). Then one recording of the simulator starts. When the recorder prints `Recording started`, that moment is written to `recording-start.txt` in seconds since 1970 to the thousandth (if the line does not come within 30 seconds, the file keeps the clock second taken just before the recorder started). The UI tests run without a rebuild into a result bundle.
 5. The screenshots and the mark files are exported from the result bundle under their attachment names, and each mark becomes one line of `recording-index.txt` (how it is made is under "Fetch the artifacts"). A name is made safe for the upload: each character the upload refuses (the double quote, colon, less than, greater than, vertical bar, asterisk, question mark, carriage return and line feed) becomes an underscore, and a name that is already taken gets a number before its ending, as in `<name>_2.txt`. The ending of a mark file is `.mark.txt` and that of any other name is what follows its last dot, so a taken name whose last dot is not an ending gets its number before that dot, as in `App UI hierarchy for com.ghanafer_2.reelsmith`.
 6. The count of videos in the library is printed again.
-7. Only with `ipa=true`: the device build without code signing, packed as `Reelsmith.ipa`.
+7. Only with `ipa=true`: the device build from `app/ios/Runner.xcworkspace` in the release configuration without code signing, packed as `Reelsmith.ipa`.
 
 Between layers 3 and 4 one step writes `tone.wav`, a tone of 3 seconds made with the runner's Python, into the storage of the simulator's Files app, which it finds by a search under the data folder of the device, and prints that folder, or that it found none, without making the run red.
 
@@ -124,3 +124,111 @@ This works: on 2026-10-12 an unsigned build of this project was installed with S
 6. Open Reelsmith. The start screen shows the name of the app, the two shapes and "New project".
 
 A free Apple ID install stops working after 7 days. Repeat step 3 with the same Apple ID to renew it. A renewal installs over the app, which keeps its drafts. Never delete the app before a renewal: that removes every draft. Whether the drafts survive a renewal is on the list of what is judged on the phone.
+
+<!-- slot: flutter-build -->
+## The Flutter build
+
+The app is the Flutter app in `app/`. Its iOS project `app/ios/Runner.xcodeproj` is committed, and its scheme `Runner` is built through `app/ios/Runner.xcworkspace`. The target `Runner` makes `Reelsmith.app` with the bundle id `com.ghanafer.reelsmith` and links the root Swift package by a local package reference to `../..`. The target `ReelsmithUITests` takes the folder `UITests/` as it stands. `App/` and `project.yml` are built by no workflow.
+
+The Flutter version is written once, in `.github/flutter-version`, and each of the three workflows installs that version.
+
+- `Tests` runs three jobs on Linux: `test` runs `swift test`, `app` runs `flutter test` in `app/`, and `core` runs `dart test` in `packages/reelsmith_core`, each step of it skipped while that folder has no `pubspec.yaml`.
+- `Compile check` runs `swift test` on macOS, builds the Flutter app for a simulator with `flutter build ios --simulator --debug`, builds the app and `ReelsmithUITests` with `xcodebuild build-for-testing` on the workspace, and lints the word files in `app/assets/words/`, red when it finds none. It stops itself after 23 minutes: a cold Flutter build for the simulator of 290 seconds and a build for testing of 115 seconds, both measured by the Flutter trial on the same runner, and the 622 seconds of `swift test` in the compile check of 2026-10-15, 1027 seconds in all, with a third added.
+- `macOS build` builds the Flutter app, then the app and the UI tests for testing, in layer 2, and makes the device build of layer 7 from the same workspace in the release configuration with no code signing. The input `build_only` stops a run after layer 3: it builds, installs and grants Photos as usual, runs no UI test and uploads what it has.
+
+```
+gh workflow run "macOS build" --ref <branch> -f build_only=true
+```
+
+During the port a run reads two folders. `.github/m7/smoke/` holds files of tests, one `<class>/<test>` a line, and a part run adds the union of those files as its smoke set. `.github/m7/classes/` holds files of classes, one class a line, and a split run deals only the union of those files into its three groups. A group that gets no class stops red.
+<!-- end slot: flutter-build -->
+
+<!-- slot: engine-bridge -->
+<!-- end slot: engine-bridge -->
+
+<!-- slot: dart-core-model -->
+<!-- end slot: dart-core-model -->
+
+<!-- slot: dart-seeds-text-sound -->
+<!-- end slot: dart-seeds-text-sound -->
+
+<!-- slot: dart-clip-edits -->
+<!-- end slot: dart-clip-edits -->
+
+<!-- slot: dart-text-edits -->
+<!-- end slot: dart-text-edits -->
+
+<!-- slot: dart-sound-edits -->
+<!-- end slot: dart-sound-edits -->
+
+<!-- slot: dart-history -->
+<!-- end slot: dart-history -->
+
+<!-- slot: dart-states -->
+<!-- end slot: dart-states -->
+
+<!-- slot: dart-draft-codec -->
+<!-- end slot: dart-draft-codec -->
+
+<!-- slot: dart-draft-shelf -->
+<!-- end slot: dart-draft-shelf -->
+
+<!-- slot: flutter-words -->
+<!-- end slot: flutter-words -->
+
+<!-- slot: engine-preview -->
+<!-- end slot: engine-preview -->
+
+<!-- slot: engine-pickers -->
+<!-- end slot: engine-pickers -->
+
+<!-- slot: engine-outputs -->
+<!-- end slot: engine-outputs -->
+
+<!-- slot: flutter-start -->
+<!-- end slot: flutter-start -->
+
+<!-- slot: flutter-editor-store -->
+<!-- end slot: flutter-editor-store -->
+
+<!-- slot: flutter-editor-screen -->
+<!-- end slot: flutter-editor-screen -->
+
+<!-- slot: flutter-strip -->
+<!-- end slot: flutter-strip -->
+
+<!-- slot: flutter-trim-reorder -->
+<!-- end slot: flutter-trim-reorder -->
+
+<!-- slot: flutter-export -->
+<!-- end slot: flutter-export -->
+
+<!-- slot: flutter-text-panel -->
+<!-- end slot: flutter-text-panel -->
+
+<!-- slot: flutter-text-bars -->
+<!-- end slot: flutter-text-bars -->
+
+<!-- slot: flutter-project-list -->
+<!-- end slot: flutter-project-list -->
+
+<!-- slot: flutter-text-gestures -->
+<!-- end slot: flutter-text-gestures -->
+
+<!-- slot: flutter-sound-panel -->
+<!-- end slot: flutter-sound-panel -->
+
+<!-- slot: flutter-music -->
+<!-- end slot: flutter-music -->
+
+<!-- slot: flutter-clips-frames -->
+<!-- end slot: flutter-clips-frames -->
+
+<!-- slot: flutter-clip-panel -->
+<!-- end slot: flutter-clip-panel -->
+
+<!-- slot: flutter-whole-paths -->
+<!-- end slot: flutter-whole-paths -->
+
+<!-- slot: flutter-suite -->
+<!-- end slot: flutter-suite -->

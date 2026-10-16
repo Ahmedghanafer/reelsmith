@@ -12,7 +12,7 @@ final class ClipSlotsTests: XCTestCase {
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 
         for language in ["en", "ar", "sv"] {
-            let file = repository.appendingPathComponent("App/Resources/" + language + ".lproj/Localizable.strings")
+            let file = repository.appendingPathComponent("app/assets/words/" + language + ".lproj/Localizable.strings")
             let lines = try String(contentsOf: file, encoding: .utf8).split(whereSeparator: \.isNewline)
             let marks = lines.map { $0.trimmingCharacters(in: .whitespaces) }.filter { $0.contains("slot: ") }
 

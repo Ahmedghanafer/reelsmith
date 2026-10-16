@@ -12,3 +12,45 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: swift test
+
+  # The Flutter app's tests, on the Flutter version of .github/flutter-version.
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Read the Flutter version
+        id: flutter
+        run: echo "version=$(cat .github/flutter-version)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          cache: true
+      - name: Flutter test
+        working-directory: app
+        run: |
+          flutter --version
+          flutter pub get
+          flutter test
+
+  # The Dart Core's tests. Each step is skipped while the folder of the package is missing.
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Read the Flutter version
+        id: flutter
+        if: ${{ hashFiles('packages/reelsmith_core/pubspec.yaml') != '' }}
+        run: echo "version=$(cat .github/flutter-version)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@v2
+        if: ${{ hashFiles('packages/reelsmith_core/pubspec.yaml') != '' }}
+        with:
+          channel: stable
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          cache: true
+      - name: Dart test
+        if: ${{ hashFiles('packages/reelsmith_core/pubspec.yaml') != '' }}
+        working-directory: packages/reelsmith_core
+        run: |
+          dart pub get
+          dart test

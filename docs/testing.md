@@ -17,7 +17,7 @@ What comes back from the simulator run:
 - Before the UI tests the run puts `blue.mov` and `red.mov` into the simulator's photo library, then the test photo `magenta.png` in a call of its own, and grants the app the right to add to Photos, so no test meets the system's question. The two clips and the photo are written under `REELSMITH_CLIP_DIR` by `TestClipMakerTests`. The simulator holds photos of its own, older than blue, which stand at the end of a grid that offers photos: the run counts the photos once the test photo is in and hands that count less one to the UI tests as `TEST_RUNNER_REELSMITH_OWN_PHOTOS`, which the test runner reads as `REELSMITH_OWN_PHOTOS`.
 - The run prints the count of photos before any media is added, which reads "could not be read" on a new simulator whose library is made by the first addition, and the counts of videos and of photos in the library before and after the UI tests. The count of photos does not change. The count of videos grows by thirteen, one for each export that is saved: one in `ExportChoiceTests`, one in `ExportKeptTests`, three in `ExportPanelTests`, two in `WholeExportPathTests`, three in `WholePathTests`, one in `WholeTextPathTests`, one in `WholeSoundPathTests` and one in `WholeDraftPathTests`.
 
-The simulator run has three kinds, started as `docs/operations.md` tells. With no input it runs every UI test on one machine. With classes named it is a part run: the named classes and the smoke set, five tests listed as `SMOKE_TESTS` in `.github/workflows/macos.yml` (a start with no seed, a start on a seed, the first frame of the preview, a split and a delete on the strip, an export to the saved panel). A part run proves its classes and that the app still starts, shows a picture, edits and saves, and says nothing about the other tests, so the count of videos grows only by the exports it ran. A split run deals every test class into three groups on three machines and proves the same as the run on one machine, with the thirteen saved videos counted in the groups that hold the eight exporting classes. The line `UI tests of this run:` in the log of layer 4 and in the Summary tells which kind a run was.
+The simulator run has three kinds, started as `docs/operations.md` tells. With no input it runs every UI test on one machine. With classes named it is a part run: the named classes and the smoke set, the union of the files in `.github/m7/smoke/`, which is empty during the port until the screen stories fill it. A part run proves its classes and that the app still starts, shows a picture, edits and saves, and says nothing about the other tests, so the count of videos grows only by the exports it ran. During the port a split run deals only the classes of `.github/m7/classes/` into three groups on three machines, and the saved videos are counted in the groups that hold the exporting classes among them. The line `UI tests of this run:` in the log of layer 4 and in the Summary tells which kind a run was.
 
 ## The shared helpers of the UI tests
 
@@ -224,7 +224,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 ### The word files
 
-- `Tests/ReelsmithCoreTests/WordFilesTests.swift` reads `App/Resources/<en, ar, sv>.lproj/Localizable.strings` from the repository and fails when their key sets differ, when a text is empty, when the placeholders of a key differ between languages, when a key appears twice, or when a file holds anything but comments and lines of a key. It shows each of the first four on word files it writes into a temporary folder. It stays green when a key is gone from all three files, so each part of the app that needs keys has a test that names them. For the seed text that test is in this file: it holds `editor.seedInfo` to the English file.
+- `Tests/ReelsmithCoreTests/WordFilesTests.swift` reads `app/assets/words/<en, ar, sv>.lproj/Localizable.strings` from the repository and fails when their key sets differ, when a text is empty, when the placeholders of a key differ between languages, when a key appears twice, or when a file holds anything but comments and lines of a key. It shows each of the first four on word files it writes into a temporary folder. It stays green when a key is gone from all three files, so each part of the app that needs keys has a test that names them. For the seed text that test is in this file: it holds `editor.seedInfo` to the English file.
 - The same file gives every Linux test the function `wordKeys(of language: String) throws -> [String]`, the keys of the repository's word file of `"en"`, `"ar"` or `"sv"`. A test of a Core state that gives words holds its keys with it and writes no second reader, as `StartWordsTests.swift` does for every key of `StartState.allWords`.
 - `Tests/ReelsmithCoreTests/StartWordsTests.swift` runs on Linux, with `wordKeys(of:)`. It fails when one of the seven keys of the start screen is missing from the English, the Arabic or the Swedish word file, and when a key of `StartState.allWords` or of `Canvas.allWords` is missing from the English file.
 - `Tests/ReelsmithCoreTests/ExportWordsTests.swift` fails when one of the seven keys of the export is missing from the English, the Arabic or the Swedish word file, and when a key of `ExportState.allWords` is missing from the English file.
@@ -1063,3 +1063,104 @@ Screenshots: `draft-path-01-list` (the list with the one draft and its cover), `
 When the picker is not driven at the new project or at the added clip, the test prints `clip-path: picker not driven:` with the step that found nothing, ends the app and goes on from `-drafts fresh -seed photo-wide` (blue, the photo, red), with three blocks, made 3, the photo second before the move and the line `1 3+`. It then skips the music of a video and the reads of its bar. When the editor does not open, or the added clip does not come, within 60 seconds of a confirmed pick the test fails, and the walk goes on from the seed the same way. When only the pick of the music finds nothing, the walk goes on from the kept draft without music. The last line of the walk is `clip-path: walk finished,` with "picker driven" or "picker not driven, from the seed photo-wide", the music and the seconds of the walk: a run without that line did not walk, whatever its result says.
 
 Screenshots: `clip-path-01-strip` (the strip after the music, the photo first and the music bar under the blocks), `clip-path-01-strip-ar` and `clip-path-01-strip-sv` (the reopened draft), `clip-path-02-saved` (the saved panel with `1920 1080 30`), `clip-path-03-framed` (blue with blurred bars on the 9:16 canvas at 1 second, red selected and the clip panel open) and `clip-path-03-framed-ar` and `clip-path-03-framed-sv` (blue with blurred bars). Marks: `clip-path-01-path`, before the first start of the walk, `clip-path-02-lift`, before the press of the photo, whose recording shows the photo lifted under the finger and the blocks it passes standing aside before the release, and `clip-path-03-plays`. The count of videos the run prints grows by one for this walk.
+
+<!-- slot: flutter-build -->
+## The tests of the Flutter app
+
+- On Linux, the job `app` of `Tests` runs `flutter test` in `app/`. `app/test/app_test.dart` builds the root of the app.
+- The job `core` runs `dart test` in `packages/reelsmith_core` once that folder holds a package.
+- The UI tests stay in `UITests/`. The target `ReelsmithUITests` of `app/ios/Runner.xcodeproj` takes that folder as a synchronized folder, so a new test file edits no project file, and its tests run against `Reelsmith.app` of the Flutter build.
+- The Core tests that read the word files read them from `app/assets/words/<en, ar, sv>.lproj/Localizable.strings`.
+- A debug build of Runner copies `Tests/Fixtures/Drafts/` into the folder `DraftFixtures` of the app bundle, in a build phase of its own. A release build copies nothing. The folder holds one placeholder file until the fixtures are written.
+- The smoke set of a part run and the classes of a split run come from `.github/m7/`, as `docs/operations.md` says.
+<!-- end slot: flutter-build -->
+
+<!-- slot: engine-bridge -->
+<!-- end slot: engine-bridge -->
+
+<!-- slot: dart-core-model -->
+<!-- end slot: dart-core-model -->
+
+<!-- slot: dart-seeds-text-sound -->
+<!-- end slot: dart-seeds-text-sound -->
+
+<!-- slot: dart-clip-edits -->
+<!-- end slot: dart-clip-edits -->
+
+<!-- slot: dart-text-edits -->
+<!-- end slot: dart-text-edits -->
+
+<!-- slot: dart-sound-edits -->
+<!-- end slot: dart-sound-edits -->
+
+<!-- slot: dart-history -->
+<!-- end slot: dart-history -->
+
+<!-- slot: dart-states -->
+<!-- end slot: dart-states -->
+
+<!-- slot: dart-draft-codec -->
+<!-- end slot: dart-draft-codec -->
+
+<!-- slot: dart-draft-shelf -->
+<!-- end slot: dart-draft-shelf -->
+
+<!-- slot: flutter-words -->
+<!-- end slot: flutter-words -->
+
+<!-- slot: engine-preview -->
+<!-- end slot: engine-preview -->
+
+<!-- slot: engine-pickers -->
+<!-- end slot: engine-pickers -->
+
+<!-- slot: engine-outputs -->
+<!-- end slot: engine-outputs -->
+
+<!-- slot: flutter-start -->
+<!-- end slot: flutter-start -->
+
+<!-- slot: flutter-editor-store -->
+<!-- end slot: flutter-editor-store -->
+
+<!-- slot: flutter-editor-screen -->
+<!-- end slot: flutter-editor-screen -->
+
+<!-- slot: flutter-strip -->
+<!-- end slot: flutter-strip -->
+
+<!-- slot: flutter-trim-reorder -->
+<!-- end slot: flutter-trim-reorder -->
+
+<!-- slot: flutter-export -->
+<!-- end slot: flutter-export -->
+
+<!-- slot: flutter-text-panel -->
+<!-- end slot: flutter-text-panel -->
+
+<!-- slot: flutter-text-bars -->
+<!-- end slot: flutter-text-bars -->
+
+<!-- slot: flutter-project-list -->
+<!-- end slot: flutter-project-list -->
+
+<!-- slot: flutter-text-gestures -->
+<!-- end slot: flutter-text-gestures -->
+
+<!-- slot: flutter-sound-panel -->
+<!-- end slot: flutter-sound-panel -->
+
+<!-- slot: flutter-music -->
+<!-- end slot: flutter-music -->
+
+<!-- slot: flutter-clips-frames -->
+<!-- end slot: flutter-clips-frames -->
+
+<!-- slot: flutter-clip-panel -->
+<!-- end slot: flutter-clip-panel -->
+
+<!-- slot: flutter-whole-paths -->
+<!-- end slot: flutter-whole-paths -->
+
+<!-- slot: flutter-suite -->
+<!-- end slot: flutter-suite -->

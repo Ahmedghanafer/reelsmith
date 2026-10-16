@@ -13,7 +13,7 @@ final class SoundSlotsTests: XCTestCase {
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 
         for language in ["en", "ar", "sv"] {
-            let file = repository.appendingPathComponent("App/Resources/" + language + ".lproj/Localizable.strings")
+            let file = repository.appendingPathComponent("app/assets/words/" + language + ".lproj/Localizable.strings")
             let lines = try String(contentsOf: file, encoding: .utf8).split(whereSeparator: \.isNewline)
             let marks = lines.map(String.init).filter { $0.contains("slot: ") }
             let start = try XCTUnwrap(marks.firstIndex(of: wanted[0]), language)
