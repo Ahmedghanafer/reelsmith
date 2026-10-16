@@ -78,9 +78,17 @@ class StripState extends State<Strip> {
                 }
                 _down.add(event.pointer);
                 _many = _many || _down.length > 1;
+                _probe('down', event);
               },
-              onPointerUp: (event) => _down.remove(event.pointer),
-              onPointerCancel: (event) => _down.remove(event.pointer),
+              onPointerMove: (event) => _probe('move', event),
+              onPointerUp: (event) {
+                _probe('up', event);
+                _down.remove(event.pointer);
+              },
+              onPointerCancel: (event) {
+                _probe('cancel', event);
+                _down.remove(event.pointer);
+              },
               child: RawGestureDetector(
                 behavior: HitTestBehavior.opaque,
                 excludeFromSemantics: true,
@@ -326,6 +334,7 @@ class StripState extends State<Strip> {
   /// One pointer starts a scrub: `pause`, and the playhead's x is kept. Two start a pinch from the scale now. A
   /// pointer that comes or goes ends the gesture and starts it again with the new count.
   void _started(ScaleStartDetails details) {
+    print('probe: start n=${details.pointerCount} many=$_many pps=${scale.pointsPerSecond.toStringAsFixed(2)}');
     if (details.pointerCount > 1) {
       _pinchStart = scale;
       return;
@@ -341,6 +350,8 @@ class StripState extends State<Strip> {
   /// Core keeps the time inside the project. A pinch sets the scale to the scale at its start times its factor,
   /// held by Core, and sends nothing: the playhead stays in the middle on its time.
   void _updated(ScaleUpdateDetails details) {
+    print('probe: update n=${details.pointerCount} many=$_many scale=${details.scale.toStringAsFixed(3)} '
+        'from=${_pinchStart.pointsPerSecond.toStringAsFixed(2)} pps=${scale.pointsPerSecond.toStringAsFixed(2)}');
     if (_many) {
       if (details.pointerCount > 1) {
         setState(() => scale = _pinchStart.zoomed(details.scale));
@@ -349,6 +360,10 @@ class StripState extends State<Strip> {
     }
     final x = _scrubStart - (details.localFocalPoint.dx - _downX);
     store.send(core.EditorAction.movePlayhead(scale.time(x)));
+  }
+
+  void _probe(String kind, PointerEvent event) {
+    print('probe: $kind id=${event.pointer} kind=${event.kind.name} at=${event.localPosition} down=${_down.length}');
   }
 
   /// A tap on the row of blocks selects the clip under it. A tap anywhere else on the strip, beside the row or in
