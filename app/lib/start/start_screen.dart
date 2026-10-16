@@ -6,6 +6,7 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 import '../editor/editor_store.dart';
 import '../engine/video_engine.dart';
 import '../words/words.dart';
+import 'draft_list.dart';
 
 /// The start screen: the title, the choice of the shape, and "New project", which opens the system picker for
 /// videos and photos.
@@ -129,6 +130,53 @@ class _StartScreenState extends State<StartScreen> {
                   ),
                 ],
                 // slot: drafts
+                if (_summaries.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    _text(core.Words('drafts.title')),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 24),
+                  DraftList(
+                    summaries: _summaries,
+                    shelf: widget.shelf,
+                    engine: widget.engine,
+                    words: widget.words,
+                    // While a new project is copied no other draft opens, so the copy's own open is the only one.
+                    enabled: idle,
+                    // The draft opens with the history it was written with. One that cannot be opened is logged and
+                    // the list is read again, where it shows as unreadable.
+                    open: (id) {
+                      final core.Draft draft;
+                      try {
+                        draft = widget.shelf.open(id);
+                      } catch (error) {
+                        print('start: the draft was not opened: $error');
+                        setState(() => _summaries = widget.shelf.list());
+                        return;
+                      }
+                      final opened = core.OpenDraft(shelf: widget.shelf, id: id);
+                      widget.open(
+                        EditorStore(
+                          state: core.EditorState(draft.project),
+                          mediaFolder: opened.mediaFolder,
+                          options: widget.options,
+                          engine: widget.engine,
+                          draft: opened,
+                          exportSettings: draft.exportSettings,
+                          history: draft.history,
+                        ),
+                      );
+                    },
+                    // The list is read again also when the delete throws, so it shows what is on disk.
+                    delete: (id) {
+                      try {
+                        widget.shelf.delete(id);
+                      } catch (_) {}
+                      setState(() => _summaries = widget.shelf.list());
+                    },
+                  ),
+                ],
                 // end slot: drafts
                 if (widget.options['drafts'] != null) ...[
                   const SizedBox(height: 24),
