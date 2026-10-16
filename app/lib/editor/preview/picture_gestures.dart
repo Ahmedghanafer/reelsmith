@@ -55,49 +55,50 @@ class _PictureGesturesState extends State<PictureGestures> {
   int _most = 0;
   Offset _down = Offset.zero;
 
-  /// The distance between the first two fingers when their number last changed, which the recognizer counts its
-  /// scale and angle from.
-  double _apart = 0;
+  /// The line from the second finger to the first, the scale and the angle of two fingers are counted from: taken
+  /// once the two are `_floor` points apart, since fingers that come down at one point give no scale and no angle.
+  /// Null until then, and again when the number of fingers changes.
+  Offset? _from;
+
+  /// The points two fingers must be apart before their line is taken.
+  static const double _floor = 4;
 
   /// The points the fingers go, apart or around, before two fingers are a pinch or a twist: as m6's pinch and twist,
   /// the one that begins first takes the gesture.
   static const double _travel = 10;
 
-  void _changed() {
-    final places = _fingers.values.take(2).toList();
-    _apart = places.length == 2 ? (places[0] - places[1]).distance : 0;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: (event) {
-        if (_fingers.isEmpty) {
-          _most = 0;
-          _down = event.localPosition;
-        }
-        _fingers[event.pointer] = event.localPosition;
-        _most = math.max(_most, _fingers.length);
-        _changed();
-      },
-      onPointerMove: (event) => _fingers[event.pointer] = event.localPosition,
-      onPointerUp: (event) {
-        _fingers.remove(event.pointer);
-        _changed();
-      },
-      onPointerCancel: (event) {
-        _fingers.remove(event.pointer);
-        _changed();
-      },
-      // From the finger coming down, so the text stays under the finger and turns with it from the first move.
-      child: GestureDetector(
+    // From the finger coming down, so the text stays under the finger and turns with it from the first move.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      dragStartBehavior: DragStartBehavior.down,
+      onTapUp: _tapped,
+      onScaleStart: _started,
+      onScaleUpdate: _updated,
+      onScaleEnd: _ended,
+      // Under the recognizers, so it has each place before they report it.
+      child: Listener(
         behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        dragStartBehavior: DragStartBehavior.down,
-        onTapUp: _tapped,
-        onScaleStart: _started,
-        onScaleUpdate: _updated,
-        onScaleEnd: _ended,
+        onPointerDown: (event) {
+          if (_fingers.isEmpty) {
+            _most = 0;
+            _down = event.localPosition;
+          }
+          _fingers[event.pointer] = event.localPosition;
+          _most = math.max(_most, _fingers.length);
+          _from = null;
+        },
+        onPointerMove: (event) => _fingers[event.pointer] = event.localPosition,
+        onPointerUp: (event) {
+          _fingers.remove(event.pointer);
+          _from = null;
+        },
+        onPointerCancel: (event) {
+          _fingers.remove(event.pointer);
+          _from = null;
+        },
         child: widget.child,
       ),
     );
@@ -156,9 +157,27 @@ class _PictureGesturesState extends State<PictureGestures> {
     }
     final core.EditorState next;
     if (details.pointerCount >= 2) {
+      // The scale and the angle from the fingers' own places: the recognizer's scale stays 1 for fingers that came
+      // down at one point.
+      final places = _fingers.values.take(2).toList();
+      if (places.length < 2) {
+        return;
+      }
+      final line = places[0] - places[1];
+      final from = _from ??= line.distance >= _floor ? line : null;
+      if (from == null) {
+        return;
+      }
+      final scale = line.distance / from.distance;
+      var angle = line.direction - from.direction;
+      if (angle > math.pi) {
+        angle -= 2 * math.pi;
+      } else if (angle <= -math.pi) {
+        angle += 2 * math.pi;
+      }
       // Apart: how far the distance between the fingers changed. Around: the arc of the angle at that distance.
-      final apart = _apart * (details.scale - 1).abs();
-      final around = _apart * details.scale * details.rotation.abs();
+      final apart = (line.distance - from.distance).abs();
+      final around = line.distance * angle.abs();
       if (_twist == null && apart < _travel && around < _travel) {
         return;
       }
@@ -167,8 +186,8 @@ class _PictureGesturesState extends State<PictureGestures> {
         start,
         core.EditorAction.text(
           twist
-              ? core.TextAction.turn(text.id, text.rotation + details.rotation * 180 / math.pi)
-              : core.TextAction.setStyle(text.id, text.style.copyWith(size: text.style.size * details.scale)),
+              ? core.TextAction.turn(text.id, text.rotation + angle * 180 / math.pi)
+              : core.TextAction.setStyle(text.id, text.style.copyWith(size: text.style.size * scale)),
         ),
       );
     } else {
