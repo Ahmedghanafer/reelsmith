@@ -37,8 +37,8 @@ class ExportSettingsSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           spacing: 16,
           children: [
-            Text(words.text(const core.Words('export.settings')), style: text.titleMedium),
-            Text(words.text(const core.Words('export.size'))),
+            Text(words.text(core.Words('export.settings')), style: text.titleMedium),
+            Text(words.text(core.Words('export.size'))),
             Row(
               spacing: 8,
               children: [
@@ -46,7 +46,7 @@ class ExportSettingsSheet extends StatelessWidget {
                   _choice(context, size.words, 'export.size.${size.name}', settings.size == size, () => settings.choosingSize(size)),
               ],
             ),
-            Text(words.text(const core.Words('export.rate'))),
+            Text(words.text(core.Words('export.rate'))),
             Row(
               spacing: 8,
               children: [
@@ -59,10 +59,10 @@ class ExportSettingsSheet extends StatelessWidget {
               container: true,
               button: true,
               enabled: true,
-              label: words.text(const core.Words('export.settings.done')),
+              label: words.text(core.Words('export.settings.done')),
               onTap: done,
               excludeSemantics: true,
-              child: FilledButton(onPressed: done, child: Text(words.text(const core.Words('export.settings.done')))),
+              child: FilledButton(onPressed: done, child: Text(words.text(core.Words('export.settings.done')))),
             ),
           ],
         ),

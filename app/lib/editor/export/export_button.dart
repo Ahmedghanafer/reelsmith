@@ -65,7 +65,7 @@ class _ExportButtonState extends State<ExportButton> {
             valueListenable: _state,
             builder: (context, state, _) {
               final enabled = state.canStart(store.state);
-              return _button('editor.export', widget.words.text(const core.Words('export.button')), enabled ? _start : null);
+              return _button('editor.export', widget.words.text(core.Words('export.button')), enabled ? _start : null);
             },
           ),
         ),
