@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reelsmith/editor/editor_screen.dart';
 import 'package:reelsmith/main.dart';
+import 'package:reelsmith/start/start_root.dart';
 import 'package:reelsmith/start/start_screen.dart';
 import 'package:reelsmith_core/reelsmith_core.dart' as core;
 

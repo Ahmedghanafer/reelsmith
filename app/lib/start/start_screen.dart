@@ -61,7 +61,6 @@ class _StartScreenState extends State<StartScreen> {
     final idle = _state == core.StartState.idle;
     final words = _state.words;
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -169,7 +168,10 @@ class _StartScreenState extends State<StartScreen> {
           ),
           child: Text(
             _text(shape.words),
-            style: TextStyle(fontSize: 17, color: chosen ? const Color(0xFFFFFFFF) : const Color(0xFF000000)),
+            style: TextStyle(
+              fontSize: 17,
+              color: chosen ? const Color(0xFFFFFFFF) : Theme.of(context).colorScheme.onSurface,
+            ),
           ),
         ),
       ),
