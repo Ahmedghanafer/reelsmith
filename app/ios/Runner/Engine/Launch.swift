@@ -37,8 +37,51 @@ extension Engine {
         if let drafts = options.drafts {
             values["drafts"] = drafts.rawValue
         }
+        if let name = options.draftFixture {
+            copyDraftFixture(name, caches: caches)
+        }
         let data = try JSONSerialization.data(withJSONObject: values, options: [.sortedKeys])
         return String(decoding: data, as: UTF8.self)
+    }
+
+    /// `-draft-fixture <name>`: the fixture `DraftFixtures/swift/<name>.json` of a debug bundle becomes the draft
+    /// `<caches>/TestDrafts/<name>/draft.json`, in place of a draft of that name, and every file of `<caches>/Seeds/`
+    /// is copied into its `Media`, so the clips and the music a seed start wrote there are found. The shelf removes
+    /// the files the draft does not name when it opens it. A fixture that is not in the bundle, or a copy that
+    /// fails, is logged.
+    ///
+    /// https://developer.apple.com/documentation/foundation/bundle/resourceurl
+    /// https://developer.apple.com/documentation/foundation/filemanager/removeitem(at:)
+    /// https://developer.apple.com/documentation/foundation/filemanager/copyitem(at:to:)
+    /// https://developer.apple.com/documentation/foundation/filemanager/contentsofdirectory(at:includingpropertiesforkeys:options:)
+    private func copyDraftFixture(_ name: String, caches: URL) {
+        let manager = FileManager.default
+        guard let resources = Bundle.main.resourceURL else {
+            NSLog("%@", "draft fixture: the bundle has no resources, " + name + " was not copied")
+            return
+        }
+        let fixture = resources.appendingPathComponent("DraftFixtures").appendingPathComponent("swift")
+            .appendingPathComponent(name + ".json")
+        guard !name.isEmpty, manager.fileExists(atPath: fixture.path) else {
+            NSLog("%@", "draft fixture: no fixture " + name + ".json in the bundle")
+            return
+        }
+        let draft = caches.appendingPathComponent("TestDrafts").appendingPathComponent(name)
+        let media = draft.appendingPathComponent("Media")
+        let seeds = caches.appendingPathComponent("Seeds")
+        do {
+            if manager.fileExists(atPath: draft.path) {
+                try manager.removeItem(at: draft)
+            }
+            try manager.createDirectory(at: media, withIntermediateDirectories: true)
+            try manager.copyItem(at: fixture, to: draft.appendingPathComponent("draft.json"))
+            let files = (try? manager.contentsOfDirectory(at: seeds, includingPropertiesForKeys: nil)) ?? []
+            for file in files {
+                try manager.copyItem(at: file, to: media.appendingPathComponent(file.lastPathComponent))
+            }
+        } catch {
+            NSLog("%@", "draft fixture: " + name + " was not copied: \(error)")
+        }
     }
 
     /// Writes the seed's test clips, test tones and test photos once into `<caches>/Seeds/`, keeps a file that is

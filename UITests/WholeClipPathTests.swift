@@ -227,7 +227,7 @@ final class WholeClipPathTests: XCTestCase {
         let clipsPart = element(app, "sound.tab.clips")
         waitUntil("sound.tab.clips after the tap on editor.sound") { clipsPart.exists }
         tapOn(app, "sound.tab.clips")
-        let slider = app.sliders["sound.clipVolume"]
+        let slider = element(app, "sound.clipVolume")
         waitUntil("the slider sound.clipVolume after the tap on sound.tab.clips") { slider.exists }
         let play = element(app, "editor.play")
         // The volume of the clips is 1: the thumb stands at the higher end. Placed before the play.
@@ -474,7 +474,7 @@ final class WholeClipPathTests: XCTestCase {
 
     /// Drags the thumb of `clip.volume` past its higher end, as `ClipGainTests` does, until red reads 200.
     private func raiseRed(_ app: XCUIApplication) {
-        let slider = app.sliders["clip.volume"]
+        let slider = element(app, "clip.volume")
         waitUntil("the slider clip.volume") { slider.exists }
         let width = slider.frame.width
         let start = slider.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))

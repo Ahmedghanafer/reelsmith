@@ -66,7 +66,7 @@ final class WholeTextPathTests: XCTestCase {
         stepDone("the editor")
 
         // Add and type, in Latin letters only.
-        let typed = app.textViews["text.field"]
+        let typed = app.descendants(matching: .any)["text.field"]
         element(app, "editor.addText").tap()
         waitUntil("the text region and the field after the tap on the text button, every button in its row") {
             element(app, "editor.textRegion").exists && typed.exists
@@ -112,7 +112,9 @@ final class WholeTextPathTests: XCTestCase {
         element(app, "text.colour.3").tap()
         waitUntil("field 4 255,214,10 after the tap on text.colour.3") { field(app, 4) == "255,214,10" }
         // The move of a slider does not promise the place it lands on, so only the direction is asserted.
-        app.sliders["text.size"].adjust(toNormalizedSliderPosition: 0.35)
+        let slider = app.descendants(matching: .any)["text.size"]
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5)))
         waitUntil("field 3 above 64 after the move of text.size toward its upper end") {
             (Int(field(app, 3)) ?? 0) > 64
         }
@@ -298,7 +300,7 @@ final class WholeTextPathTests: XCTestCase {
 
         typeTab.tap()
         waitUntil("the field after the tap on text.tab.type, the part button selected and in its row") {
-            app.textViews["text.field"].exists && typeTab.isSelected && inOneRow(app, parts)
+            app.descendants(matching: .any)["text.field"].exists && typeTab.isSelected && inOneRow(app, parts)
         }
         // Leading is the right in Arabic: split and the part type stand at the right end of their rows,
         // and done at the left end of its row.

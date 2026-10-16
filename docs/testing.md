@@ -1173,6 +1173,10 @@ Screenshots: `clip-path-01-strip` (the strip after the music, the photo first an
 <!-- end slot: flutter-clip-panel -->
 
 <!-- slot: flutter-whole-paths -->
+### The whole paths on the Flutter build
+`FoldTests`, `DraftListTests`, the six `Whole*Tests` and `DraftFixtureTests` run on the Flutter build. Where a file found `text.field` among the text views or a slider among the sliders, it finds them through `descendants(matching: .any)`, and where it moved a slider with `adjust(toNormalizedSliderPosition:)` it presses its middle and drags to the place.
+
+`DraftFixtureTests` opens drafts written by the Swift encoder of m6. The launch value `-draft-fixture <name>` (debug builds only) makes the fixture `Tests/Fixtures/Drafts/swift/<name>.json`, which the debug bundle carries in `DraftFixtures`, the draft `<caches>/TestDrafts/<name>/draft.json`, and copies every file of `<caches>/Seeds/` into its `Media`. So a test first starts the seeds whose files the draft names with no `-drafts`, empties the test drafts with `-drafts fresh`, and then starts with `-drafts kept -draft-fixture <name>`. `seed-music-wide` is read with its clips, text, music, export choice and one undo, `photo-framing-text-4k` with its photo, framing, text and 4K choice.
 <!-- end slot: flutter-whole-paths -->
 
 <!-- slot: flutter-suite -->
