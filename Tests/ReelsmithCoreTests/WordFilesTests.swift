@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-/// Holds the three word files `App/Resources/<en, ar, sv>.lproj/Localizable.strings` to the same keys.
+/// Holds the three word files `app/assets/words/<en, ar, sv>.lproj/Localizable.strings` to the same keys.
 final class WordFilesTests: XCTestCase {
     func testTheWordFilesOfTheRepositoryAgree() throws {
         XCTAssertEqual(try wordFileProblems(in: repository), [])
@@ -76,7 +76,7 @@ private let repository = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 
 private func wordFile(of language: String, in folder: URL) -> URL {
-    folder.appendingPathComponent("App/Resources/" + language + ".lproj/Localizable.strings")
+    folder.appendingPathComponent("app/assets/words/" + language + ".lproj/Localizable.strings")
 }
 
 /// The keys of the word file of one language ("en", "ar" or "sv") in the repository, in the order of the file.
