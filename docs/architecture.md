@@ -704,6 +704,12 @@ The choice of size and rate belongs to the draft it was made on and comes back w
 <!-- end slot: dart-core-model -->
 
 <!-- slot: dart-seeds-text-sound -->
+### The seeds in Dart
+
+- `lib/src/seeds/seed.dart`: `Seed`, the eight seed projects with their Swift names and raw values, `canvas`, `testClips`, `testTones`, `testPhotos`, `selectedText`, `showsSound` and `project`. `Seed.fromRawValue` is the Swift `init(rawValue:)`, null for an unknown name.
+- `lib/src/seeds/test_tone.dart` and `test_photo.dart`: `TestTone` with `long` and `short`, `TestPhoto` with `magenta`, beside the test clips of `test_clip.dart`. Dart holds only their values (names, lengths, sizes, pitches, colours). The files of the clips, tones and photos are written by the Swift writers.
+- Two members that ported tests read come ahead of their stories, in the files of their Swift files: `Project.fileNames` in `lib/src/drafts/draft.dart` and `EditorState` with its fields and `timeLabel` in `lib/src/editor/editor_state.dart`.
+- The ported tests: `TextModelTests`, `SoundModelTests`, `ProjectTests` and `WordsTests` in `test/model/`, `SeedsTests`, `PhotoSeedTests`, `SoundSeedsTests` and `TextSeedsTests` in `test/seeds/`. The test of `TextSeedsTests` that reads `LaunchOptions` stays in Swift.
 <!-- end slot: dart-seeds-text-sound -->
 
 <!-- slot: dart-clip-edits -->

@@ -1,3 +1,5 @@
+export 'src/drafts/draft.dart';
+export 'src/editor/editor_state.dart';
 export 'src/export/export_settings.dart';
 export 'src/model/canvas.dart';
 export 'src/model/framing.dart';
@@ -8,4 +10,7 @@ export 'src/model/sound.dart';
 export 'src/model/text.dart';
 export 'src/model/time.dart';
 export 'src/model/words.dart';
+export 'src/seeds/seed.dart';
 export 'src/seeds/test_clip.dart';
+export 'src/seeds/test_photo.dart';
+export 'src/seeds/test_tone.dart';
