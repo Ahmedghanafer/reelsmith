@@ -1155,6 +1155,8 @@ Screenshots: `clip-path-01-strip` (the strip after the music, the photo first an
 <!-- end slot: flutter-text-gestures -->
 
 <!-- slot: flutter-sound-panel -->
+### The sound panel on the Flutter build
+`SoundClipsTests`, `LiveLevelsTests` and `MusicLevelsTests` run on the Flutter build. A Flutter slider reports as another kind of element and does not take `adjust(toNormalizedSliderPosition:)`, so the three files find a slider through `descendants(matching: .any)`, move it with a press at its middle dragged to the place, and read the place of its thumb from its value, the percent.
 <!-- end slot: flutter-sound-panel -->
 
 <!-- slot: flutter-music -->

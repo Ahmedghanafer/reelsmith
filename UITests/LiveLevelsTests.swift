@@ -19,7 +19,7 @@ final class LiveLevelsTests: XCTestCase {
         waitForTheEditor(app)
         waitUntil("the part button sound.tab.levels after the start") { element(app, "sound.tab.levels").exists }
         element(app, "sound.tab.levels").tap()
-        let slider = app.sliders["sound.musicStart"]
+        let slider = element(app, "sound.musicStart")
         waitUntil("the slider sound.musicStart after the tap on its part button") { slider.exists }
         let play = element(app, "editor.play")
         let picture = element(app, "editor.picture")
@@ -30,7 +30,7 @@ final class LiveLevelsTests: XCTestCase {
         let start = field(app, 3)
         XCTAssertNotNil(before, "editor.picture has no count of builds")
 
-        slider.adjust(toNormalizedSliderPosition: 1)
+        slide(slider, to: 1)
         waitUntil("field 3 changed, editor.play labelled \(still) and a higher count of builds after the move") {
             field(app, 3) != start && play.label == still && (builds(picture) ?? 0) > (before ?? Int.max)
         }
@@ -38,6 +38,13 @@ final class LiveLevelsTests: XCTestCase {
         XCTAssertNotEqual(field(app, 3), start)
         XCTAssertEqual(play.label, still)
         XCTAssertEqual(builds(picture), (before ?? -2) + 1)
+    }
+
+    /// A Flutter slider reports as another kind and does not take adjust: a press at its middle dragged to the
+    /// place moves it, as a finger does.
+    private func slide(_ slider: XCUIElement, to place: CGFloat) {
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: place, dy: 0.5)))
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {

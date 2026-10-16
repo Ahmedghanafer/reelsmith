@@ -44,13 +44,13 @@ final class MusicLevelsTests: XCTestCase {
         XCTAssertFalse(element(app, "sound.noMusic").exists)
         XCTAssertEqual(soundInfo(app), withMusic)
         // The label above the four sliders, which stand one under the other in their order.
-        let frames = sliders.map { app.sliders[$0].frame }
+        let frames = sliders.map { element(app, $0).frame }
         XCTAssertLessThanOrEqual(label.frame.maxY, frames[0].minY + 1)
         for index in 1..<frames.count {
             XCTAssertGreaterThanOrEqual(frames[index].minY, frames[index - 1].maxY - 1, sliders[index])
         }
         // The sliders show the project: the volume 1 at the upper end, the start and both fades 0 at the lower.
-        let places = sliders.map { app.sliders[$0].normalizedSliderPosition }
+        let places = sliders.map { position(element(app, $0)) }
         print("music-levels: the sliders at \(places) with the volume at 1, the start and the fades at 0")
         XCTAssertGreaterThan(places[0], 0.9)
         for index in 1..<places.count {
@@ -89,7 +89,7 @@ final class MusicLevelsTests: XCTestCase {
 
         // The panel is made anew and shows the values of the project.
         let changed = soundInfo(app)
-        let values = sliders.map { app.sliders[$0].value as? String ?? "" }
+        let values = sliders.map { element(app, $0).value as? String ?? "" }
         print("music-levels: before done editor.soundInfo reads \(changed), the sliders \(values)")
         element(app, "sound.done").tap()
         waitUntil("the sound region gone after the tap on done") { !element(app, "editor.soundRegion").exists }
@@ -99,9 +99,9 @@ final class MusicLevelsTests: XCTestCase {
         }
         element(app, "sound.tab.levels").tap()
         waitUntil("the four sliders after the tap on sound.tab.levels") {
-            sliders.allSatisfy { app.sliders[$0].exists }
+            sliders.allSatisfy { element(app, $0).exists }
         }
-        let again = sliders.map { app.sliders[$0].value as? String ?? "" }
+        let again = sliders.map { element(app, $0).value as? String ?? "" }
         print("music-levels: made anew editor.soundInfo reads \(soundInfo(app)), the sliders \(again)")
         XCTAssertEqual(soundInfo(app), changed)
         XCTAssertEqual(again, values)
@@ -123,7 +123,7 @@ final class MusicLevelsTests: XCTestCase {
         while field(app, 3) != "0+4200" && moves < mostMoves {
             let before = startAndHeard(field(app, 3)).begins
             let count = builds(picture)
-            app.sliders["sound.musicStart"].adjust(toNormalizedSliderPosition: 0)
+            slide(element(app, "sound.musicStart"), to: 0)
             moves += 1
             let lowered = waitUntil("the start in field 3 below \(before) after move \(moves) to the lower end", required: false) {
                 startAndHeard(field(app, 3)).begins < before
@@ -167,13 +167,13 @@ final class MusicLevelsTests: XCTestCase {
     func testInArabicThePartMirrorsAndTheTimesAndThePictureAndTheStripDoNot() {
         let app = startLevels(language: "ar")
         let label = element(app, "sound.levelsLabel")
-        let volume = app.sliders["sound.musicVolume"]
+        let volume = element(app, "sound.musicVolume")
 
         // Leading is the right now: the label of the times stands right of the middle of the slider. It reads
         // its digits as in English.
         XCTAssertEqual(label.label, startLabel)
         XCTAssertGreaterThan(label.frame.midX, volume.frame.midX)
-        XCTAssertTrue(sliders.allSatisfy { app.sliders[$0].exists })
+        XCTAssertTrue(sliders.allSatisfy { element(app, $0).exists })
         // The preview and the strip do not mirror.
         XCTAssertLessThan(element(app, "editor.play").frame.minX, element(app, "editor.time").frame.minX)
         XCTAssertLessThan(element(app, "editor.clip.1").frame.minX, element(app, "editor.clip.2").frame.minX)
@@ -189,7 +189,7 @@ final class MusicLevelsTests: XCTestCase {
         waitUntil("the part button sound.tab.levels after the start") { element(app, "sound.tab.levels").exists }
         element(app, "sound.tab.levels").tap()
         waitUntil("the label and the four sliders of the part levels after the tap on its part button") {
-            element(app, "sound.levelsLabel").exists && sliders.allSatisfy { app.sliders[$0].exists }
+            element(app, "sound.levelsLabel").exists && sliders.allSatisfy { element(app, $0).exists }
         }
         return app
     }
@@ -204,7 +204,7 @@ final class MusicLevelsTests: XCTestCase {
         let count = builds(picture)
         XCTAssertNotNil(count, "editor.picture has no count of builds")
         let rises = identifier == "sound.musicStart"
-        app.sliders[identifier].adjust(toNormalizedSliderPosition: place)
+        slide(element(app, identifier), to: place)
         waitUntil("field \(owned) changed and " + (rises ? "a higher" : "the same") + " count of builds after the move of \(identifier)") {
             field(app, owned) != before[owned - 1]
                 && (rises ? (builds(picture) ?? 0) > (count ?? Int.max) : builds(picture) == count)
@@ -220,6 +220,18 @@ final class MusicLevelsTests: XCTestCase {
             XCTAssertEqual(after[other - 1], before[other - 1], "field \(other) after the move of \(identifier)")
         }
         return after[owned - 1]
+    }
+
+    /// A Flutter slider reports as another kind and does not take adjust: a press at its middle dragged to the
+    /// place moves it, as a finger does.
+    private func slide(_ slider: XCUIElement, to place: CGFloat) {
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: place, dy: 0.5)))
+    }
+
+    /// The place of the thumb from 0 to 1, read from the value of the slider, its percent.
+    private func position(_ slider: XCUIElement) -> Double {
+        (Double((slider.value as? String ?? "").replacingOccurrences(of: "%", with: "")) ?? -1) / 100
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
