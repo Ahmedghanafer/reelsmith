@@ -1,0 +1,6 @@
+AddMusicTests
+MusicRowTests
+MusicVideoTests
+SoundPanelTests
+TimelineTests
+ZoomTests

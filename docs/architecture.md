@@ -801,7 +801,7 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- slot: engine-pickers -->
 ### The pickers
 
-The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in `MediaCalls.swift` keeps, on the main thread, the items of the last `pick`, the file of the last `pickAudio` and the picker that shows. Both pickers are shown on the topmost controller that the view controller of the plugin registrar presents, and a picker she cancels or swipes away, or one UIKit did not show, answers as nothing chosen. One picker of each kind shows at a time: a call while one shows answers as nothing chosen at once.
+The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in `MediaCalls.swift` keeps, on the main thread, the items of the last `pick`, the file of the last `pickAudio` and the picker that shows. Both pickers are shown on the topmost controller that the view controller of the plugin registrar presents, and a picker she cancels or swipes away answers as nothing chosen. Both are remote views that UIKit puts on screen only after `present` returns, so a picker UIKit never showed answers as nothing chosen at the next call. One picker of each kind shows at a time: a call while one shows answers as nothing chosen at once.
 
 - `Picker.swift`: `pick` shows `VideoPicker`, the system photo picker of `App/Start/VideoPicker.swift` with the same configuration (videos, photos too when asked, the order of choosing kept with no limit), and gives the count she chose. `copyPicked` copies those items into the folder with `copyPicked(_:into:)` of `App/Start/PickedVideos.swift`, each file inside the provider's handler, a photo brought in as a still movie by `importPhoto`, and gives the JSON of each media fact in the order of choosing. An item that cannot be copied, read or imported is left out.
 - `AudioPicker.swift`: `pickAudio` shows the system file browser for one audio file, opened in place as the file importer of `App/Editor/Sound/MusicPart.swift` did, and gives true when she chose one.
@@ -912,6 +912,10 @@ The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in 
 <!-- end slot: flutter-sound-panel -->
 
 <!-- slot: flutter-music -->
+### Music in Flutter
+- `app/lib/editor/sound/music_part.dart`: `MusicPart`, as `MusicPart.swift`, in the slot `music` of the sound panel. With music, `sound.musicTitle` (the title as given) and `sound.musicLabel` (the times of `musicLabel`, fixed left to right) in one row, then the row `sound.addMusic` (`music.add`, or `music.replace` with music), `sound.removeMusic` and `sound.addFromVideo`. Its one state is the `MusicImport` of a file that comes in: `sound.importWords` while it is not idle, the add buttons disabled while copying, and `sound.importOk` after a refusal. The add button calls `pickAudio`, then `importMusic` into the media folder of the store. `addMusic` decodes the JSON of the music file and sends `setMusic`, and a `PlatformException` with the code `protectedFile` is the protected refusal, every other error the plain one. A copy that ends after the part is gone still sets the music, and its event is dropped.
+- `app/lib/editor/sound/music_from_video.dart`: `MusicFromVideo`, the button `sound.addFromVideo`, which calls `pick` for one video and then `musicFromVideo`, through the same `addMusic`.
+- `app/lib/editor/strip/music_bar.dart`: `musicBar`, in the slot `music-row` of the strip, and `MusicBar`, `editor.music`: one bar from time zero for `Project.heardMusic` at the strip's scale in the row at `musicY`, none with no heard music or while a text is selected. It shows the title on the part of the bar on the screen, its label is `musicRow.bar`, and a tap sends `sound(open)` while a drag on it scrubs. It reads the state the strip draws, so it follows a trim while a handle drags.
 <!-- end slot: flutter-music -->
 
 <!-- slot: flutter-clips-frames -->
