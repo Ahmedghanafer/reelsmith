@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:reelsmith_core/reelsmith_core.dart';
 import 'package:test/test.dart';
 
@@ -7,10 +9,11 @@ import 'package:test/test.dart';
 // Stay in Swift, since they read the plan through segments: testThePlanOfTwoClipsAtTheStandardFramingIsTheFitOfToday,
 // testFillCoversTheCanvasWithBlue, testFitAtZoomTwoDoublesBlueAroundTheCentre, testAnOffsetPastTheEdgeIsStoredHeld,
 // testABlurredBackdropFillsTheCanvasOnlyWhereThePictureLeavesBars and testThePlanAt4KHasEveryRectangleTwiceAsLarge.
-// Ported with the draft codec:
-// testAVersionOneTextWhoseClipsLackFramingDecodesToTheStandardFraming and
-// testADraftOfTwoClipsWithBlueFilledBlurredAndZoomedRoundTrips.
 void main() {
+  /// A draft of `two-clips` at 1080p and 30, as a draft of version 1 was written: no clip has `framing`.
+  const versionOne =
+      '{"changed":813704709,"exportSettings":{"rate":{"thirty":{}},"size":{"hd1080":{}}},"project":{"canvas":{"portrait":{}},"clipVolume":1,"clips":[{"duration":{"ticks":1800},"id":{"raw":1},"media":{"raw":"blue"},"sourceStart":{"ticks":0},"volume":1},{"duration":{"ticks":2400},"id":{"raw":2},"media":{"raw":"red"},"sourceStart":{"ticks":0},"volume":1}],"clipsMuted":false,"media":[{"raw":"red"},{"duration":{"ticks":2400},"fileName":"red.mov","hasSound":true,"height":1920,"id":{"raw":"red"},"quarterTurns":0,"width":1080},{"raw":"blue"},{"duration":{"ticks":1800},"fileName":"blue.mov","hasSound":true,"height":1080,"id":{"raw":"blue"},"quarterTurns":0,"width":1920}],"nextClipID":3,"nextTextID":1,"texts":[]},"version":1}';
+
   const blue = ClipID(1);
   const red = ClipID(2);
 
@@ -27,6 +30,38 @@ void main() {
   EditorState playing(EditorState state) => state.copyWith(isPlaying: true);
 
   EditorState frame(EditorState state, FrameAction action) => reduce(state, EditorAction.frame(action));
+
+  test('testAVersionOneTextWhoseClipsLackFramingDecodesToTheStandardFraming', () {
+    final draft = decodeDraft(utf8.encode(versionOne));
+
+    expect(draft.version, 1);
+    expect(draft.project, Seed.twoClips.project);
+    expect(draft.project.clips.map((clip) => clip.framing).toList(), [Framing.standard, Framing.standard]);
+    expect(Framing.standard, const Framing(fit: Fit.fit, backdrop: Backdrop.black, zoom: 1, x: 0, y: 0));
+  });
+
+  test('testADraftOfTwoClipsWithBlueFilledBlurredAndZoomedRoundTrips', () {
+    final project = framed(
+      Seed.twoClips.project,
+      0,
+      const Framing(fit: Fit.fill, backdrop: Backdrop.blurred, zoom: 1.5, x: 0.1),
+    );
+    final draft = Draft(
+      project: project,
+      exportSettings: ExportSettings.startChoice,
+      changed: DateTime.fromMillisecondsSinceEpoch(1792011909 * 1000, isUtc: true),
+    );
+
+    final back = decodeDraft(encodeDraft(draft));
+
+    expect(back, draft);
+    expect(
+      back.project.clips[0].framing,
+      const Framing(fit: Fit.fill, backdrop: Backdrop.blurred, zoom: 1.5, x: 0.1, y: 0),
+    );
+    expect(back.project.clips[1].framing, Framing.standard);
+    expect(back.version, 1);
+  });
 
   test('testEachFrameActionChangesOnlyTheNamedClipPausesAndIsOneUndoStep', () {
     final start = playing(seeded());
