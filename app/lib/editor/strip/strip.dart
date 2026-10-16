@@ -177,6 +177,9 @@ class StripState extends State<Strip> {
             children: [
               ..._tiles(clip, width, rows.clipHeight),
               DecoratedBox(
+                // Painted above the label, as m6's layer border: a block of the shortest length shows only yellow.
+                // https://api.flutter.dev/flutter/widgets/DecoratedBox/position.html
+                position: DecorationPosition.foreground,
                 decoration: BoxDecoration(
                   border: Border.all(
                     width: selected ? 3 : 1,
