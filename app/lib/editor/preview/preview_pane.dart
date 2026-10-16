@@ -64,15 +64,21 @@ class PreviewPane extends StatelessWidget {
                     ? () => store.send(store.state.isPlaying ? core.EditorAction.pause : core.EditorAction.play)
                     : null,
               ),
-              Semantics(
-                identifier: 'editor.time',
-                container: true,
-                child: Text(
-                  state.timeLabel,
-                  style: const TextStyle(fontSize: 17, fontFeatures: [FontFeature.tabularFigures()]),
+              // The space between play and undo: the label stands at its start, and is cut on a screen too narrow
+              // for it rather than push the buttons off.
+              Expanded(
+                child: Semantics(
+                  identifier: 'editor.time',
+                  container: true,
+                  child: Text(
+                    state.timeLabel,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.clip,
+                    style: const TextStyle(fontSize: 15, fontFeatures: [FontFeature.tabularFigures()]),
+                  ),
                 ),
               ),
-              const Spacer(),
               _button(
                 'editor.undo',
                 core.Words('editor.undo'),

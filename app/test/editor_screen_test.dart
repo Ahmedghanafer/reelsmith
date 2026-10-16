@@ -172,14 +172,18 @@ void main() {
     final (:store, :engine) = await _show(tester);
     expect(_node(tester, 'editor.picture').value, '0');
     engine.sendBuildCount(1);
+    // The event comes in a microtask after the first pump, and its frame is drawn by the second.
+    await tester.pump();
     await tester.pump();
     expect(_node(tester, 'editor.picture').value, '1');
     engine.sendBuildCount(2);
+    await tester.pump();
     await tester.pump();
     expect(_node(tester, 'editor.picture').value, '2');
 
     final unseeded = await _show(tester, options: const {'seed': null, 'drafts': 'kept'});
     unseeded.engine.sendBuildCount(3);
+    await tester.pump();
     await tester.pump();
     expect(_node(tester, 'editor.picture').value, '');
     semantics.dispose();
