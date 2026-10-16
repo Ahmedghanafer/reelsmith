@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  reelsmith_core:
+    path: ../packages/reelsmith_core
 
 dev_dependencies:
   test: ^1.31.1
