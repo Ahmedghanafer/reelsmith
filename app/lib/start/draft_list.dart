@@ -116,7 +116,8 @@ class _DraftListState extends State<DraftList> {
   }
 
   Widget _row(int place, core.DraftSummary summary) {
-    final shown = summary.id == _swiped ? _shown : 0.0;
+    // A disabled list shows no delete, also one swiped open before.
+    final shown = widget.enabled && summary.id == _swiped ? _shown : 0.0;
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final changed = summary.changed;
     final opens = widget.enabled && summary.isReadable;
