@@ -26,6 +26,14 @@ jobs:
           channel: stable
           flutter-version: ${{ steps.flutter.outputs.version }}
           cache: true
+      # The pinned Pigeon writes the two files of the engine's API again. They must equal the committed ones.
+      - name: Pigeon gives the committed files
+        working-directory: app
+        run: |
+          flutter pub get
+          dart run pigeon --input pigeons/engine.dart
+          git add --intent-to-add lib/engine/engine_api.g.dart ios/Runner/Engine/EngineApi.g.swift
+          git diff --exit-code
       - name: Flutter test
         working-directory: app
         run: |

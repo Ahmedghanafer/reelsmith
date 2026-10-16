@@ -690,6 +690,16 @@ The choice of size and rate belongs to the draft it was made on and comes back w
 <!-- end slot: flutter-build -->
 
 <!-- slot: engine-bridge -->
+### The bridge to the Engine
+
+The Flutter app reaches the Swift Engine through one Pigeon API.
+
+- `app/pigeons/engine.dart` is the API, every call and event with what it takes and gives. Pigeon, pinned in `app/pubspec.yaml`, writes from it `app/lib/engine/engine_api.g.dart` and `app/ios/Runner/Engine/EngineApi.g.swift`, both committed. The job `app` of `tests.yml` runs Pigeon again on Linux and fails when its output differs from the committed files. The API is not edited or generated again.
+- A project crosses as the `project` member of the draft JSON of version 1, the export settings, a media fact and a music file as their JSON, a folder or a file as a path, a time in ticks. The events come on one event channel: `PlayheadEvent`, `PlayedToEndEvent`, `BuildCountEvent` and `ExportProgressEvent`.
+- `app/lib/engine/video_engine.dart`: `VideoEngine`, the only door of the screens and the store to the Engine, one method per call and one stream per event. `PigeonVideoEngine` is the app's, the only user of the generated class. It listens to the event channel from its making and hands each event to the broadcast stream of its kind. `app/test/support/fake_video_engine.dart`: `FakeVideoEngine`, which `flutter test` uses. It records each call by name, answers with a field of the same name and gives an event on `send...`.
+- `app/ios/Runner/Engine/` is a synchronized folder of the Runner target, so a new Swift file there edits no project file. Runner links the root package by the local reference `../..`. `Engine.swift` is the dispatcher: the class `Engine` answers the calls, keeps the plugin registrar (the messenger, the textures, the view controller) and one state object per area, `preview`, `media` and `output`, whose classes stand in the area files, and sends the events through `EngineEvents`, which hands each event to the main thread. `AppDelegate.swift` registers it with the implicit Flutter engine. Each call lives in its area as an extension of `Engine`: `Launch.swift`, `Preview/PreviewCalls.swift`, `Media/MediaCalls.swift` and `Output/OutputCalls.swift`. A call not built yet throws `EngineError.notBuilt`, which reaches Dart as a `PlatformException` with the code `notBuilt`.
+- `launch` gives one JSON object with sorted keys: the values `LaunchOptions` parses from the process arguments of a debug build (`seed`, `playhead`, `exportFails`, `drafts`, a release build none), and the two folders of the drafts from `FileManager`, `draftsFolder` at `<Application Support>/Drafts` and `testDraftsFolder` at `<caches>/TestDrafts`. Dart never reads the process arguments.
+- `writeSeedMedia` writes the test clips, tones and photos of the named seed into `<caches>/Seeds/` with the Engine's writers, as the seed start of the SwiftUI app does, and gives that folder.
 <!-- end slot: engine-bridge -->
 
 <!-- slot: dart-core-model -->
