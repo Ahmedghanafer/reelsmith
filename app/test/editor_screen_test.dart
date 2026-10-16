@@ -243,8 +243,24 @@ void main() {
       await tester.pump();
       expect(store.editing.unsaved, isFalse);
       expect(written(), store.state.project);
-      expect(engine.covers, contains(draft.coverFile.path));
+      expect(engine.covers, [draft.coverFile.path]);
       expect(store.isOpen, isTrue);
+
+      // The rest of the way out and back makes no second cover. The next leave does.
+      for (final phase in [
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(phase);
+      }
+      await tester.pump();
+      expect(engine.covers, [draft.coverFile.path]);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      expect(engine.covers, [draft.coverFile.path, draft.coverFile.path]);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     });
 

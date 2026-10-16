@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../words/words.dart';
@@ -49,9 +50,13 @@ class _EditorScreenState extends State<EditorScreen> {
   void initState() {
     super.initState();
     _builds = store.engine.buildCount.listen((count) => setState(() => _built = count));
+    // Once a leave: on the way out and back the phases inactive, hidden and paused each come in turn.
+    var phase = SchedulerBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
     _lifecycle = AppLifecycleListener(
-      onStateChange: (phase) {
-        if (phase != AppLifecycleState.resumed) {
+      onStateChange: (next) {
+        final leaves = phase == AppLifecycleState.resumed && next != AppLifecycleState.resumed;
+        phase = next;
+        if (leaves) {
           store.writeNow();
           store.makeCover();
         }
