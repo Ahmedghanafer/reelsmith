@@ -93,8 +93,32 @@ jobs:
           ) &
           looper=$!
           set +e
-          flutter test integration_test -d "$SIMULATOR" --reporter expanded --dart-define=E25_OUT="$out" 2>&1 | tee "$out/integration.txt"
-          status=${PIPESTATUS[0]}
+          # Run 3 hung 22 minutes on a white app that never reached the test, so each try has 8 minutes
+          # and a second try follows a stall.
+          for try in 1 2; do
+            flutter test integration_test -d "$SIMULATOR" --reporter expanded --dart-define=E25_OUT="$out" \
+              > "$out/integration-$try.txt" 2>&1 &
+            tester=$!
+            waited=0
+            while kill -0 "$tester" 2>/dev/null && [ "$waited" -lt 480 ]; do
+              sleep 5
+              waited=$((waited + 5))
+            done
+            if kill -0 "$tester" 2>/dev/null; then
+              echo "try $try stalled after ${waited}s and was ended" | tee -a "$RUNNER_TEMP/timings.txt"
+              kill "$tester"
+              pkill -f "flutter_tools" || true
+              xcrun simctl terminate "$SIMULATOR" com.ghanafer.flutterE25 || true
+              status=124
+            else
+              wait "$tester"
+              status=$?
+            fi
+            cat "$out/integration-$try.txt"
+            cp "$out/integration-$try.txt" "$out/integration.txt"
+            echo "integration try $try: status $status after ${waited}s" | tee -a "$RUNNER_TEMP/timings.txt"
+            [ "$status" = 124 ] || break
+          done
           set -e
           kill "$looper" || true
           kill -INT "$recorder" || true
