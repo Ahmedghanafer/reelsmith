@@ -84,6 +84,9 @@ final class RunnerTests: XCTestCase {
             say("no slider kind, swiped right on the value element")
         }
         Thread.sleep(forTimeInterval: 1.5)
+        say("slider after swipe: value \(String(describing: valued.value))")
+        valued.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.5)).tap()
+        Thread.sleep(forTimeInterval: 1.5)
         say("slider after: value \(String(describing: valued.value)) text: \(element(app, "e25.sliderValue").label)")
         shot("ui-2-slider")
         app.terminate()
@@ -165,6 +168,7 @@ final class ProbeTests: XCTestCase {
         say("3 after rotate: \(element(app, "p.gesture").label)")
 
         // 5: the frame of a region against its laid out size.
+        say("5 kinds: region \(element(app, "p.region").elementType.rawValue) alert \(element(app, "p.alert").elementType.rawValue) pick \(element(app, "p.pick").elementType.rawValue) Pick label as button \(app.buttons["Pick"].exists)")
         say("5 frame: \(element(app, "p.region").frame) laid out: \(element(app, "p.regionSize").label)")
 
         // 6: an AlertDialog through app.alerts.

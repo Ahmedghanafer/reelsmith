@@ -222,7 +222,8 @@ class _E25ScreenState extends State<E25Screen> {
                 ),
               ),
               _text('e25.frames', 'frames ${e25.frames} rgb ${e25.rgb}'),
-              _text('e25.time', 'time ${e25.time.toStringAsFixed(2)}'),
+              // Half second steps: a label that changes ten times a second keeps XCUITest from finding the app idle.
+              _text('e25.time', 'time ${((e25.time * 2).floor() / 2).toStringAsFixed(1)}'),
               Row(children: [
                 Expanded(child: _button('e25.play', 'Play', () => engine.invokeMethod('play'))),
                 const SizedBox(width: 8),

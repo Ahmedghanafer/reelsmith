@@ -151,7 +151,7 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/ui" > "$out/ui-build.txt" 2>&1 || { tail -80 "$out/ui-build.txt"; exit 1; }
           echo "xcuitest build-for-testing: ${SECONDS}s" | tee -a "$RUNNER_TEMP/timings.txt"
           set +e
-          TEST_RUNNER_E25_OUT="$out" xcodebuild test-without-building -workspace Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" \
+          TEST_RUNNER_E25_OUT="$out" xcodebuild test-without-building -workspace Runner.xcworkspace -scheme Runner -destination "id=$SIMULATOR" -parallel-testing-enabled NO \
             -derivedDataPath "$RUNNER_TEMP/ui" -resultBundlePath "$out/ui.xcresult" 2>&1 | tee "$out/ui-test.txt"
           status=${PIPESTATUS[0]}
           set -e
