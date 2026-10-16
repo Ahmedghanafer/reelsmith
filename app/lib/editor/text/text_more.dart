@@ -62,6 +62,8 @@ class TextMore extends StatelessWidget {
                 words.text(core.Words('text.spacing')),
                 Slider(
                   value: style.lineSpacing,
+                  // The track past the thumb in the grey of the theme, as the iOS slider draws it.
+                  inactiveColor: Theme.of(context).disabledColor,
                   max: 2,
                   divisions: 20,
                   onChanged: (spacing) => _change(selected.id, (style) => style.copyWith(lineSpacing: spacing)),

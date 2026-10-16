@@ -12,8 +12,13 @@ import 'text_more.dart';
 /// button only clears the selection, and Core removes a text that is left blank. The row lays out from leading to
 /// trailing, so Arabic mirrors it.
 ///
-/// The field shows the string of the store and sends every change of it whole. A change that would leave half of a
-/// character (an unpaired UTF-16 surrogate) has that half taken out first, since the draft could not be read back.
+/// While the keyboard is up the row of part buttons is only as high as its words and the panel has no space under
+/// it, so the picture keeps its room above the panel, as in m6.
+///
+/// The field shows the string of the store and sends every change of it whole. It starts each sentence with a
+/// capital, and takes its direction from the first letter of what is typed, so an Arabic text stands at the right.
+/// A change that would leave half of a character (an unpaired UTF-16 surrogate) has that half taken out first, since
+/// the draft could not be read back.
 ///
 /// https://api.flutter.dev/flutter/material/TextField-class.html
 /// https://api.flutter.dev/flutter/widgets/TextEditingController-class.html
@@ -60,27 +65,30 @@ class _TextPanelState extends State<TextPanel> {
   @override
   Widget build(BuildContext context) {
     final selected = _selected;
+    final typing = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final rowHeight = typing ? 0.0 : 44.0;
     return Padding(
-      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+      padding: EdgeInsets.only(left: 16, right: 16, bottom: typing ? 0 : 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 8,
         children: [
           ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
+            constraints: BoxConstraints(minHeight: rowHeight),
             child: Row(
               spacing: 24,
               children: [
-                _tab(_Part.type, 'text.tab.type'),
-                _tab(_Part.look, 'text.tab.look'),
-                _tab(_Part.more, 'text.tab.more'),
+                _tab(_Part.type, 'text.tab.type', rowHeight),
+                _tab(_Part.look, 'text.tab.look', rowHeight),
+                _tab(_Part.more, 'text.tab.more', rowHeight),
                 const Spacer(),
                 textButton(
                   'text.done',
                   widget.words.text(core.Words('text.done')),
                   null,
                   () => store.send(core.EditorAction.clearSelection),
+                  height: rowHeight,
                 ),
               ],
             ),
@@ -94,8 +102,14 @@ class _TextPanelState extends State<TextPanel> {
   }
 
   /// One part button. Its word key is its identifier, and the part that shows is bold and has the trait selected.
-  Widget _tab(_Part shown, String key) {
-    return textButton(key, widget.words.text(core.Words(key)), _part == shown, () => setState(() => _part = shown));
+  Widget _tab(_Part shown, String key, double height) {
+    return textButton(
+      key,
+      widget.words.text(core.Words(key)),
+      _part == shown,
+      () => setState(() => _part = shown),
+      height: height,
+    );
   }
 
   Widget _typed(BuildContext context, core.TextItem selected) {
@@ -116,6 +130,8 @@ class _TextPanelState extends State<TextPanel> {
           maxLines: null,
           expands: true,
           keyboardType: TextInputType.multiline,
+          textCapitalization: TextCapitalization.sentences,
+          textDirection: fieldDirection(selected.string),
           textAlignVertical: TextAlignVertical.top,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.all(8),
@@ -167,10 +183,26 @@ String whole(String string) {
   return kept.length == units.length ? string : String.fromCharCodes(kept);
 }
 
+/// Right to left when the first letter of the string is Arabic or Hebrew, left to right when it is a Latin letter,
+/// and null, the direction of the language, when the string has no letter.
+TextDirection? fieldDirection(String string) {
+  for (final rune in string.runes) {
+    if ((rune >= 0x0590 && rune <= 0x08FF) ||
+        (rune >= 0xFB1D && rune <= 0xFDFF) ||
+        (rune >= 0xFE70 && rune <= 0xFEFF)) {
+      return TextDirection.rtl;
+    }
+    if ((rune >= 0x41 && rune <= 0x5A) || (rune >= 0x61 && rune <= 0x7A) || (rune >= 0xC0 && rune <= 0x24F)) {
+      return TextDirection.ltr;
+    }
+  }
+  return null;
+}
+
 /// A button of words with its identifier, the label of its word, the trait selected when `selected` is true and
 /// bold words then. `selected` null is a button that is never selected. On iOS Material pads a button to a 48 point
-/// target, so the target is shrink wrapped and the height held at 44.
-Widget textButton(String identifier, String label, bool? selected, VoidCallback tap) {
+/// target, so the target is shrink wrapped and the height held at `height`, 44 unless the caller says otherwise.
+Widget textButton(String identifier, String label, bool? selected, VoidCallback tap, {double height = 44}) {
   return Semantics(
     identifier: identifier,
     container: true,
@@ -184,7 +216,7 @@ Widget textButton(String identifier, String label, bool? selected, VoidCallback 
       style: TextButton.styleFrom(
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         padding: EdgeInsets.zero,
-        minimumSize: const Size(0, 44),
+        minimumSize: Size(0, height),
         textStyle: TextStyle(fontSize: 17, fontWeight: selected == true ? FontWeight.bold : FontWeight.normal),
       ),
       child: Text(label),

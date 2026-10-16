@@ -181,7 +181,8 @@ class _EditorScreenState extends State<EditorScreen> {
     return Semantics(
       identifier: identifier,
       container: true,
-      child: Text(line, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
+      // The line as high as m6's footnote, not the taller line of the Material theme, so the picture keeps its room.
+      child: Text(line, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, height: 1.2)),
     );
   }
 

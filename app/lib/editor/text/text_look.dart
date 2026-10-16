@@ -72,6 +72,8 @@ class TextLook extends StatelessWidget {
                 words.text(core.Words('text.size')),
                 Slider(
                   value: style.size,
+                  // The track past the thumb in the grey of the theme, as the iOS slider draws it.
+                  inactiveColor: Theme.of(context).disabledColor,
                   min: core.TextGeometry.minimumSize,
                   max: core.TextGeometry.maximumSize,
                   divisions: (core.TextGeometry.maximumSize - core.TextGeometry.minimumSize) ~/ 2,
