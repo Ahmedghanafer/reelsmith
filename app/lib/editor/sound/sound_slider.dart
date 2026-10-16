@@ -51,6 +51,9 @@ class SoundSlider extends StatefulWidget {
 }
 
 class _SoundSliderState extends State<SoundSlider> {
+  /// The height of an iOS slider in points.
+  static const double _height = 31;
+
   /// The value of the slider while it is dragged, null while it is not.
   double? _dragged;
 
@@ -94,40 +97,44 @@ class _SoundSliderState extends State<SoundSlider> {
             label: widget.label,
             value: '${(share * 100).round()}%',
             excludeSemantics: true,
-            child: Slider(
-              value: shown,
-              min: widget.min,
-              max: widget.max,
-              divisions: divisions,
-              activeColor: theme.colorScheme.primary,
-              inactiveColor: theme.disabledColor,
-              onChangeStart: (_) => setState(() => _dragged = _dragged ?? widget.value),
-              onChanged: (value) {
-                final moved = _stepped(value);
-                if (_dragged == null) {
-                  widget.send(moved);
+            // As high as m6's slider, so four rows stand 39 points apart: Material's own height is 48.
+            child: SizedBox(
+              height: _height,
+              child: Slider(
+                value: shown,
+                min: widget.min,
+                max: widget.max,
+                divisions: divisions,
+                activeColor: theme.colorScheme.primary,
+                inactiveColor: theme.disabledColor,
+                onChangeStart: (_) => setState(() => _dragged = _dragged ?? widget.value),
+                onChanged: (value) {
+                  final moved = _stepped(value);
+                  if (_dragged == null) {
+                    widget.send(moved);
+                    if (widget.follows) {
+                      widget.ended?.call();
+                    }
+                  } else {
+                    setState(() => _dragged = moved);
+                    if (widget.follows) {
+                      widget.send(moved);
+                    }
+                  }
+                },
+                onChangeEnd: (_) {
+                  final last = _dragged;
+                  if (last == null) {
+                    return;
+                  }
+                  setState(() => _dragged = null);
                   if (widget.follows) {
                     widget.ended?.call();
+                  } else {
+                    widget.send(last);
                   }
-                } else {
-                  setState(() => _dragged = moved);
-                  if (widget.follows) {
-                    widget.send(moved);
-                  }
-                }
-              },
-              onChangeEnd: (_) {
-                final last = _dragged;
-                if (last == null) {
-                  return;
-                }
-                setState(() => _dragged = null);
-                if (widget.follows) {
-                  widget.ended?.call();
-                } else {
-                  widget.send(last);
-                }
-              },
+                },
+              ),
             ),
           ),
         ),
