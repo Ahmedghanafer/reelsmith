@@ -132,11 +132,11 @@ void main() {
   test('testTheDropPositionOfRedAmongBlueAndGreen', () {
     final project = Seed.threeClips.project;
 
-    expect(project.dropPosition(red, const Time(ticks: 0)), 1);
-    expect(project.dropPosition(red, const Time(ticks: 800)), 1);
-    expect(project.dropPosition(red, const Time(ticks: 1000)), 2);
-    expect(project.dropPosition(red, const Time(ticks: 2500)), 3);
-    expect(project.dropPosition(const ClipID(9), const Time(ticks: 800)), isNull);
+    expect(project.dropPosition(of: red, at: const Time(ticks: 0)), 1);
+    expect(project.dropPosition(of: red, at: const Time(ticks: 800)), 1);
+    expect(project.dropPosition(of: red, at: const Time(ticks: 1000)), 2);
+    expect(project.dropPosition(of: red, at: const Time(ticks: 2500)), 3);
+    expect(project.dropPosition(of: const ClipID(9), at: const Time(ticks: 800)), isNull);
   });
 
   test('testTheClipPanelShowsForASelectedClipOnly', () {

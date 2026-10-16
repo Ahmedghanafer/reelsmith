@@ -34,11 +34,17 @@ abstract final class TimelineGeometry {
     required double shownWidth,
   }) {
     const double inset = 6;
-    final left = max(barX, shownX);
-    final right = min(barX + barWidth, shownX + shownWidth);
-    return (x: left + inset, width: max(right - left - 2 * inset, 0.0));
+    final left = _max(barX, shownX);
+    final right = _min(barX + barWidth, shownX + shownWidth);
+    return (x: left + inset, width: _max(right - left - 2 * inset, 0));
   }
 }
+
+/// Swift's min: the second when it is less than the first, else the first.
+double _min(double a, double b) => b < a ? b : a;
+
+/// Swift's max: the second when it is at least the first, else the first.
+double _max(double a, double b) => b >= a ? b : a;
 
 /// The rows of the timeline strip, in points from its top: the clips, the texts under them and, while no text is
 /// selected, the music. Folded, the blocks are 24 points high and every row under them moves up 32.

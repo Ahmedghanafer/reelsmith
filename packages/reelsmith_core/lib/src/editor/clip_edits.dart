@@ -42,7 +42,9 @@ extension ProjectClipEdits on Project {
   /// The Swift dropPosition(of:at:). The position from 1 the clip takes when let go at the time: 1 plus the count
   /// of the other clips, in their order with the clip taken out, whose middle is before the time. Null for an
   /// unknown id.
-  int? dropPosition(ClipID clip, Time time) {
+  int? dropPosition({required ClipID of, required Time at}) {
+    final clip = of;
+    final time = at;
     if (positionOfClip(clip) == null) {
       return null;
     }
