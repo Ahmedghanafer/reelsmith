@@ -377,7 +377,9 @@ final class PreviewPlayer: NSObject {
         if redraws {
             redraws = false
             let time: Time = frameTime(of: wanted)
-            player.seekExactly(to: time - Time(ticks: 1)) { [weak self] _ in
+            // One tick back, or one frame on at the start, where a seek back would stay at the start.
+            let aside: Time = time > .zero ? time - Time(ticks: 1) : time + Time.frame
+            player.seekExactly(to: aside) { [weak self] _ in
                 guard let self, number == self.build else {
                     return
                 }
