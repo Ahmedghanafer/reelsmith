@@ -12,6 +12,7 @@ import 'text_panel.dart';
 /// so Arabic mirrors them.
 ///
 /// https://api.flutter.dev/flutter/material/Slider-class.html
+/// https://api.flutter.dev/flutter/widgets/FittedBox-class.html
 /// https://api.flutter.dev/flutter/widgets/GestureDetector-class.html
 /// https://api.flutter.dev/flutter/painting/BoxDecoration-class.html
 /// https://api.flutter.dev/flutter/widgets/Semantics-class.html
@@ -35,20 +36,24 @@ class TextLook extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 8,
       children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Row(
-            spacing: 24,
-            children: [
-              for (final font in core.TextFont.allCases)
-                textButton(
-                  'text.font.${font.rawValue}',
-                  words.text(font.words),
-                  style.font == font,
-                  () => _change(selected.id, (style) => style.copyWith(font: font)),
-                ),
-              const Spacer(),
-            ],
+        // Scaled down whole on a screen too narrow for the row, never cut.
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 24,
+              children: [
+                for (final font in core.TextFont.allCases)
+                  textButton(
+                    'text.font.${font.rawValue}',
+                    words.text(font.words),
+                    style.font == font,
+                    () => _change(selected.id, (style) => style.copyWith(font: font)),
+                  ),
+              ],
+            ),
           ),
         ),
         Row(

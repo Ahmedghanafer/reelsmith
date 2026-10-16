@@ -128,10 +128,11 @@ class _TextPanelState extends State<TextPanel> {
           onChanged: (string) {
             final kept = whole(string);
             if (kept != string) {
-              final offset = _field.selection.baseOffset;
+              // The caret keeps its place in what is kept.
+              final offset = _field.selection.baseOffset.clamp(0, string.length);
               _field.value = TextEditingValue(
                 text: kept,
-                selection: TextSelection.collapsed(offset: offset.clamp(0, kept.length)),
+                selection: TextSelection.collapsed(offset: whole(string.substring(0, offset)).length),
               );
             }
             store.send(core.EditorAction.text(core.TextAction.setString(selected.id, kept)));
