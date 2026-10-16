@@ -46,13 +46,13 @@ final class PreviewPlayer: NSObject {
     private var state: EditorState
     /// The folder of the project's media, as Dart last showed it.
     private var mediaFolder: URL
-    /// The project the view was last handed, or the one a build that landed was refreshed to.
+    /// The project the player last followed, or the one a build that landed was refreshed to.
     private var project: Project?
     /// Counts the builds, so the result of a build that a newer one superseded is dropped.
     private var build = 0
     /// True from the start of a build of an item until it lands.
     private var isBuilding = false
-    /// Counts the items the view began to build, for the accessibility value of a seeded start.
+    /// Counts the items the player began to build, sent as the event `buildCount`.
     private var built = 0
     /// The item of the newest build, the one whose status is observed.
     private var item: AVPlayerItem?
@@ -74,10 +74,9 @@ final class PreviewPlayer: NSObject {
     /// True while one seek is in flight. A newer playhead waits in `target` until it lands.
     private var isSeeking = false
     private var timeObserver: Any?
-    /// True when the next seek goes one tick on first and then to its time: a paused player whose
-    /// item was refreshed does not always give its video output a new frame for a seek to the time it
-    /// stands on, and a seek that first goes to another time does (E25). One tick on lies in the same
-    /// frame, so the frame it gives is the one sought.
+    /// True when the next seek goes one tick back first and then to its time: after a picture refresh
+    /// on a paused item, a seek to the time it stands on gave the video output a new frame in one
+    /// simulator run and none in another, and one tick back then the time gave it in both.
     private var redraws = false
     /// Counts the items put into the player. What was registered for an older item does nothing.
     /// What is registered for the newest item reads the texture's flag of the moment.
@@ -178,15 +177,18 @@ final class PreviewPlayer: NSObject {
 
     /// Gives the item the picture of the project, whose footage is the one the item was built from.
     /// It only sets the video composition of the item. False when the Engine refused: the item is then
-    /// as it was. For the item in the paused player, with no seek in flight to it, the player then stands
-    /// on no playhead and the next seek goes one tick on first, so the texture gets the frame drawn again.
+    /// as it was. For the item in the paused player the next seek goes one tick back first, so the
+    /// texture gets the frame drawn again. With no seek in flight the player then stands on no playhead,
+    /// and with one in flight it is sought again when that one lands.
     private func refresh(_ item: AVPlayerItem, to project: Project) -> Bool {
         do {
             try refreshPicture(of: item, plan: renderPlan(for: project), media: project.media)
-            if item === player.currentItem, !isPlaying, !isSeeking || !isReady {
-                target = nil
-                sent = nil
+            if item === player.currentItem, !isPlaying {
                 redraws = true
+                if !isSeeking || !isReady {
+                    target = nil
+                    sent = nil
+                }
             }
             return true
         } catch {
@@ -202,6 +204,7 @@ final class PreviewPlayer: NSObject {
     private func rebuild(for state: EditorState) {
         build += 1
         let number = build
+        redraws = false
         isReady = false
         statusObservation = nil
         stop()
@@ -244,6 +247,7 @@ final class PreviewPlayer: NSObject {
 
     private func install(_ item: AVPlayerItem?, build number: Int) {
         self.item = item
+        redraws = false
         // The item is given the first playhead before it goes into the player, so that time is its
         // starting time: the player makes the item ready on that frame and never begins on the
         // first one. A seek sent after the item went in could reach a player that had already
@@ -373,7 +377,7 @@ final class PreviewPlayer: NSObject {
         if redraws {
             redraws = false
             let time: Time = frameTime(of: wanted)
-            player.seekExactly(to: time + Time(ticks: 1)) { [weak self] _ in
+            player.seekExactly(to: time - Time(ticks: 1)) { [weak self] _ in
                 guard let self, number == self.build else {
                     return
                 }
@@ -404,6 +408,9 @@ final class PreviewPlayer: NSObject {
         }
         isSeeking = false
         if target != sought {
+            seekToTarget()
+        } else if redraws {
+            // A picture refreshed while this seek was in flight is drawn again, finished or not.
             seekToTarget()
         } else if !finished {
             // The player is not there, so the next state seeks again.
