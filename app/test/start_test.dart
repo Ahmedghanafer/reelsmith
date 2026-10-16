@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reelsmith/editor/editor_screen.dart';
 import 'package:reelsmith/main.dart';
@@ -83,6 +84,10 @@ SemanticsNode _node(WidgetTester tester, String identifier) =>
     tester.getSemantics(find.bySemanticsIdentifier(identifier));
 
 void main() {
+  // The bundle keeps each words file as the future of the test that read it first, which a later test's
+  // clock never runs: each test reads them anew.
+  setUp(rootBundle.clear);
+
   testWidgets('the start screen shows the shape choice and New project with the words of m6, and New project calls pick', (
     tester,
   ) async {
