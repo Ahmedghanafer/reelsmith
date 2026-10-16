@@ -197,6 +197,33 @@ void main() {
     expect(names(shelf.folder), [open.id.raw]);
   });
 
+  /// Not a Swift test: a temporary file a cut write left is taken over by the next write.
+  test('aWriteTakesOverATemporaryFileACutWriteLeft', () {
+    final shelf = makeShelf();
+    final open = shelf.create(draft(Seed.twoClipsWide));
+    final place = folderOf(open.id, shelf);
+    File('${place.path}/.draft.json.new').writeAsStringSync('junk of a cut write');
+    final next = draft(Seed.musicWide, hour: 12);
+
+    open.write(next);
+
+    expect(names(place), ['Media', 'draft.json']);
+    expect(decodeDraft(File('${place.path}/draft.json').readAsBytesSync()), next);
+  });
+
+  /// Not a Swift test: a rename that fails throws cannotWrite and leaves no temporary file.
+  test('aRenameThatFailsThrowsCannotWriteAndLeavesNoTemporaryFile', () {
+    final shelf = makeShelf();
+    final open = shelf.create(draft(Seed.twoClipsWide));
+    final place = folderOf(open.id, shelf);
+    File('${place.path}/draft.json').deleteSync();
+    Directory('${place.path}/draft.json').createSync();
+
+    expect(() => open.write(draft(Seed.musicWide)), throwsA(DraftError.cannotWrite));
+    expect(names(place), ['Media', 'draft.json']);
+    expect(FileSystemEntity.isDirectorySync('${place.path}/draft.json'), isTrue);
+  });
+
   test('testDeleteRemovesOneDraftAndRemoveAllTheShelf', () {
     final shelf = makeShelf();
     final gone = shelf.create(draft(Seed.twoClipsWide, hour: 10));

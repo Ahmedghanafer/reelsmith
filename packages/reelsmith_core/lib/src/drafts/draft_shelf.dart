@@ -26,18 +26,21 @@ class DraftShelf {
   /// A new id, `<folder>/<id>/Media` made with every folder above it, draft.json written.
   /// When either fails the new folder is removed again, so no draft is left.
   OpenDraft create(Draft draft) {
-    final open = OpenDraft(shelf: this, id: DraftID(_uuidString()));
+    OpenDraft? open;
     try {
+      open = OpenDraft(shelf: this, id: DraftID(_uuidString()));
       open.mediaFolder.createSync(recursive: true);
       open.write(draft);
+      return open;
     } catch (error) {
       print('drafts: a new draft was not made: $error');
-      try {
-        _draftFolder(open.id).deleteSync(recursive: true);
-      } catch (_) {}
+      if (open != null) {
+        try {
+          _draftFolder(open.id).deleteSync(recursive: true);
+        } catch (_) {}
+      }
       throw DraftError.cannotWrite;
     }
-    return open;
   }
 
   /// One summary for each folder in `folder`, from its draft.json, unreadable when that is missing or throws.
@@ -190,9 +193,9 @@ class OpenDraft {
 
   /// `encodeDraft`, then `<folder>/<id>/draft.json` written whole or not at all, as the atomic option of Swift's
   /// `Data.write`: the bytes go to the temporary file `.draft.json.new` in the same folder, flushed, then renamed
-  /// over the old file. A rename in one folder replaces the file in one step
-  /// (https://api.dart.dev/stable/dart-io/File/renameSync.html), so a cut write leaves the old draft.json whole, and
-  /// the next write takes over a temporary file a cut write left. Every failure, a number the codec cannot write
+  /// over the old file with `renameSync` (https://api.dart.dev/stable/dart-io/File/renameSync.html). On Linux and
+  /// iOS dart:io makes that the POSIX `rename(2)`, which within one folder replaces the old file atomically, so a cut
+  /// write leaves the old draft.json whole, and the next write takes over a temporary file a cut write left. Every failure, a number the codec cannot write
   /// among them, throws cannotWrite and leaves no temporary file.
   void write(Draft draft) {
     final file = shelf._draftFile(id);
