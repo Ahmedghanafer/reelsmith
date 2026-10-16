@@ -781,6 +781,11 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: dart-draft-shelf -->
 
 <!-- slot: flutter-words -->
+### The words in the Flutter app
+
+- The three word files are assets of the app as they are, `app/assets/words/<en, ar, sv>.lproj/Localizable.strings`, listed one by one in `app/pubspec.yaml`. They are read as `.strings`, with their slot groups, and never turned into ARB.
+- `app/lib/words/words.dart`: `WordsText.load(locale)` reads the file of the locale's language, English for any language but Arabic and Swedish. `text(words)` gives the line of the key with the arguments put in at `%1$@`, `%2$@` and so on, as `text(_:)` of `App/WordsText.swift` does, and a key with no line gives the key. A screen gets every word it shows through `text`. Numbers come in as arguments already written with the digits 0 to 9.
+- `parseStrings` reads the `"key" = "value";` lines, skips `/* */` and `//` comments, and takes `\"`, `\\` and `\n` in a line.
 <!-- end slot: flutter-words -->
 
 <!-- slot: engine-preview -->
