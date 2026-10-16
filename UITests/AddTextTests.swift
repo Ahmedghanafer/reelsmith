@@ -66,7 +66,7 @@ final class AddTextTests: XCTestCase {
         let lookTab = region.descendants(matching: .any)["text.tab.look"]
         let moreTab = region.descendants(matching: .any)["text.tab.more"]
         let done = region.descendants(matching: .any)["text.done"]
-        let field = region.textViews["text.field"]
+        let field = region.descendants(matching: .any)["text.field"]
         for control in [typeTab, lookTab, moreTab, done, field] {
             XCTAssertTrue(control.exists)
         }
@@ -114,7 +114,7 @@ final class AddTextTests: XCTestCase {
             button.tap()
             waitUntil(part + " selected after the tap on it") { button.isSelected }
             XCTAssertFalse(element(app, "text.tab.type").isSelected)
-            XCTAssertFalse(app.textViews["text.field"].exists)
+            XCTAssertFalse(app.descendants(matching: .any)["text.field"].exists)
             XCTAssertTrue(done.exists)
             XCTAssertTrue(done.isHittable)
         }
@@ -132,7 +132,7 @@ final class AddTextTests: XCTestCase {
         waitUntil("the position 1 after a text with nothing typed") { position(app) == "1" }
 
         // Only spaces typed: the same.
-        let field = app.textViews["text.field"]
+        let field = app.descendants(matching: .any)["text.field"]
         typeInTheField(app, "  ")
         waitUntil("only spaces as the value of the field") {
             let value = field.value as? String ?? ""
@@ -146,7 +146,7 @@ final class AddTextTests: XCTestCase {
     func testDeleteRemovesASelectedTextAndLeavesBothClips() {
         let app = startText(seed: "two-clips-wide")
         addAText(app)
-        let field = app.textViews["text.field"]
+        let field = app.descendants(matching: .any)["text.field"]
         typeInTheField(app, "Peace")
         waitUntil("the typed word as the value of the field") { field.value as? String == "Peace" }
 
@@ -190,7 +190,7 @@ final class AddTextTests: XCTestCase {
         XCTAssertEqual(textInfo(app), "1 naskh 64 255,255,255 centre 960,540 0 ... 0+4200 0")
         // The text has a string, so the part look shows.
         XCTAssertTrue(element(app, "text.tab.look").isSelected)
-        let field = app.textViews["text.field"]
+        let field = app.descendants(matching: .any)["text.field"]
         XCTAssertFalse(field.exists)
 
         element(app, "text.tab.type").tap()
@@ -297,7 +297,7 @@ final class AddTextTests: XCTestCase {
     /// Taps the field, waits for the keyboard and types. A keyboard that does not come is printed and
     /// fails nothing here: the typing fails by itself when the field has no focus.
     private func typeInTheField(_ app: XCUIApplication, _ string: String) {
-        let field = app.textViews["text.field"]
+        let field = app.descendants(matching: .any)["text.field"]
         field.tap()
         waitUntil("the keyboard after the tap on the field", expected: 2, required: false) {
             app.keyboards.firstMatch.exists
