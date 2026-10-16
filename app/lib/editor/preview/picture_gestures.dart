@@ -61,10 +61,19 @@ class _PictureGesturesState extends State<PictureGestures> {
   int _most = 0;
   Offset _down = Offset.zero;
 
-  /// The line from the second finger to the first, the scale and the angle of two fingers are counted from: taken
-  /// once the two are `_floor` points apart, since fingers that come down at one point give no scale and no angle.
-  /// Null until then, and again when the number of fingers changes.
+  /// The line from the second finger to the first, the angle of two fingers is counted from: taken once the two are
+  /// `_floor` points apart, since fingers that come down at one point give no angle. Null until then, and again when
+  /// the number of fingers changes.
   Offset? _from;
+
+  /// The distance of the first two fingers when the number of fingers last changed, and the distance the scale counts
+  /// from once they went `_pinchTravel` points further apart or closer, null until then.
+  double _pinchDown = 0;
+  double? _pinchFrom;
+
+  /// As the pinch of iOS, the scale starts once the fingers went this many points apart or together from where they
+  /// came down, and counts from that distance, so the same fingers give the size and the zoom they give in m6.
+  static const double _pinchTravel = 8;
 
   /// The points two fingers must be apart before their line is taken.
   static const double _floor = 4;
@@ -95,6 +104,7 @@ class _PictureGesturesState extends State<PictureGestures> {
           }
           _fingers[event.pointer] = event.localPosition;
           _most = math.max(_most, _fingers.length);
+          _pinchDown = _spread();
         },
         onPointerMove: (event) {
           _fingers[event.pointer] = event.localPosition;
@@ -105,10 +115,12 @@ class _PictureGesturesState extends State<PictureGestures> {
         onPointerUp: (event) {
           _endPair();
           _fingers.remove(event.pointer);
+          _pinchDown = _spread();
         },
         onPointerCancel: (event) {
           _endPair();
           _fingers.remove(event.pointer);
+          _pinchDown = _spread();
         },
         child: widget.child,
       ),
@@ -148,6 +160,7 @@ class _PictureGesturesState extends State<PictureGestures> {
     _drawn = null;
     _twist = null;
     _from = null;
+    _pinchFrom = null;
     _beginClip();
     if (text == null) {
       return;
@@ -214,7 +227,7 @@ class _PictureGesturesState extends State<PictureGestures> {
     if (from == null) {
       return;
     }
-    final scale = line.distance / from.distance;
+    final scale = _pinchScale() ?? 1;
     var angle = line.direction - from.direction;
     if (angle > math.pi) {
       angle -= 2 * math.pi;
@@ -238,6 +251,24 @@ class _PictureGesturesState extends State<PictureGestures> {
         ),
       ),
     );
+  }
+
+  /// The distance between the first two fingers on the picture, 0 with fewer.
+  double _spread() {
+    final places = _fingers.values.take(2).toList();
+    return places.length < 2 ? 0 : (places[0] - places[1]).distance;
+  }
+
+  /// The scale of two fingers, null until they went `_pinchTravel` points apart or together from where they came down.
+  double? _pinchScale() {
+    final spread = _spread();
+    if (_pinchFrom == null) {
+      if ((spread - _pinchDown).abs() < _pinchTravel) {
+        return null;
+      }
+      _pinchFrom = _pinchDown + (spread > _pinchDown ? _pinchTravel : -_pinchTravel);
+    }
+    return spread / _pinchFrom!;
   }
 
   /// Ends the gesture of two fingers when a finger comes or goes. The `Listener` hears of it before the recognizer.
@@ -357,24 +388,22 @@ class _PictureGesturesState extends State<PictureGestures> {
     );
   }
 
-  /// Two fingers zoom the clip: the zoom at the start times the scale of the fingers, counted from their line once
-  /// they are `_floor` points apart, with the offset of the start held again. A twist does nothing to a clip.
+  /// Two fingers zoom the clip: the zoom at the start times the scale of the fingers, as a text's pinch counts it,
+  /// with the offset of the start held again. A twist does nothing to a clip.
   void _pinchClip() {
     final start = _clipStart;
     final clip = _clip;
     if (start == null || clip == null) {
       return;
     }
-    final places = _fingers.values.take(2).toList();
-    final line = places[0] - places[1];
-    final from = _from ??= line.distance >= _floor ? line : null;
-    if (from == null) {
+    final scale = _pinchScale();
+    if (scale == null) {
       return;
     }
     final framing = clip.framing;
     final zoomed = core.reduce(
       start,
-      core.EditorAction.frame(core.FrameAction.setZoom(clip.id, framing.zoom * line.distance / from.distance)),
+      core.EditorAction.frame(core.FrameAction.setZoom(clip.id, framing.zoom * scale)),
     );
     _drawClip(core.reduce(zoomed, core.EditorAction.frame(core.FrameAction.setOffset(clip.id, framing.x, framing.y))));
   }
