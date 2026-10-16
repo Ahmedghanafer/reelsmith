@@ -1,5 +1,18 @@
 export 'src/drafts/draft.dart';
+export 'src/editor/clip_edits.dart' hide moveClip, cutBefore, cutAfter;
+export 'src/editor/editor_action.dart';
 export 'src/editor/editor_state.dart';
+export 'src/editor/edits.dart' hide addClips, split, trimStart, trimEnd, deleteSelected;
+export 'src/editor/frame_action.dart';
+export 'src/editor/frame_edits.dart' hide reduceFrame;
+export 'src/editor/history.dart';
+export 'src/editor/reduce.dart';
+export 'src/editor/sound_action.dart';
+export 'src/editor/sound_edits.dart' hide reduceSound, settleSound;
+export 'src/editor/text_action.dart';
+export 'src/editor/text_edits.dart' hide reduceText, settleTexts;
+export 'src/editor/text_geometry.dart';
+export 'src/editor/timeline_geometry.dart';
 export 'src/export/export_settings.dart';
 export 'src/model/canvas.dart';
 export 'src/model/framing.dart';
