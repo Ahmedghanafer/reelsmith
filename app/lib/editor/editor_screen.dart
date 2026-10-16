@@ -10,6 +10,7 @@ import 'editor_store.dart';
 import 'export/export_button.dart';
 import 'preview/preview_pane.dart';
 import 'strip/strip.dart';
+import 'text/text_panel.dart';
 import 'tools/tools_row.dart';
 
 /// The editor shell, in the colours of the theme, light or dark as the system is: four regions from top to bottom, each with the slot of the story that fills it, and between
@@ -131,6 +132,8 @@ class _EditorScreenState extends State<EditorScreen> {
                   if (state.selectedText != null)
                     _region('editor.textRegion', [
                       // slot: text
+                      // Made anew for every text that gets selected, so it starts on the part of that text.
+                      TextPanel(key: ValueKey(state.selectedText), store: store, words: widget.words),
                       // end slot: text
                     ]),
                   if (state.showsSound)

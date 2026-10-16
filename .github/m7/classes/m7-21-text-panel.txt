@@ -1,0 +1,6 @@
+AddTextTests
+TextLookTests
+TextMoreTests
+UndoTests
+DraftSavingTests
+PreviewTextTests

@@ -46,7 +46,7 @@ final class TextMoreTests: XCTestCase {
         XCTAssertLessThan(sideButtons[1].frame.minX, sideButtons[2].frame.minX)
         XCTAssertEqual(sideButtons.map { $0.label }, ["Left", "Centre", "Right"])
         // The slider under the sides, and the three toggles in one row under the slider.
-        let slider = app.sliders["text.spacing"]
+        let slider = app.descendants(matching: .any)["text.spacing"]
         XCTAssertTrue(slider.exists)
         XCTAssertGreaterThanOrEqual(slider.frame.minY, sideButtons[0].frame.maxY - 1)
         let toggles = marks.map { element(app, $0) }
@@ -156,19 +156,20 @@ final class TextMoreTests: XCTestCase {
     func testTheSliderMovesTheLinesApartAndThenBackTogether() {
         let app = startMore()
         let picture = element(app, "editor.picture")
-        let slider = app.sliders["text.spacing"]
+        let slider = app.descendants(matching: .any)["text.spacing"]
         XCTAssertTrue(slider.exists)
         waitForThePicture(app)
         element(app, "text.box").tap()
         let boxed = waitForTheShare(of: blue, "blue with the box", in: picture, lessThan: blueWithNoBox)
         XCTAssertLessThan(boxed, blueWithNoBox, "blue with the box")
         XCTAssertEqual(field(app, 10), "0")
-        print("text-more: field 10 before the first move \(field(app, 10)), the slider at \(slider.normalizedSliderPosition)")
+        print("text-more: field 10 before the first move \(field(app, 10)), the slider at \(slider.value as? String ?? "none")")
 
-        slider.adjust(toNormalizedSliderPosition: 0.8)
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)))
         waitUntil("field 10 above 0 after the move toward the upper end") { (spacing(app) ?? 0) > 0 }
         let wide = spacing(app) ?? 0
-        print("text-more: field 10 after the move toward the upper end \(wide), the slider at \(slider.normalizedSliderPosition)")
+        print("text-more: field 10 after the move toward the upper end \(wide), the slider at \(slider.value as? String ?? "none")")
         XCTAssertGreaterThan(wide, 0)
         let spaced = waitForTheShare(
             of: blue, "blue with the box of the spaced lines", in: picture, lessThan: boxed - 0.001)
@@ -176,12 +177,13 @@ final class TextMoreTests: XCTestCase {
         XCTAssertLessThan(spaced, boxed - 0.001, "blue with the box of the spaced lines")
         screenshot("text-more-03-spaced")
 
-        slider.adjust(toNormalizedSliderPosition: 0.3)
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5)))
         waitUntil("field 10 below \(wide) after the move back toward the lower end") {
             (spacing(app) ?? Int.max) < wide
         }
         let narrow = spacing(app) ?? Int.max
-        print("text-more: field 10 after the move back toward the lower end \(narrow), the slider at \(slider.normalizedSliderPosition)")
+        print("text-more: field 10 after the move back toward the lower end \(narrow), the slider at \(slider.value as? String ?? "none")")
         XCTAssertLessThan(narrow, wide)
     }
 
@@ -205,7 +207,9 @@ final class TextMoreTests: XCTestCase {
         XCTAssertLessThan(boxed, blueWithNoBox, "blue with everything on")
         screenshot("text-more-04-all-on")
 
-        app.sliders["text.spacing"].adjust(toNormalizedSliderPosition: 0.8)
+        let slider = app.descendants(matching: .any)["text.spacing"]
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)))
         waitUntil("field 10 above 0 after the move toward the upper end") { (spacing(app) ?? 0) > 0 }
         print("text-more: field 10 after the move toward the upper end \(field(app, 10))")
         XCTAssertEqual(field(app, 5), "left")
@@ -224,13 +228,15 @@ final class TextMoreTests: XCTestCase {
             field(app, 5) == "left" && field(app, 8) == "o.." && left.isSelected
                 && element(app, "text.outline").isSelected
         }
-        app.sliders["text.spacing"].adjust(toNormalizedSliderPosition: 0.8)
+        let slider = app.descendants(matching: .any)["text.spacing"]
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)))
         waitUntil("field 10 above 0 for the first text") { (spacing(app) ?? 0) > 0 }
 
         element(app, "text.done").tap()
         waitUntil("the text region gone after the tap on done") { !element(app, "editor.textRegion").exists }
         element(app, "editor.addText").tap()
-        let typed = app.textViews["text.field"]
+        let typed = app.descendants(matching: .any)["text.field"]
         waitUntil("the field after the tap on the text button") { typed.exists }
         typed.tap()
         // A keyboard that does not come fails nothing here: the typing fails by itself with no focus.
