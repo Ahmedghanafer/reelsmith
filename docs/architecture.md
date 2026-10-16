@@ -755,6 +755,11 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: dart-history -->
 
 <!-- slot: dart-states -->
+### The block frames and the states of the screens in Dart
+
+- `lib/src/editor/block_frames.dart`: `BlockFrames` with `step`, `times(media)`, `tileCount(width:, tile:)` and `frameTime(of:, media:, index:, tile:, scale:)`, the Swift `frameTime(of:media:tile:tile:scale:)`, whose first `tile` is the index. They are pure and synchronous, so the strip lays out its tiles without the bridge. Only the frames themselves come from Swift as PNG bytes.
+- `lib/src/start/start_state.dart`, `lib/src/start/music_import.dart` and `lib/src/export/export_state.dart`: `StartState`, `MusicImport` and `ExportState`, each a sealed class with one subclass per case, made as `StartState.ready(project)`, `MusicImport.failed(isProtected)` and `ExportState.failed(notAllowed)`, and a case without values a constant (`ExportState.idle`). Each gives the screen its `words` and `allWords`, and moves by `after` with an event of the sealed class named for the Swift nested enum: `StartStateEvent`, `MusicImportEvent` and `ExportStateEvent`. `ExportState` also gives `percentText`, `canStart(editor)` and `keepsScreenAwake`, true exactly while exporting. A thrown export is the event `ExportStateEvent.failed(false)`.
+- The ported tests: `BlockFramesTests` in `test/editor/`, `StartStateTests`, `MusicImportTests`, `StartWordsTests` and `AddMusicWordsTests` in `test/start/`, `ExportStateTests`, `ExportAwakeTests` and `ExportWordsTests` in `test/export/`. The checks that read the word files stay in Swift. In Dart the keys each state gives are held to the keys its Swift words test holds in all three files.
 <!-- end slot: dart-states -->
 
 <!-- slot: dart-draft-codec -->
@@ -789,6 +794,14 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: engine-preview -->
 
 <!-- slot: engine-pickers -->
+### The pickers
+
+The calls of the media stand in `app/ios/Runner/Engine/Media/`. `MediaState` in `MediaCalls.swift` keeps, on the main thread, the items of the last `pick`, the file of the last `pickAudio` and the picker that shows. Both pickers are shown on the topmost controller that the view controller of the plugin registrar presents, and a picker she cancels or swipes away, or one UIKit did not show, answers as nothing chosen. One picker of each kind shows at a time: a call while one shows answers as nothing chosen at once.
+
+- `Picker.swift`: `pick` shows `VideoPicker`, the system photo picker of `App/Start/VideoPicker.swift` with the same configuration (videos, photos too when asked, the order of choosing kept with no limit), and gives the count she chose. `copyPicked` copies those items into the folder with `copyPicked(_:into:)` of `App/Start/PickedVideos.swift`, each file inside the provider's handler, a photo brought in as a still movie by `importPhoto`, and gives the JSON of each media fact in the order of choosing. An item that cannot be copied, read or imported is left out.
+- `AudioPicker.swift`: `pickAudio` shows the system file browser for one audio file, opened in place as the file importer of `App/Editor/Sound/MusicPart.swift` did, and gives true when she chose one.
+- `MusicImport.swift`: `importMusic` copies that file with the Engine's `importMusic`, with no title, and `musicFromVideo` copies the video of the last `pick` through a folder under the temporary folder and imports its sound with the video's suggested name as the title, as `App/Editor/Sound/MusicFromVideo.swift` did. Each gives the JSON of the music file. A refused file throws the Engine's error, which reaches Dart with the code `protectedFile` for a protected file, and nothing is added.
+- `MediaCalls.swift`: `readMediaInfo` gives the JSON of the media fact of a file as the Engine reads it.
 <!-- end slot: engine-pickers -->
 
 <!-- slot: engine-outputs -->
