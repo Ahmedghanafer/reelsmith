@@ -27,17 +27,26 @@ class AddClips extends StatefulWidget {
 class _AddClipsState extends State<AddClips> {
   bool _copying = false;
 
+  /// True while the picker is up, so a second tap shows no second picker.
+  bool _picking = false;
+
   @override
   Widget build(BuildContext context) => widget.button(_copying ? null : _add);
 
   Future<void> _add() async {
     final store = widget.store;
+    if (_picking) {
+      return;
+    }
+    _picking = true;
     int chosen;
     try {
       chosen = await store.engine.pick(true, 0);
     } catch (error) {
       print('editor: the picker was not shown: $error');
       return;
+    } finally {
+      _picking = false;
     }
     if (chosen == 0) {
       return;

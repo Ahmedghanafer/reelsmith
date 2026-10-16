@@ -12,6 +12,7 @@ import '../../engine/video_engine.dart';
 ///
 /// https://api.flutter.dev/flutter/painting/decodeImageFromList.html
 /// https://api.flutter.dev/flutter/dart-ui/Image/dispose.html
+/// https://api.dart.dev/stable/dart-async/Future/wait.html
 class FramesCache {
   FramesCache({required this.engine, required this.mediaFolder, required this.changed});
 
@@ -47,7 +48,11 @@ class FramesCache {
     try {
       final bytes = await engine.blockFrames(jsonEncode(_mediaJson(media)), mediaFolder);
       final times = bytes.keys.toList();
-      final images = await Future.wait([for (final time in times) decodeImageFromList(bytes[time]!)]);
+      // A frame that does not decode lets go of those that did.
+      final images = await Future.wait(
+        [for (final time in times) decodeImageFromList(bytes[time]!)],
+        cleanUp: (image) => image.dispose(),
+      );
       frames = {for (final (index, time) in times.indexed) core.Time(ticks: time): images[index]};
     } catch (error) {
       print('strip: the frames of a block were not made: $error');
