@@ -118,7 +118,7 @@ class UndoHistory {
   bool get canRedo => future.isNotEmpty;
 
   /// A new step: the project before it goes to the end of past, the oldest dropped past depth, no future.
-  UndoHistory add(Project before, {required EditRun? run}) {
+  UndoHistory _add(Project before, {required EditRun? run}) {
     final steps = [...past, before];
     return UndoHistory._(
       past: steps.length > depth ? steps.sublist(steps.length - depth) : steps,
@@ -127,14 +127,14 @@ class UndoHistory {
     );
   }
 
-  UndoHistory endRun() => copyWith(run: () => null);
+  UndoHistory _endRun() => copyWith(run: () => null);
 
   /// The last of past taken out, all else kept.
-  UndoHistory dropLastStep() => past.isEmpty ? this : copyWith(past: past.sublist(0, past.length - 1));
+  UndoHistory _dropLastStep() => past.isEmpty ? this : copyWith(past: past.sublist(0, past.length - 1));
 
   /// The Swift undo(from:): the last of past, with the history that has the current project put at the end of
   /// future and no run. Null when past is empty.
-  ({UndoHistory history, Project project})? undo(Project current) {
+  ({UndoHistory history, Project project})? _undo(Project current) {
     if (past.isEmpty) {
       return null;
     }
@@ -146,7 +146,7 @@ class UndoHistory {
 
   /// The Swift redo(from:): the last of future, with the history that has the current project put at the end of
   /// past and no run. Null when future is empty.
-  ({UndoHistory history, Project project})? redo(Project current) {
+  ({UndoHistory history, Project project})? _redo(Project current) {
     if (future.isEmpty) {
       return null;
     }
@@ -174,7 +174,7 @@ class Editing {
 
   /// The Swift init(state:history:): the state as given, that history with its run ended, unsaved false.
   Editing.withHistory({required this.state, required UndoHistory history})
-    : history = history.endRun(),
+    : history = history._endRun(),
       unsaved = false;
 
   const Editing._({required this.state, required this.history, required this.unsaved});
@@ -190,9 +190,9 @@ class Editing {
     var next = history;
     final began = history.past.isEmpty ? null : history.past.last;
     if (history.run == EditRun.drag && began == state.project.withoutBlankTexts) {
-      next = next.dropLastStep();
+      next = next._dropLastStep();
     }
-    return copyWith(history: next.endRun());
+    return copyWith(history: next._endRun());
   }
 
   /// An action that changes nothing ends a run of another kind, but never a drag run: the player reports its
@@ -203,19 +203,19 @@ class Editing {
     final a = nextState.project.withoutBlankTexts;
     if (!_oneStepApart(a, b)) {
       if (k != history.run && history.run != EditRun.drag) {
-        return copyWith(state: nextState, history: history.endRun());
+        return copyWith(state: nextState, history: history._endRun());
       }
       return copyWith(state: nextState);
     }
     if (k != null && k == history.run) {
       return copyWith(state: nextState, unsaved: true);
     }
-    return copyWith(state: nextState, history: history.add(b, run: k), unsaved: true);
+    return copyWith(state: nextState, history: history._add(b, run: k), unsaved: true);
   }
 
   /// This when canUndo is false.
   Editing undone() {
-    final back = history.undo(state.project.withoutBlankTexts);
+    final back = history._undo(state.project.withoutBlankTexts);
     if (back == null) {
       return this;
     }
@@ -224,7 +224,7 @@ class Editing {
 
   /// This when canRedo is false.
   Editing redone() {
-    final back = history.redo(state.project.withoutBlankTexts);
+    final back = history._redo(state.project.withoutBlankTexts);
     if (back == null) {
       return this;
     }
