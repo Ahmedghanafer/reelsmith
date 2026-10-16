@@ -32,7 +32,8 @@ extension Engine {
     /// gives the JSON of its music file. The new folder is removed after an import and after a refusal alike. A
     /// video that cannot be copied, or no video chosen, throws `cannotRead`.
     func musicFromVideo(folder: String) async throws -> String {
-        guard let video = await MainActor.run(body: { self.media.picked.first }) else {
+        let picked = await MainActor.run { self.media.picked }
+        guard let video = picked.first else {
             throw EngineError.cannotRead
         }
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
