@@ -139,6 +139,18 @@ void main() {
     await tester.pump();
     expect(store.state.playhead.ticks, 1800);
 
+    // When the first finger lifts before the scrub starts, the finger left counts from where it came down.
+    final lifted = await tester.startGesture(_onBlocks(tester, 300));
+    final left = await tester.startGesture(_onBlocks(tester, 100), pointer: 10);
+    await lifted.up();
+    for (var step = 0; step < 6; step++) {
+      await left.moveBy(const Offset(-10, 0));
+      await tester.pump();
+    }
+    await left.up();
+    await tester.pump();
+    expect(store.state.playhead.ticks, 2400);
+
     final first = await tester.startGesture(_onBlocks(tester, 151), pointer: 7);
     final second = await tester.startGesture(_onBlocks(tester, 251), pointer: 8);
     for (var step = 0; step < 10; step++) {
@@ -154,7 +166,7 @@ void main() {
     }
     await second.up();
     await tester.pump();
-    expect(store.state.playhead.ticks, 1800);
+    expect(store.state.playhead.ticks, 2400);
     semantics.dispose();
   });
 
