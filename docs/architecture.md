@@ -755,6 +755,11 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: dart-history -->
 
 <!-- slot: dart-states -->
+### The block frames and the states of the screens in Dart
+
+- `lib/src/editor/block_frames.dart`: `BlockFrames` with `step`, `times(media)`, `tileCount(width:, tile:)` and `frameTime(of:, media:, index:, tile:, scale:)`, the Swift `frameTime(of:media:tile:tile:scale:)`, whose first `tile` is the index. They are pure and synchronous, so the strip lays out its tiles without the bridge. Only the frames themselves come from Swift as PNG bytes.
+- `lib/src/start/start_state.dart`, `lib/src/start/music_import.dart` and `lib/src/export/export_state.dart`: `StartState`, `MusicImport` and `ExportState`, each a sealed class with one subclass per case, made as `StartState.ready(project)`, `MusicImport.failed(isProtected)` and `ExportState.failed(notAllowed)`, and a case without values a constant (`ExportState.idle`). Each gives the screen its `words` and `allWords`, and moves by `after` with an event of the sealed class named for the Swift nested enum: `StartStateEvent`, `MusicImportEvent` and `ExportStateEvent`. `ExportState` also gives `percentText`, `canStart(editor)` and `keepsScreenAwake`, true exactly while exporting. A thrown export is the event `ExportStateEvent.failed(false)`.
+- The ported tests: `BlockFramesTests` in `test/editor/`, `StartStateTests`, `MusicImportTests`, `StartWordsTests` and `AddMusicWordsTests` in `test/start/`, `ExportStateTests`, `ExportAwakeTests` and `ExportWordsTests` in `test/export/`. The checks that read the word files stay in Swift. In Dart the keys each state gives are held to the keys its Swift words test holds in all three files.
 <!-- end slot: dart-states -->
 
 <!-- slot: dart-draft-codec -->
