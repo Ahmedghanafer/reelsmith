@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' show Locale;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reelsmith/editor/editor_screen.dart';
@@ -29,6 +30,7 @@ Future<({EditorStore store, FakeVideoEngine engine})> _show(
   Map<String, Object?> options = _seeded,
   core.OpenDraft? draft,
   TextDirection direction = TextDirection.ltr,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(const SizedBox());
   _phone(tester);
@@ -43,6 +45,7 @@ Future<({EditorStore store, FakeVideoEngine engine})> _show(
   addTearDown(store.dispose);
   await tester.pumpWidget(
     MaterialApp(
+      theme: theme,
       home: Directionality(
         textDirection: direction,
         child: EditorScreen(store: store, words: _english),
@@ -237,6 +240,22 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
+
+  testWidgets('the screen takes its colours from the theme, light or dark, and the picture stays on black', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    for (final brightness in [Brightness.light, Brightness.dark]) {
+      await _show(tester, theme: ThemeData(brightness: brightness));
+      final screen = find.byType(EditorScreen);
+      expect(tester.widget<Material>(find.descendant(of: screen, matching: find.byType(Material)).first).color, isNull);
+      final time = tester.renderObject<RenderParagraph>(find.text('00:00 / 00:07')).text.style!.color!;
+      expect(time.computeLuminance() > 0.5, brightness == Brightness.dark, reason: '$brightness');
+      final black = find.descendant(of: find.bySemanticsIdentifier('editor.picture'), matching: find.byType(ColoredBox));
+      expect(tester.widget<ColoredBox>(black).color, const Color(0xFF000000), reason: '$brightness');
+    }
+    semantics.dispose();
+  });
 
   group('a draft', () {
     late core.OpenDraft draft;

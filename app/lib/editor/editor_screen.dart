@@ -9,7 +9,7 @@ import '../words/words.dart';
 import 'editor_store.dart';
 import 'preview/preview_pane.dart';
 
-/// The editor shell: four regions from top to bottom, each with the slot of the story that fills it, and between
+/// The editor shell, in the colours of the theme, light or dark as the system is: four regions from top to bottom, each with the slot of the story that fills it, and between
 /// the tools and the export the text region, only while a text is selected, the sound region, only while the sound
 /// panel shows, or the clip region, only while a clip is selected. Core keeps any two of them from showing
 /// together. The root and the regions are semantics containers, so a region is found while it is empty and a
@@ -86,7 +86,6 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
       child: SafeArea(
         child: ListenableBuilder(
           listenable: store,
