@@ -14,6 +14,7 @@ import 'sound_clips.dart';
 ///
 /// https://api.flutter.dev/flutter/material/TextButton-class.html
 /// https://api.flutter.dev/flutter/material/MaterialTapTargetSize.html
+/// https://api.flutter.dev/flutter/widgets/FittedBox-class.html
 /// https://api.flutter.dev/flutter/widgets/Semantics-class.html
 class SoundPanel extends StatefulWidget {
   const SoundPanel({super.key, required this.store, required this.words});
@@ -46,10 +47,24 @@ class _SoundPanelState extends State<SoundPanel> {
             child: Row(
               spacing: 24,
               children: [
-                _tab(_Part.music, 'sound.tab.music'),
-                _tab(_Part.levels, 'sound.tab.levels'),
-                _tab(_Part.clips, 'sound.tab.clips'),
-                const Spacer(),
+                // The part buttons are scaled down whole on a screen too narrow for the row, never cut.
+                Expanded(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 24,
+                        children: [
+                          _tab(_Part.music, 'sound.tab.music'),
+                          _tab(_Part.levels, 'sound.tab.levels'),
+                          _tab(_Part.clips, 'sound.tab.clips'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 _button('sound.done', null, () => store.send(core.EditorAction.clearSelection)),
               ],
             ),
