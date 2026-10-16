@@ -7,14 +7,14 @@ import 'package:reelsmith_core/reelsmith_core.dart';
 ///
 /// https://api.flutter.dev/flutter/services/rootBundle.html
 class WordsText {
-  WordsText(Map<String, String> lines) : _lines = Map<String, String>.unmodifiable(lines);
+  WordsText._(Map<String, String> lines) : _lines = Map<String, String>.unmodifiable(lines);
 
   final Map<String, String> _lines;
 
   /// Reads the file of the locale's language: English, Arabic or Swedish, and English for any other.
   static Future<WordsText> load(Locale locale) async {
     final language = const ['en', 'ar', 'sv'].contains(locale.languageCode) ? locale.languageCode : 'en';
-    return WordsText(parseStrings(await rootBundle.loadString('assets/words/$language.lproj/Localizable.strings')));
+    return WordsText._(_parseStrings(await rootBundle.loadString('assets/words/$language.lproj/Localizable.strings')));
   }
 
   /// The line of the key, with the arguments put in at %1$@, %2$@ and so on. A key with no line gives the key, as on iOS.
@@ -28,7 +28,7 @@ class WordsText {
 }
 
 /// The `"key" = "value";` lines of a `.strings` file. Comments are skipped, and a backslash keeps the quote or backslash after it, or makes `\n` a new line.
-Map<String, String> parseStrings(String source) {
+Map<String, String> _parseStrings(String source) {
   final lines = <String, String>{};
   String? key;
   var index = 0;
