@@ -212,6 +212,32 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets(
+    'on iOS each button of the row is 44 by 44, undo beside redo, Save at the trailing end, and undo and redo follow the history',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final (:store, :engine) = await _show(tester);
+      final region = _rect(tester, 'editor.previewRegion');
+      for (final identifier in ['editor.projects', 'editor.play', 'editor.undo', 'editor.redo', 'editor.save']) {
+        expect(_rect(tester, identifier).size, const Size(44, 44), reason: identifier);
+      }
+      expect(_rect(tester, 'editor.redo').left - _rect(tester, 'editor.undo').right, closeTo(8, 1));
+      expect(_rect(tester, 'editor.save').left, greaterThanOrEqualTo(_rect(tester, 'editor.redo').right - 1));
+      expect(_rect(tester, 'editor.save').right, closeTo(region.right, 1));
+
+      store.send(core.EditorAction.trimEnd(store.state.project.clips.last.id, const core.Time(ticks: 600)));
+      await tester.pump();
+      expect(_node(tester, 'editor.undo'), containsSemantics(isButton: true, isEnabled: true));
+      expect(_node(tester, 'editor.redo'), containsSemantics(isButton: true, isEnabled: false));
+      await tester.tap(_id('editor.undo'));
+      await tester.pump();
+      expect(_node(tester, 'editor.undo'), containsSemantics(isButton: true, isEnabled: false));
+      expect(_node(tester, 'editor.redo'), containsSemantics(isButton: true, isEnabled: true));
+      semantics.dispose();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
   group('a draft', () {
     late core.OpenDraft draft;
 

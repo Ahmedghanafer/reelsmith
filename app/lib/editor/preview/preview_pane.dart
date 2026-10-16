@@ -64,7 +64,7 @@ class PreviewPane extends StatelessWidget {
                     ? () => store.send(store.state.isPlaying ? core.EditorAction.pause : core.EditorAction.play)
                     : null,
               ),
-              // The space between play and undo: the label stands at its start, and is cut on a screen too narrow
+              // The space between play and undo: the label stands at its start, 17 points as in m6, and is cut on a screen too narrow
               // for it rather than push the buttons off.
               Expanded(
                 child: Semantics(
@@ -75,7 +75,7 @@ class PreviewPane extends StatelessWidget {
                     maxLines: 1,
                     softWrap: false,
                     overflow: TextOverflow.clip,
-                    style: const TextStyle(fontSize: 15, fontFeatures: [FontFeature.tabularFigures()]),
+                    style: const TextStyle(fontSize: 17, fontFeatures: [FontFeature.tabularFigures()]),
                   ),
                 ),
               ),
@@ -99,7 +99,10 @@ class PreviewPane extends StatelessWidget {
     );
   }
 
-  /// A 44 point button with its identifier and the label of its word key. Null `tap` disables it.
+  /// A 44 by 44 point button with its identifier and the label of its word key. Null `tap` disables it. On iOS
+  /// Material pads an icon button to a 48 point target, so the target is shrink wrapped and the box fixed at 44.
+  ///
+  /// https://api.flutter.dev/flutter/material/MaterialTapTargetSize.html
   Widget _button(String identifier, core.Words label, IconData icon, VoidCallback? tap) {
     return Semantics(
       identifier: identifier,
@@ -109,11 +112,16 @@ class PreviewPane extends StatelessWidget {
       label: words.text(label),
       onTap: tap,
       excludeSemantics: true,
-      child: IconButton(
-        onPressed: tap,
-        icon: Icon(icon),
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: IconButton(
+          onPressed: tap,
+          icon: Icon(icon),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+        ),
       ),
     );
   }
