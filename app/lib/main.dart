@@ -109,46 +109,46 @@ class _StartRootState extends State<StartRoot> {
       print('seed start: the seed was not started: $error');
       return;
     }
-    if (seeded == null) {
-      return;
+    if (seeded != null) {
+      _open(seeded);
     }
-    if (!mounted || _store != null) {
-      seeded.dispose();
-      return;
-    }
-    _open(seeded);
   }
 
+  /// Pushes the editor on the store. One editor is open at a time: a store that comes while one is open is
+  /// disposed.
   void _open(EditorStore store) {
+    if (_store != null || !mounted) {
+      store.dispose();
+      return;
+    }
     final words = _launch!.words;
     _store = store;
     final navigator = Navigator.of(context);
+    final route = PageRouteBuilder<void>(
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) => EditorScreen(store: store, words: words),
+    );
     void closed() {
-      if (!store.isOpen) {
-        store.removeListener(closed);
-        navigator.pop();
+      if (store.isOpen) {
+        return;
+      }
+      store.removeListener(closed);
+      // What the editor showed over itself goes with it.
+      navigator.popUntil((one) => one == route);
+      navigator.pop();
+      // The editor leaves the tree in the next frame, and the store goes after it.
+      WidgetsBinding.instance.addPostFrameCallback((_) => store.dispose());
+      if (mounted) {
+        setState(() {
+          _store = null;
+          _starts++;
+        });
       }
     }
 
     store.addListener(closed);
-    navigator
-        .push(
-          PageRouteBuilder<void>(
-            transitionDuration: Duration.zero,
-            reverseTransitionDuration: Duration.zero,
-            pageBuilder: (context, animation, secondaryAnimation) => EditorScreen(store: store, words: words),
-          ),
-        )
-        .then((_) {
-          // The editor leaves the tree in the next frame, and the store goes after it.
-          WidgetsBinding.instance.addPostFrameCallback((_) => store.dispose());
-          if (mounted) {
-            setState(() {
-              _store = null;
-              _starts++;
-            });
-          }
-        });
+    navigator.push(route);
   }
 
   @override

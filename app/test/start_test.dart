@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -35,6 +36,16 @@ class _Engine extends FakeVideoEngine {
     copiedInto.add(folder);
     return super.copyPicked(folder);
   }
+}
+
+/// The fake whose seed media are written when the test completes the future.
+class _SlowSeed extends FakeVideoEngine {
+  _SlowSeed(this.written);
+
+  final Future<String> written;
+
+  @override
+  Future<String> writeSeedMedia(String seed) => written;
 }
 
 Directory _temporary() {
@@ -249,5 +260,42 @@ void main() {
     expect(find.byType(EditorScreen), findsNothing);
     expect(find.byType(StartScreen), findsOneWidget);
     expect(engine.calls, contains('disposePreview'));
+  });
+
+  testWidgets('a store that comes while an editor is open is disposed, and the editor closes over a page of its own', (
+    tester,
+  ) async {
+    final folder = _temporary();
+    final seedWritten = Completer<String>();
+    final engine = _SlowSeed(seedWritten.future)
+      ..launchAnswer = _engine(folder, seed: 'two-clips').launchAnswer
+      ..pickAnswer = 1
+      ..copyPickedAnswer = [_fact('one')];
+    await _start(tester, engine);
+
+    // New project opens its editor while the seed media are still being written.
+    await tester.tap(find.bySemanticsIdentifier('start.newProject'));
+    await _settle(tester);
+    final opened = tester.widget<EditorScreen>(find.byType(EditorScreen)).store;
+    seedWritten.complete('/fake/Seeds');
+    await _settle(tester);
+    expect(find.byType(EditorScreen), findsOneWidget);
+    expect(tester.widget<EditorScreen>(find.byType(EditorScreen)).store, same(opened));
+
+    // A page the editor shows over itself goes with it when the store closes.
+    unawaited(
+      Navigator.of(tester.element(find.byType(EditorScreen))).push(
+        PageRouteBuilder<void>(
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (context, animation, secondaryAnimation) => const SizedBox(),
+        ),
+      ),
+    );
+    await _settle(tester);
+    await opened.close();
+    await _settle(tester);
+    expect(find.byType(EditorScreen), findsNothing);
+    expect(find.byType(StartScreen), findsOneWidget);
   });
 }
