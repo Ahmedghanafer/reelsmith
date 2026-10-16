@@ -18,7 +18,7 @@ core.Project _written(core.OpenDraft draft) =>
 
 /// A store on a new draft of the seed in a temporary folder, its texture made.
 Future<({EditorStore store, FakeVideoEngine engine, core.OpenDraft draft})> _open(WidgetTester tester) async {
-  final folder = Directory.systemTemp.createTempSync('m7-16-editor-store');
+  final folder = Directory.systemTemp.createTempSync('editor_store');
   addTearDown(() => folder.deleteSync(recursive: true));
   final draft = core.DraftShelf(Directory('${folder.path}/Drafts')).create(
     core.Draft(project: _seedProject, exportSettings: core.ExportSettings.startChoice, changed: DateTime.now()),
@@ -98,7 +98,7 @@ void main() {
   testWidgets('a write that fails leaves the draft unsaved, and a start without a draft writes nothing', (
     tester,
   ) async {
-    final folder = Directory.systemTemp.createTempSync('m7-16-editor-store');
+    final folder = Directory.systemTemp.createTempSync('editor_store');
     addTearDown(() => folder.deleteSync(recursive: true));
     final gone = core.OpenDraft(shelf: core.DraftShelf(Directory('${folder.path}/missing')), id: const core.DraftID('x'));
     final failing = EditorStore(
