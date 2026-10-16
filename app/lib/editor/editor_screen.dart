@@ -8,6 +8,8 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 import '../words/words.dart';
 import 'editor_store.dart';
 import 'preview/preview_pane.dart';
+import 'strip/strip.dart';
+import 'tools/tools_row.dart';
 
 /// The editor shell, in the colours of the theme, light or dark as the system is: four regions from top to bottom, each with the slot of the story that fills it, and between
 /// the tools and the export the text region, only while a text is selected, the sound region, only while the sound
@@ -117,10 +119,12 @@ class _EditorScreenState extends State<EditorScreen> {
                   ),
                   _region('editor.timelineRegion', [
                     // slot: timeline
+                    Strip(key: ObjectKey(store), store: store),
                     // end slot: timeline
                   ]),
                   _region('editor.toolsRegion', [
                     // slot: tools
+                    ToolsRow(store: store, words: widget.words),
                     // end slot: tools
                   ]),
                   if (state.selectedText != null)

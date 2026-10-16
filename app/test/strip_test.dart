@@ -222,9 +222,6 @@ void main() {
       }
       expect(_node(tester, 'editor.split').label, 'تقسيم');
       expect(_node(tester, 'editor.delete').label, 'حذف');
-      // The two icons are 44 by 44 points on iOS.
-      expect(_rect(tester, 'editor.addClips').size, const Size(44, 44));
-      expect(_rect(tester, 'editor.frames').size, const Size(44, 44));
 
       // Time runs to the right: blue, red, green from left to right, the playhead at 4.5 seconds in the middle.
       expect(_rect(tester, 'editor.clip.1').right, closeTo(_rect(tester, 'editor.clip.2').left, 0.5));
@@ -232,6 +229,21 @@ void main() {
       expect(_rect(tester, 'editor.clip.1').left, closeTo(201 - 270, 0.5));
       expect(_rect(tester, 'editor.playhead').center.dx, closeTo(201, 0.5));
       expect(_node(tester, 'editor.playhead').value, '00:04');
+      semantics.dispose();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
+  testWidgets(
+    'on iOS the add and the frames button are 44 by 44 points',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _show(tester);
+      // Wide enough for the row in the square letters of the test font, so the row is not scaled down.
+      tester.view.physicalSize = const Size(3000, 2622);
+      await tester.pump();
+      expect(_rect(tester, 'editor.addClips').size, const Size(44, 44));
+      expect(_rect(tester, 'editor.frames').size, const Size(44, 44));
       semantics.dispose();
     },
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
