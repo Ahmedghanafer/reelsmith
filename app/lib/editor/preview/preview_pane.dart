@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../../words/words.dart';
+import '../clip/instagram_guide_view.dart';
 import '../editor_store.dart';
 import 'picture_gestures.dart';
 import 'preview_picture.dart';
@@ -43,7 +44,17 @@ class PreviewPane extends StatelessWidget {
             child: Center(
               child: AspectRatio(
                 aspectRatio: canvas.width / canvas.height,
-                child: PictureGestures(store: store, child: PreviewPicture(textureId: store.textureId, builds: builds)),
+                child: PictureGestures(
+                  store: store,
+                  // The guide over the picture, under the gestures, which it lets through.
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      PreviewPicture(textureId: store.textureId, builds: builds),
+                      InstagramGuideView(store: store, words: words),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

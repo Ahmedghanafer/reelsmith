@@ -75,10 +75,10 @@ final class FollowFingerTests: XCTestCase {
         let red = element(app, "editor.clip.2")
         red.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         waitUntil("editor.clip.2 selected and the slider clip.volume") {
-            red.isSelected && app.sliders["clip.volume"].exists
+            red.isSelected && element(app, "clip.volume").exists
         }
         // The volume is 1 of 0 to 2: the thumb stands in the middle.
-        drag(app.sliders["clip.volume"], from: 0.5, toHighest: false)
+        drag(element(app, "clip.volume"), from: 0.5, toHighest: false)
         waitUntil("editor.clip.2 ending 0 v after the drag") { self.value(app, "editor.clip.2").hasSuffix(" 0 v") }
         print("follow: after the drag of clip.volume editor.clip.2 reads " + value(app, "editor.clip.2"))
         XCTAssertTrue(value(app, "editor.clip.2").hasSuffix(" 0 v"), value(app, "editor.clip.2"))
@@ -88,7 +88,7 @@ final class FollowFingerTests: XCTestCase {
     func testADragOfTheVolumeOfTheMusicIsOneUndoStep() {
         let app = startLevels()
         // The volume is 1: the thumb stands at the higher end.
-        drag(app.sliders["sound.musicVolume"], from: 1, toHighest: false)
+        drag(element(app, "sound.musicVolume"), from: 1, toHighest: false)
         waitUntil("field 4 at 0 after the drag") { self.field(app, 4) == "0" }
         print("follow: after the drag of sound.musicVolume editor.soundInfo reads \(soundInfo(app))")
         XCTAssertEqual(field(app, 4), "0")
@@ -98,7 +98,7 @@ final class FollowFingerTests: XCTestCase {
     /// The fade in begins at 0, its lowest, so it is dragged to its highest, 3000 ticks.
     func testADragOfTheFadeInIsOneUndoStep() {
         let app = startLevels()
-        drag(app.sliders["sound.fadeIn"], from: 0, toHighest: true)
+        drag(element(app, "sound.fadeIn"), from: 0, toHighest: true)
         waitUntil("field 5 at 3000 after the drag") { self.field(app, 5) == "3000" }
         print("follow: after the drag of sound.fadeIn editor.soundInfo reads \(soundInfo(app))")
         XCTAssertEqual(field(app, 5), "3000")
@@ -115,7 +115,7 @@ final class FollowFingerTests: XCTestCase {
         waitForTheEditor(app)
         waitUntil("the part button sound.tab.clips after the start") { self.element(app, "sound.tab.clips").exists }
         element(app, "sound.tab.clips").tap()
-        let slider = app.sliders["sound.clipVolume"]
+        let slider = element(app, "sound.clipVolume")
         waitUntil("the slider sound.clipVolume after the tap on its part button") { slider.exists }
         let play = element(app, "editor.play")
         let picture = element(app, "editor.picture")
@@ -149,7 +149,7 @@ final class FollowFingerTests: XCTestCase {
         waitUntil("the part button sound.tab.levels after the start") { self.element(app, "sound.tab.levels").exists }
         element(app, "sound.tab.levels").tap()
         waitUntil("the sliders sound.musicVolume and sound.fadeIn after the tap on sound.tab.levels") {
-            app.sliders["sound.musicVolume"].exists && app.sliders["sound.fadeIn"].exists
+            element(app, "sound.musicVolume").exists && element(app, "sound.fadeIn").exists
         }
         return app
     }

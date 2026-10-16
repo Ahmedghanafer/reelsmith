@@ -32,7 +32,7 @@ final class ClipGainTests: XCTestCase {
             waitUntil("editor.clip.2 selected and editor.clipRegion in " + language) {
                 red.isSelected && self.element(app, "editor.clipRegion").exists
             }
-            let slider = app.sliders["clip.volume"]
+            let slider = element(app, "clip.volume")
             waitUntil("the slider clip.volume in " + language) { slider.exists }
             let mirrored = language == "ar"
             let width = slider.frame.width
