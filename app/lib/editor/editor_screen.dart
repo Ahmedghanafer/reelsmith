@@ -7,6 +7,7 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../words/words.dart';
 import 'editor_store.dart';
+import 'export/export_button.dart';
 import 'preview/preview_pane.dart';
 import 'strip/strip.dart';
 import 'tools/tools_row.dart';
@@ -144,6 +145,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     ]),
                   _region('editor.exportRegion', [
                     // slot: export
+                    ExportButton(store: store, words: widget.words),
                     // end slot: export
                   ]),
                 ],

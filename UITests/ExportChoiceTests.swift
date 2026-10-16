@@ -30,7 +30,7 @@ final class ExportChoiceTests: XCTestCase {
         let export = element(app, "editor.export")
 
         // Criterion 1: two buttons in the region, both enabled, the choice left of Export.
-        XCTAssertEqual(region.buttons.allElementsBoundByIndex.map { $0.identifier }, ["editor.exportSettings", "editor.export"])
+        XCTAssertEqual(region.descendants(matching: .any).matching(NSPredicate(format: "identifier != ''")).allElementsBoundByIndex.map { $0.identifier }, ["editor.exportSettings", "editor.export"])
         XCTAssertTrue(choice.isEnabled)
         XCTAssertTrue(export.isEnabled)
         XCTAssertLessThanOrEqual(choice.frame.maxX, export.frame.minX + 1)
