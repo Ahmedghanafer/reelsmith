@@ -72,6 +72,7 @@ final class PreviewTexture: NSObject, FlutterTexture {
         }
         let video = AVPlayerItemVideoOutput(pixelBufferAttributes: [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferIOSurfacePropertiesKey as String: [String: Any](),
             kCVPixelBufferMetalCompatibilityKey as String: true,
         ])
         item.add(video)
