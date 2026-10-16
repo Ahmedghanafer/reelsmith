@@ -6,8 +6,8 @@ import 'package:test/test.dart';
 // Holds the shared draft fixtures of `Tests/Fixtures/Drafts/`, from both sides. Each file of `swift/` was written
 // by Swift's `encodeDraft` and decodes here to its expected value. Each file of `dart/` is the Dart encoding of the
 // file of the same name in `swift/`: with REELSMITH_WRITE_FIXTURES set this test first writes each file of `dart/`
-// that is missing, never one that is there, and in both modes it holds that every file equals that encoding. `DraftFixtureTests.swift` decodes both folders. A fixture never changes:
-// a new field brings a new fixture.
+// that is missing, never one that is there, and in both modes it holds that every file equals that encoding.
+// `DraftFixtureTests.swift` decodes both folders. A fixture never changes: a new field brings a new fixture.
 void main() {
   const folder = '../../Tests/Fixtures/Drafts';
   final writes = Platform.environment.containsKey('REELSMITH_WRITE_FIXTURES');

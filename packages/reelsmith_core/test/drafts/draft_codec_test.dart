@@ -20,7 +20,9 @@ void main() {
     for (final ticks in ['1800', '1800.0', '1.8e3', '18e2']) {
       expect(decodeDraft(utf8.encode(versionOne(ticks))), expected, reason: ticks);
     }
-    for (final ticks in ['1800.5', '1.8005e3']) {
+    final least = decodeDraft(utf8.encode(versionOne('-9.223372036854775808e18')));
+    expect(least.project.clips[0].duration.ticks, -9223372036854775808);
+    for (final ticks in ['1800.5', '1.8005e3', '9.223372036854775808e18']) {
       expect(() => decodeDraft(utf8.encode(versionOne(ticks))), throwsA(DraftError.unreadable), reason: ticks);
     }
   });

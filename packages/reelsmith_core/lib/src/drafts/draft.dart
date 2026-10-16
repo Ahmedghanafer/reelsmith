@@ -436,7 +436,8 @@ int _int(Object? json) {
   if (number is int) {
     return number;
   }
-  if (!number.isFinite || number != number.truncateToDouble() || number.abs() >= 9223372036854775808.0) {
+  if (!number.isFinite || number != number.truncateToDouble() || number >= 9223372036854775808.0 ||
+      number < -9223372036854775808.0) {
     throw const FormatException('not a whole number');
   }
   return number.toInt();
