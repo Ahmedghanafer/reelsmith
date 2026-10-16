@@ -22,11 +22,15 @@ extension Engine {
     func pick(photos: Bool, limit: Int64) async throws -> Int64 {
         await withCheckedContinuation { continuation in
             Task { @MainActor in
-                // One picker shows at a time, as the one sheet of m6: a call while one shows gives 0.
-                guard self.media.videoPicker == nil else {
-                    NSLog("%@", "pick: a picker shows already")
-                    continuation.resume(returning: 0)
-                    return
+                // One picker shows at a time, as the one sheet of m6: a call while one shows gives 0. A kept picker
+                // that went away without a word answers nothing chosen first.
+                if let kept = self.media.videoPicker {
+                    if kept.isShown {
+                        NSLog("%@", "pick: a picker shows already")
+                        continuation.resume(returning: 0)
+                        return
+                    }
+                    kept.report([])
                 }
                 let picker = VideoPicker(closed: { items in
                     self.media.picked = items
@@ -89,6 +93,12 @@ final class VideoPicker: NSObject, PHPickerViewControllerDelegate, UIAdaptivePre
     /// Photos are offered beside the videos.
     private let photos: Bool
     private var reported = false
+    private weak var controller: PHPickerViewController?
+
+    /// The picker is on screen.
+    var isShown: Bool {
+        controller?.presentingViewController != nil
+    }
 
     init(closed: @escaping @MainActor ([NSItemProvider]) -> Void, limit: Int = 0, photos: Bool = false) {
         self.closed = closed
@@ -107,6 +117,7 @@ final class VideoPicker: NSObject, PHPickerViewControllerDelegate, UIAdaptivePre
         let picker = PHPickerViewController(configuration: configuration)
         picker.delegate = self
         picker.presentationController?.delegate = self
+        controller = picker
         return picker
     }
 

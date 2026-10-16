@@ -18,10 +18,14 @@ extension Engine {
         await withCheckedContinuation { continuation in
             Task { @MainActor in
                 // One browser shows at a time, as the one file importer of m6: a call while one shows gives false.
-                guard self.media.audioPicker == nil else {
-                    NSLog("%@", "pickAudio: a browser shows already")
-                    continuation.resume(returning: false)
-                    return
+                // A kept browser that went away without a word answers nothing chosen first.
+                if let kept = self.media.audioPicker {
+                    if kept.isShown {
+                        NSLog("%@", "pickAudio: a browser shows already")
+                        continuation.resume(returning: false)
+                        return
+                    }
+                    kept.report(nil)
                 }
                 let browser = AudioPicker { file in
                     self.media.audio = file
@@ -65,6 +69,12 @@ extension Engine {
 final class AudioPicker: NSObject, UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate {
     private let closed: @MainActor (URL?) -> Void
     private var reported = false
+    private weak var controller: UIDocumentPickerViewController?
+
+    /// The browser is on screen.
+    var isShown: Bool {
+        controller?.presentingViewController != nil
+    }
 
     init(closed: @escaping @MainActor (URL?) -> Void) {
         self.closed = closed
@@ -75,6 +85,7 @@ final class AudioPicker: NSObject, UIDocumentPickerDelegate, UIAdaptivePresentat
         browser.allowsMultipleSelection = false
         browser.delegate = self
         browser.presentationController?.delegate = self
+        controller = browser
         return browser
     }
 
