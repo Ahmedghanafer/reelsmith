@@ -7,8 +7,9 @@ import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
 import '../editor_store.dart';
 
-/// The gestures on the picture, laid over it and drawing nothing: a tap selects the text nearest to the finger, and
-/// one scale recognizer moves the selected text with one finger and sizes or turns it with two. They decide nothing.
+/// The gestures on the picture, laid over it and drawing nothing: a tap selects the text nearest to the finger, a
+/// scale recognizer moves the selected text with one finger, and a `Listener` sizes or turns it with two. They decide
+/// nothing.
 /// A gesture that begins with a text selected sends `pause`, then draws `reduce` of the state from its start under
 /// the fingers: the compositor draws every pixel of a text, so each drawn project goes to the player through `show`
 /// and the store keeps its state. On release the gesture sends the one value it changed, the text's centre, size or
@@ -49,6 +50,9 @@ class _PictureGesturesState extends State<PictureGestures> {
   /// With two fingers, true for a twist and false for a pinch, null until the fingers went far enough to tell.
   bool? _twist;
 
+  /// True while two fingers size or turn the text: from their first move until the number of fingers changes.
+  bool _pair = false;
+
   /// The fingers on the picture by pointer, the most of them since the first came down, and where the first came
   /// down.
   final Map<int, Offset> _fingers = {};
@@ -82,28 +86,27 @@ class _PictureGesturesState extends State<PictureGestures> {
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: (event) {
-          _probe('down', event);
+          _endPair();
           if (_fingers.isEmpty) {
             _most = 0;
             _down = event.localPosition;
           }
           _fingers[event.pointer] = event.localPosition;
           _most = math.max(_most, _fingers.length);
-          _from = null;
         },
         onPointerMove: (event) {
-          _probe('move', event);
           _fingers[event.pointer] = event.localPosition;
+          if (_fingers.length >= 2) {
+            _paired();
+          }
         },
         onPointerUp: (event) {
-          _probe('up', event);
+          _endPair();
           _fingers.remove(event.pointer);
-          _from = null;
         },
         onPointerCancel: (event) {
-          _probe('cancel', event);
+          _endPair();
           _fingers.remove(event.pointer);
-          _from = null;
         },
         child: widget.child,
       ),
@@ -133,76 +136,47 @@ class _PictureGesturesState extends State<PictureGestures> {
     }
   }
 
-  /// The recognizer starts at the first move, and ends and starts again when a finger comes or goes, so each part
-  /// with one number of fingers is a gesture of its own. The first part counts from where the finger came down.
-  void _started(ScaleStartDetails details) {
-    print('probe: start n=${details.pointerCount} focal=${details.localFocalPoint} most=$_most');
+  /// Takes the state the gesture counts from, after a `pause`, when a text is selected.
+  void _begin() {
     final store = widget.store;
     final selected = store.state.selectedText;
     final text = selected == null ? null : store.state.project.text(selected);
     _start = null;
     _text = null;
     _drawn = null;
+    _twist = null;
+    _from = null;
     if (text == null) {
       return;
     }
     store.send(core.EditorAction.pause);
     _start = store.state;
     _text = store.state.project.text(text.id);
-    _focal = details.pointerCount == 1 && _most == 1 ? _down : details.localFocalPoint;
-    _twist = null;
   }
 
-  /// One finger moves the text by the distance moved. Two size it by the scale or turn it by the angle, in degrees
-  /// clockwise as she sees it: not both, as m6's pinch and twist never ran together. The first of the two whose way
-  /// passes `_travel` points takes the gesture, apart for a pinch and around for a twist, counted from the start.
-  void _updated(ScaleUpdateDetails details) {
-    print('probe: update n=${details.pointerCount} scale=${details.scale.toStringAsFixed(3)} '
-        'fingers=${_fingers.length} ${_fingers.values.take(2).toList()} from=$_from twist=$_twist text=${_text != null}');
-    final start = _start;
-    final text = _text;
-    if (start == null || text == null) {
+  /// The recognizer starts at the first move, and ends and starts again when a finger comes or goes, so each part
+  /// with one number of fingers is a gesture of its own. The first part counts from where the finger came down. Two
+  /// fingers are left to the `Listener`: the recognizer takes them only once their spread changed by 18 points, which
+  /// a small pinch outward never does.
+  void _started(ScaleStartDetails details) {
+    if (details.pointerCount >= 2) {
       return;
     }
-    final core.EditorState next;
-    if (details.pointerCount >= 2) {
-      // The scale and the angle from the fingers' own places: the recognizer's scale stays 1 for fingers that came
-      // down at one point.
-      final places = _fingers.values.take(2).toList();
-      if (places.length < 2) {
-        return;
-      }
-      final line = places[0] - places[1];
-      final from = _from ??= line.distance >= _floor ? line : null;
-      if (from == null) {
-        return;
-      }
-      final scale = line.distance / from.distance;
-      var angle = line.direction - from.direction;
-      if (angle > math.pi) {
-        angle -= 2 * math.pi;
-      } else if (angle <= -math.pi) {
-        angle += 2 * math.pi;
-      }
-      // Apart: how far the distance between the fingers changed. Around: the arc of the angle at that distance.
-      final apart = (line.distance - from.distance).abs();
-      final around = line.distance * angle.abs();
-      if (_twist == null && apart < _travel && around < _travel) {
-        return;
-      }
-      final twist = _twist ??= around > apart;
-      next = core.reduce(
-        start,
-        core.EditorAction.text(
-          twist
-              ? core.TextAction.turn(text.id, text.rotation + angle * 180 / math.pi)
-              : core.TextAction.setStyle(text.id, text.style.copyWith(size: text.style.size * scale)),
-        ),
-      );
-    } else {
-      final canvas = start.project.canvas;
-      final moved = details.localFocalPoint - _focal;
-      next = core.reduce(
+    _begin();
+    _focal = _most == 1 ? _down : details.localFocalPoint;
+  }
+
+  /// One finger moves the text by the distance moved.
+  void _updated(ScaleUpdateDetails details) {
+    final start = _start;
+    final text = _text;
+    if (details.pointerCount >= 2 || _pair || start == null || text == null) {
+      return;
+    }
+    final canvas = start.project.canvas;
+    final moved = details.localFocalPoint - _focal;
+    _draw(
+      core.reduce(
         start,
         core.EditorAction.text(
           core.TextAction.move(
@@ -211,18 +185,83 @@ class _PictureGesturesState extends State<PictureGestures> {
             text.y + _canvasLength(moved.dy, canvas),
           ),
         ),
-      );
+      ),
+    );
+  }
+
+  /// Two fingers size the text by the scale or turn it by the angle, in degrees clockwise as she sees it: not both,
+  /// as m6's pinch and twist never ran together. The first of the two whose way passes `_travel` points takes the
+  /// gesture, apart for a pinch and around for a twist, counted from the start. The gesture begins at the first move
+  /// of two fingers, after the recognizer ended the part of one finger at the second finger's down.
+  void _paired() {
+    if (!_pair) {
+      _pair = true;
+      _begin();
     }
-    if (next.project != (_drawn ?? start).project) {
+    final start = _start;
+    final text = _text;
+    if (start == null || text == null) {
+      return;
+    }
+    final places = _fingers.values.take(2).toList();
+    final line = places[0] - places[1];
+    final from = _from ??= line.distance >= _floor ? line : null;
+    if (from == null) {
+      return;
+    }
+    final scale = line.distance / from.distance;
+    var angle = line.direction - from.direction;
+    if (angle > math.pi) {
+      angle -= 2 * math.pi;
+    } else if (angle <= -math.pi) {
+      angle += 2 * math.pi;
+    }
+    // Apart: how far the distance between the fingers changed. Around: the arc of the angle at that distance.
+    final apart = (line.distance - from.distance).abs();
+    final around = line.distance * angle.abs();
+    if (_twist == null && apart < _travel && around < _travel) {
+      return;
+    }
+    final twist = _twist ??= around > apart;
+    _draw(
+      core.reduce(
+        start,
+        core.EditorAction.text(
+          twist
+              ? core.TextAction.turn(text.id, text.rotation + angle * 180 / math.pi)
+              : core.TextAction.setStyle(text.id, text.style.copyWith(size: text.style.size * scale)),
+        ),
+      ),
+    );
+  }
+
+  /// Ends the gesture of two fingers when a finger comes or goes. The `Listener` hears of it before the recognizer.
+  void _endPair() {
+    if (_pair) {
+      _pair = false;
+      _finish();
+    }
+  }
+
+  /// Shows the state when its project differs from the one drawn last.
+  void _draw(core.EditorState next) {
+    final start = _start;
+    if (start != null && next.project != (_drawn ?? start).project) {
       _drawn = next;
       _show(next.project);
     }
   }
 
+  /// The recognizer's end of a part of one finger.
+  void _ended(ScaleEndDetails details) {
+    if (!_pair) {
+      _finish();
+    }
+  }
+
   /// Sends the one value that changed, the centre, the style or the rotation, so the gesture is one step of undo. An
   /// end while a finger stays sends too: a finger that comes or goes ends a gesture.
-  void _ended(ScaleEndDetails details) {
-    print('probe: end n=${details.pointerCount} drawn=${_drawn != null}');
+  void _finish() {
     final text = _text;
     final project = _drawn?.project;
     _start = null;
@@ -261,11 +300,6 @@ class _PictureGesturesState extends State<PictureGestures> {
     store.engine.show(id, json, store.mediaFolder.path, null, false).catchError((Object error) {
       print('editor: the preview was not shown: $error');
     });
-  }
-
-  void _probe(String kind, PointerEvent event) {
-    print('probe: $kind id=${event.pointer} kind=${event.kind.name} at=${event.localPosition} '
-        't=${event.timeStamp.inMilliseconds} fingers=${_fingers.length}');
   }
 
   // slot: punch-in
