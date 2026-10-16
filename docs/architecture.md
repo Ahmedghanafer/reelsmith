@@ -780,6 +780,13 @@ The Flutter app reaches the Swift Engine through one Pigeon API.
 <!-- end slot: engine-pickers -->
 
 <!-- slot: engine-outputs -->
+### The outputs
+
+- `app/ios/Runner/Engine/Output/Export.swift`: `export` is `exportToPhotos` of `App/Editor/Export/ExportToPhotos.swift` up to the written file. It plans the project at the settings, has the Engine write it to a new file in the temporary folder, sends each progress as `ExportProgressEvent`, and gives the file with `VideoFacts.infoText` of it, null when it cannot be read. An error of the plan or the Engine is thrown to Dart and the file is removed. With `fails` the file lies in a folder that is not there. `keepAwake` sets `isIdleTimerDisabled`, which `ExportButton.swift` set from `ExportState.keepsScreenAwake`.
+- `SaveToPhotos.swift`: `saveToPhotos` is the rest of `exportToPhotos`. It asks for adding only, adds the file as a video, and removes the file after the save and after a failure alike. It gives `notAllowed` when adding is not allowed, so Dart shows the words that send her to Settings, and `failed` for every other error.
+- `Cover.swift`: `writeCover` is `makeCover` of `App/Editor/EditorStore.swift`. It writes the cover of the project's plan to the file Dart gives when the project has a clip, else removes that file. A failure is logged and leaves the file as it was.
+- `Frames.swift`: `blockFrames` makes the frames of one media with `makeBlockFrames`, as `FramesCache.swift` did, and gives each as PNG bytes by its time in ticks. A media whose frames cannot be made gives an empty map.
+- `app/ios/Runner/Engine/Confirm.swift`: `confirm` shows the question as a system alert, as `App/Start/DraftList.swift` did, with a destructive button of the confirm words and the identifier `drafts.deleteConfirm`, and a cancel button of the cancel words and the identifier `drafts.deleteCancel`. It gives true when she confirmed. The alert is shown on the view controller of the plugin registrar.
 <!-- end slot: engine-outputs -->
 
 <!-- slot: flutter-start -->
