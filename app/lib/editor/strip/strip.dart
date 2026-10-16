@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:reelsmith_core/reelsmith_core.dart' as core;
 
@@ -15,7 +16,8 @@ import '../editor_store.dart';
 /// https://api.flutter.dev/flutter/gestures/ScaleGestureRecognizer-class.html
 /// https://api.flutter.dev/flutter/gestures/ScaleStartDetails/pointerCount.html
 /// https://api.flutter.dev/flutter/gestures/ScaleUpdateDetails/scale.html
-/// https://api.flutter.dev/flutter/widgets/GestureDetector-class.html
+/// https://api.flutter.dev/flutter/widgets/RawGestureDetector-class.html
+/// https://api.flutter.dev/flutter/gestures/OneSequenceGestureRecognizer/resolve.html
 /// https://api.flutter.dev/flutter/widgets/LayoutBuilder-class.html
 /// https://api.flutter.dev/flutter/widgets/Positioned-class.html
 /// https://api.flutter.dev/flutter/widgets/Stack/clipBehavior.html
@@ -74,14 +76,23 @@ class StripState extends State<Strip> {
               },
               onPointerUp: (event) => _down.remove(event.pointer),
               onPointerCancel: (event) => _down.remove(event.pointer),
-              child: GestureDetector(
+              child: RawGestureDetector(
                 behavior: HitTestBehavior.opaque,
                 excludeFromSemantics: true,
-                onScaleStart: _started,
-                onScaleUpdate: _updated,
-                onTapUp: (details) => _tapped(details.localPosition, left),
-                // slot: recognizers
-                // end slot: recognizers
+                gestures: {
+                  _StripScale: GestureRecognizerFactoryWithHandlers<_StripScale>(
+                    () => _StripScale(debugOwner: this),
+                    (recognizer) => recognizer
+                      ..onStart = _started
+                      ..onUpdate = _updated,
+                  ),
+                  TapGestureRecognizer: GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+                    () => TapGestureRecognizer(debugOwner: this),
+                    (recognizer) => recognizer.onTapUp = (details) => _tapped(details.localPosition, left),
+                  ),
+                  // slot: recognizers
+                  // end slot: recognizers
+                },
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -228,5 +239,27 @@ class StripState extends State<Strip> {
         point.dy < rows.clipY + rows.clipHeight;
     final clip = inRow ? store.state.project.clip(scale.time(x)) : null;
     store.send(clip == null ? core.EditorAction.clearSelection : core.EditorAction.select(clip.id));
+  }
+}
+
+/// The scale recognizer of the strip, which takes the touch as soon as a second pointer comes down, as a pinch of
+/// iOS does, and measures the scale from where the pointers came down. Flutter's own waits until the pointers have
+/// spread past a slop of 18 points from their middle, which a short pinch never reaches.
+class _StripScale extends ScaleGestureRecognizer {
+  _StripScale({super.debugOwner}) : super(dragStartBehavior: DragStartBehavior.down);
+
+  final Set<int> _pointers = {};
+
+  @override
+  void handleEvent(PointerEvent event) {
+    if (event is PointerDownEvent) {
+      _pointers.add(event.pointer);
+    } else if (event is PointerUpEvent || event is PointerCancelEvent) {
+      _pointers.remove(event.pointer);
+    }
+    super.handleEvent(event);
+    if (event is PointerDownEvent && _pointers.length > 1) {
+      resolve(GestureDisposition.accepted);
+    }
   }
 }

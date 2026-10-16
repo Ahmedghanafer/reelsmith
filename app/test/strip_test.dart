@@ -169,6 +169,26 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('a short pinch, two fingers 8 points apart spreading to 28, zooms the strip', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final store = await _show(tester);
+    // The fingers of XCUITest's pinch with scale 2 on the timeline region, around its middle.
+    final middle = _rect(tester, 'editor.timelineRegion').center;
+    final first = await tester.startGesture(middle + const Offset(1.3, 3.6), pointer: 12);
+    final second = await tester.startGesture(middle - const Offset(1.3, 3.6), pointer: 13);
+    for (var step = 1; step <= 10; step++) {
+      await first.moveTo(middle + Offset(1.3 + 0.89 * step, 3.6 + 0.39 * step));
+      await second.moveTo(middle - Offset(1.3 + 0.89 * step, 3.6 + 0.39 * step));
+      await tester.pump();
+    }
+    await first.up();
+    await second.up();
+    await tester.pump();
+    expect(_rect(tester, 'editor.clip.1').width, greaterThan(181));
+    expect(store.state.playhead.ticks, 0);
+    semantics.dispose();
+  });
+
   testWidgets('a tap selects a block and leaves the playhead, a tap on empty strip clears the selection', (
     tester,
   ) async {
