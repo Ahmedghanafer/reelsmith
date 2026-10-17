@@ -12,7 +12,8 @@ jobs:
   compile:
     if: github.event_name != 'pull_request' || github.event.label.name == 'compile'
     runs-on: macos-26
-    timeout-minutes: 15
+    # The cold Flutter build for the simulator (290 s), the build for testing (115 s) and swift test (622 s), a third added.
+    timeout-minutes: 23
     steps:
       - uses: actions/checkout@v5
         with:
@@ -23,11 +24,16 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_26.6.app
           xcodebuild -version
 
-      - name: Generate the project
-        if: ${{ !cancelled() }}
-        run: |
-          brew install xcodegen
-          xcodegen generate
+      - name: Read the Flutter version
+        id: flutter
+        run: echo "version=$(cat .github/flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          cache: true
 
       - name: Test the package on macOS
         if: ${{ !cancelled() }}
@@ -35,20 +41,28 @@ jobs:
           REELSMITH_CLIP_DIR: ${{ runner.temp }}/clips
         run: swift test
 
-      - name: Build app and UI tests for a simulator
+      - name: Build the Flutter app for a simulator
+        id: app
         if: ${{ !cancelled() }}
+        working-directory: app
+        run: |
+          flutter --version
+          flutter build ios --simulator --debug
+
+      - name: Build the app and the UI tests for testing
+        if: ${{ !cancelled() && steps.app.outcome == 'success' }}
         run: |
           udid=$(xcrun simctl list devices available --json | jq -er '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
-          xcodebuild build-for-testing -project Reelsmith.xcodeproj -scheme Reelsmith -destination "id=$udid" \
+          xcodebuild build-for-testing -workspace app/ios/Runner.xcworkspace -scheme Runner -destination "id=$udid" \
             -derivedDataPath build/simulator
 
       - name: Lint the word files
         if: ${{ !cancelled() }}
         run: |
           shopt -s nullglob
-          files=(App/Resources/*.lproj/*.strings)
+          files=(app/assets/words/*.lproj/*.strings)
           if [ ${#files[@]} -eq 0 ]; then
-            echo "No word files yet."
-          else
-            plutil -lint "${files[@]}"
+            echo "No word file in app/assets/words."
+            exit 1
           fi
+          plutil -lint "${files[@]}"

@@ -147,9 +147,9 @@ final class PunchInTests: XCTestCase {
         let before = waitForTheShare(in: picture, "red standing between bars", above: 0.2)
         let built = builds(picture)
         XCTAssertNotNil(built, "editor.picture has no count of builds")
-        let slider = app.sliders["clip.volume"]
+        let slider = element(app, "clip.volume")
         waitUntil("the slider clip.volume") { slider.exists }
-        slider.adjust(toNormalizedSliderPosition: 0)
+        slide(slider, to: 0)
         waitUntil("editor.clip.2 ending other than 100 v after the move of clip.volume") {
             !self.value(app, "editor.clip.2").hasSuffix(" 100 v")
         }
@@ -220,6 +220,13 @@ final class PunchInTests: XCTestCase {
 
     private func value(_ app: XCUIApplication, _ identifier: String) -> String {
         element(app, identifier).value as? String ?? ""
+    }
+
+    /// A Flutter slider reports as another kind and does not take adjust: a press at its middle dragged to the
+    /// place moves it, as a finger does.
+    private func slide(_ slider: XCUIElement, to place: CGFloat) {
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: place, dy: 0.5)))
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {

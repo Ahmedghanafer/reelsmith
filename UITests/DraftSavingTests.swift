@@ -124,7 +124,7 @@ final class DraftSavingTests: XCTestCase {
     /// Adds a text and types "Hi" into its field.
     private func typeHi(_ app: XCUIApplication) {
         element(app, "editor.addText").tap()
-        let field = app.textViews["text.field"]
+        let field = app.descendants(matching: .any)["text.field"]
         waitUntil("the field after the tap on Text") { field.exists }
         field.tap()
         waitUntil("the keyboard after the tap on the field", expected: 2) { app.keyboards.firstMatch.exists }

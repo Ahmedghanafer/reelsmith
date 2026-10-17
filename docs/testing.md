@@ -224,7 +224,7 @@ Changing a weight, a range or the media list in the file changes every run, so t
 
 ### The word files
 
-- `Tests/ReelsmithCoreTests/WordFilesTests.swift` reads `App/Resources/<en, ar, sv>.lproj/Localizable.strings` from the repository and fails when their key sets differ, when a text is empty, when the placeholders of a key differ between languages, when a key appears twice, or when a file holds anything but comments and lines of a key. It shows each of the first four on word files it writes into a temporary folder. It stays green when a key is gone from all three files, so each part of the app that needs keys has a test that names them. For the seed text that test is in this file: it holds `editor.seedInfo` to the English file.
+- `Tests/ReelsmithCoreTests/WordFilesTests.swift` reads `app/assets/words/<en, ar, sv>.lproj/Localizable.strings` from the repository and fails when their key sets differ, when a text is empty, when the placeholders of a key differ between languages, when a key appears twice, or when a file holds anything but comments and lines of a key. It shows each of the first four on word files it writes into a temporary folder. It stays green when a key is gone from all three files, so each part of the app that needs keys has a test that names them. For the seed text that test is in this file: it holds `editor.seedInfo` to the English file.
 - The same file gives every Linux test the function `wordKeys(of language: String) throws -> [String]`, the keys of the repository's word file of `"en"`, `"ar"` or `"sv"`. A test of a Core state that gives words holds its keys with it and writes no second reader, as `StartWordsTests.swift` does for every key of `StartState.allWords`.
 - `Tests/ReelsmithCoreTests/StartWordsTests.swift` runs on Linux, with `wordKeys(of:)`. It fails when one of the seven keys of the start screen is missing from the English, the Arabic or the Swedish word file, and when a key of `StartState.allWords` or of `Canvas.allWords` is missing from the English file.
 - `Tests/ReelsmithCoreTests/ExportWordsTests.swift` fails when one of the seven keys of the export is missing from the English, the Arabic or the Swedish word file, and when a key of `ExportState.allWords` is missing from the English file.
@@ -1063,3 +1063,123 @@ Screenshots: `draft-path-01-list` (the list with the one draft and its cover), `
 When the picker is not driven at the new project or at the added clip, the test prints `clip-path: picker not driven:` with the step that found nothing, ends the app and goes on from `-drafts fresh -seed photo-wide` (blue, the photo, red), with three blocks, made 3, the photo second before the move and the line `1 3+`. It then skips the music of a video and the reads of its bar. When the editor does not open, or the added clip does not come, within 60 seconds of a confirmed pick the test fails, and the walk goes on from the seed the same way. When only the pick of the music finds nothing, the walk goes on from the kept draft without music. The last line of the walk is `clip-path: walk finished,` with "picker driven" or "picker not driven, from the seed photo-wide", the music and the seconds of the walk: a run without that line did not walk, whatever its result says.
 
 Screenshots: `clip-path-01-strip` (the strip after the music, the photo first and the music bar under the blocks), `clip-path-01-strip-ar` and `clip-path-01-strip-sv` (the reopened draft), `clip-path-02-saved` (the saved panel with `1920 1080 30`), `clip-path-03-framed` (blue with blurred bars on the 9:16 canvas at 1 second, red selected and the clip panel open) and `clip-path-03-framed-ar` and `clip-path-03-framed-sv` (blue with blurred bars). Marks: `clip-path-01-path`, before the first start of the walk, `clip-path-02-lift`, before the press of the photo, whose recording shows the photo lifted under the finger and the blocks it passes standing aside before the release, and `clip-path-03-plays`. The count of videos the run prints grows by one for this walk.
+
+<!-- slot: flutter-build -->
+## The tests of the Flutter app
+
+- On Linux, the job `app` of `Tests` runs `flutter test` in `app/`. `app/test/app_test.dart` builds the root of the app.
+- The job `core` runs `dart test` in `packages/reelsmith_core` once that folder holds a package.
+- The UI tests stay in `UITests/`. The target `ReelsmithUITests` of `app/ios/Runner.xcodeproj` takes that folder as a synchronized folder, so a new test file edits no project file, and its tests run against `Reelsmith.app` of the Flutter build.
+- The Core tests that read the word files read them from `app/assets/words/<en, ar, sv>.lproj/Localizable.strings`.
+- A debug build of Runner copies `Tests/Fixtures/Drafts/` into the folder `DraftFixtures` of the app bundle, in a build phase of its own. A release build copies nothing.
+<!-- end slot: flutter-build -->
+
+<!-- slot: engine-bridge -->
+<!-- end slot: engine-bridge -->
+
+<!-- slot: dart-core-model -->
+<!-- end slot: dart-core-model -->
+
+<!-- slot: dart-seeds-text-sound -->
+<!-- end slot: dart-seeds-text-sound -->
+
+<!-- slot: dart-clip-edits -->
+<!-- end slot: dart-clip-edits -->
+
+<!-- slot: dart-text-edits -->
+<!-- end slot: dart-text-edits -->
+
+<!-- slot: dart-sound-edits -->
+<!-- end slot: dart-sound-edits -->
+
+<!-- slot: dart-history -->
+<!-- end slot: dart-history -->
+
+<!-- slot: dart-states -->
+<!-- end slot: dart-states -->
+
+<!-- slot: dart-draft-codec -->
+## The draft fixtures
+
+- `Tests/Fixtures/Drafts/swift/` holds drafts written by Swift's `encodeDraft`, the encoder the SwiftUI app ships: `version-one.json` (the literal of `DraftVersionOneTests`, as it was written), `seed-<seed>.json` for each of the eight seeds after a clip added and a text typed (an undo history of two steps, its run typing), `photo-framing-text-4k.json` (`photo-wide` with blue framed, a text with every member set and 4K at 60), `music-text-shaping.json` (`text-wide` with a music whose file id and title, start, fades and volume all differ, the text outlined and not shadowed, a history whose run is shaping), `history-drag.json` (a history whose run is drag) and `history-undone.json` (after an undo: one step past, one in the future, no run). `dart/` holds Dart's encoding of each, under the same name.
+- `DraftFixtureTests.swift` holds that every file of both folders decodes to its expected value, and that each folder holds exactly those names. `test/drafts/draft_fixture_test.dart` holds that each file of `swift/` decodes in Dart to the same expected value, built by the Dart Core, and that each file of `dart/` equals the Dart encoding of its file of `swift/` and decodes to that value.
+- With `REELSMITH_WRITE_FIXTURES` set, the Swift test writes each file of `swift/` that is missing and holds nothing else. The Dart test then writes each file of `dart/` that is missing, as its encoding of the file of `swift/`, and still holds every check above. Neither overwrites a file that is there. Each fixture was written once, on `macos-26`, and is committed. A fixture never changes: a new field of a draft brings a new fixture.
+- `test/drafts/draft_codec_test.dart` holds what Swift's decoder reads and no writer of ours writes: an integer written as `1800.0`, `1.8e3` or `18e2` reads, `1800.5` is unreadable, and a byte order mark before the JSON is passed over.
+- `test/drafts/` also holds the ports of `DraftTests` and `DraftVersionOneTests`, and `test/model/` those of `ClipModelTests` and the two codec tests of `FramingTests`. The test of `DraftTests` that reads `Editing` back from a draft is ported with the shelf. The two tests of `ClipModelTests` that read the plan stay in Swift.
+<!-- end slot: dart-draft-codec -->
+
+<!-- slot: dart-draft-shelf -->
+<!-- end slot: dart-draft-shelf -->
+
+<!-- slot: flutter-words -->
+<!-- end slot: flutter-words -->
+
+<!-- slot: engine-preview -->
+<!-- end slot: engine-preview -->
+
+<!-- slot: engine-pickers -->
+<!-- end slot: engine-pickers -->
+
+<!-- slot: engine-outputs -->
+<!-- end slot: engine-outputs -->
+
+<!-- slot: flutter-start -->
+<!-- end slot: flutter-start -->
+
+<!-- slot: flutter-editor-store -->
+<!-- end slot: flutter-editor-store -->
+
+<!-- slot: flutter-editor-screen -->
+<!-- end slot: flutter-editor-screen -->
+
+<!-- slot: flutter-strip -->
+<!-- end slot: flutter-strip -->
+
+<!-- slot: flutter-trim-reorder -->
+<!-- end slot: flutter-trim-reorder -->
+
+<!-- slot: flutter-export -->
+<!-- end slot: flutter-export -->
+
+<!-- slot: flutter-text-panel -->
+<!-- end slot: flutter-text-panel -->
+
+<!-- slot: flutter-text-bars -->
+<!-- end slot: flutter-text-bars -->
+
+<!-- slot: flutter-project-list -->
+<!-- end slot: flutter-project-list -->
+
+<!-- slot: flutter-text-gestures -->
+<!-- end slot: flutter-text-gestures -->
+
+<!-- slot: flutter-sound-panel -->
+### The sound panel on the Flutter build
+`SoundClipsTests`, `LiveLevelsTests` and `MusicLevelsTests` run on the Flutter build. A Flutter slider reports as another kind of element and does not take `adjust(toNormalizedSliderPosition:)`, so the three files find a slider through `descendants(matching: .any)`, move it with a press at its middle dragged to the place, and read the place of its thumb from its value, the percent.
+<!-- end slot: flutter-sound-panel -->
+
+<!-- slot: flutter-music -->
+### Music on the Flutter build
+`AddMusicTests`, `MusicRowTests`, `MusicVideoTests` and `SoundPanelTests` run on the Flutter build with `TimelineTests` and `ZoomTests`, their files unchanged. The title and the times of the music are leaf semantics nodes with a label, which XCUITest reports as static texts.
+<!-- end slot: flutter-music -->
+
+<!-- slot: flutter-clips-frames -->
+<!-- end slot: flutter-clips-frames -->
+
+<!-- slot: flutter-clip-panel -->
+### The clip panel on the Flutter build
+`ClipPanelTests`, `ClipGainTests`, `FramingPanelTests`, `GuideTests`, `PunchInTests` and `FollowFingerTests` run on the Flutter build. `clip.volume` and the sound sliders are found through `descendants(matching: .any)`, since a Flutter slider reports as another kind of element, and where a test moved `clip.volume` with `adjust(toNormalizedSliderPosition:)` it presses its middle and drags to the place.
+<!-- end slot: flutter-clip-panel -->
+
+<!-- slot: flutter-whole-paths -->
+### The whole paths on the Flutter build
+`FoldTests`, `DraftListTests`, the six `Whole*Tests` and `DraftFixtureTests` run on the Flutter build. Where a file found `text.field` among the text views or a slider among the sliders, it finds them through `descendants(matching: .any)`, and where it moved a slider with `adjust(toNormalizedSliderPosition:)` it presses its middle and drags to the place.
+
+`DraftFixtureTests` opens drafts written by the Swift encoder of m6. The launch value `-draft-fixture <name>` (debug builds only) makes the fixture `Tests/Fixtures/Drafts/swift/<name>.json`, which the debug bundle carries in `DraftFixtures`, the draft `<caches>/TestDrafts/<name>/draft.json`, and copies every file of `<caches>/Seeds/` into its `Media`. So a test first starts the seeds whose files the draft names with no `-drafts`, empties the test drafts with `-drafts fresh`, and then starts with `-drafts kept -draft-fixture <name>`. `seed-music-wide` is read with its clips, text, music, export choice and one undo, `photo-framing-text-4k` with its photo, framing, text and 4K choice.
+<!-- end slot: flutter-whole-paths -->
+
+<!-- slot: flutter-suite -->
+### The whole suite on the Flutter build
+
+Every class of `UITests/` runs on the Flutter build, and a split run deals all of them again, as `docs/operations.md` says. The two starts, the first frame, the split and delete and the export of the smoke set are the five tests they were in `m6`.
+<!-- end slot: flutter-suite -->

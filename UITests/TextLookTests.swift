@@ -62,7 +62,7 @@ final class TextLookTests: XCTestCase {
         XCTAssertEqual(colours[7].label, "Colour 8")
         XCTAssertGreaterThanOrEqual(colours[0].frame.minY, faceButtons[0].frame.maxY - 1)
         // The slider under the colours.
-        let slider = app.sliders["text.size"]
+        let slider = app.descendants(matching: .any)["text.size"]
         XCTAssertTrue(slider.exists)
         XCTAssertGreaterThanOrEqual(slider.frame.minY, colours[0].frame.maxY - 1)
 
@@ -136,23 +136,25 @@ final class TextLookTests: XCTestCase {
     /// lands on, so only the direction of each change is asserted. Field 3 is printed around each move.
     func testTheSliderMakesTheTextLargerAndThenSmaller() {
         let app = startLook()
-        let slider = app.sliders["text.size"]
+        let slider = app.descendants(matching: .any)["text.size"]
         XCTAssertTrue(slider.exists)
         XCTAssertEqual(field(app, 3), "64")
-        print("text-look: field 3 before the first move \(field(app, 3)), the slider at \(slider.normalizedSliderPosition)")
+        print("text-look: field 3 before the first move \(field(app, 3)), the slider at \(slider.value as? String ?? "none")")
 
-        slider.adjust(toNormalizedSliderPosition: 0.8)
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)))
         waitUntil("field 3 above 64 after the move toward the upper end") { (size(app) ?? 0) > 64 }
         let large = size(app) ?? 0
-        print("text-look: field 3 after the move toward the upper end \(large), the slider at \(slider.normalizedSliderPosition)")
+        print("text-look: field 3 after the move toward the upper end \(large), the slider at \(slider.value as? String ?? "none")")
         XCTAssertGreaterThan(large, 64)
 
-        slider.adjust(toNormalizedSliderPosition: 0.3)
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5)))
         waitUntil("field 3 below \(large) after the move back toward the lower end") {
             (size(app) ?? Int.max) < large
         }
         let small = size(app) ?? Int.max
-        print("text-look: field 3 after the move back toward the lower end \(small), the slider at \(slider.normalizedSliderPosition)")
+        print("text-look: field 3 after the move back toward the lower end \(small), the slider at \(slider.value as? String ?? "none")")
         XCTAssertLessThan(small, large)
     }
 
@@ -167,7 +169,9 @@ final class TextLookTests: XCTestCase {
         element(app, "text.font.naskh-bold").tap()
         waitUntil("field 2 naskh-bold after the tap on that face") { field(app, 2) == "naskh-bold" }
         print("text-look: field 3 before the move toward the upper end \(field(app, 3))")
-        app.sliders["text.size"].adjust(toNormalizedSliderPosition: 0.35)
+        let slider = app.descendants(matching: .any)["text.size"]
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5)))
         waitUntil("field 3 above 64 after the move toward the upper end") { (size(app) ?? 0) > 64 }
         print("text-look: field 3 after the move toward the upper end \(field(app, 3))")
         let whiteLarge = waitForTheShare(
@@ -199,7 +203,7 @@ final class TextLookTests: XCTestCase {
         element(app, "text.done").tap()
         waitUntil("the text region gone after the tap on done") { !element(app, "editor.textRegion").exists }
         element(app, "editor.addText").tap()
-        let typed = app.textViews["text.field"]
+        let typed = app.descendants(matching: .any)["text.field"]
         waitUntil("the field after the tap on the text button") { typed.exists }
         typed.tap()
         // A keyboard that does not come fails nothing here: the typing fails by itself with no focus.

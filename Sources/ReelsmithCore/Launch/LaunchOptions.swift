@@ -11,12 +11,16 @@ public struct LaunchOptions: Equatable, Sendable {
     public var exportFails: Bool
     /// `-drafts fresh` or `-drafts kept`. Nil for none and for another value.
     public var drafts: DraftsLaunch?
+    /// `-draft-fixture <name>`: the fixture `<name>.json` of `Tests/Fixtures/Drafts/swift/`, opened as a draft by a UI
+    /// test. Nil when not given.
+    public var draftFixture: String?
 
     public init(arguments: [String]) {
         seed = nil
         playhead = nil
         exportFails = false
         drafts = nil
+        draftFixture = nil
         for (index, argument) in arguments.enumerated() {
             let value = index + 1 < arguments.count ? arguments[index + 1] : ""
             switch argument {
@@ -28,6 +32,8 @@ public struct LaunchOptions: Equatable, Sendable {
                 exportFails = true
             case "-drafts":
                 drafts = DraftsLaunch(rawValue: value)
+            case "-draft-fixture":
+                draftFixture = value
             default:
                 break
             }

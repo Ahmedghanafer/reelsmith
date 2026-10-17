@@ -24,7 +24,7 @@ final class TextMoreWordsTests: XCTestCase {
     private func group(of language: String) throws -> [(key: String, text: String)] {
         let file = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("App/Resources/" + language + ".lproj/Localizable.strings")
+            .appendingPathComponent("app/assets/words/" + language + ".lproj/Localizable.strings")
         let content = try String(contentsOf: file, encoding: .utf8)
         let after = content.components(separatedBy: "/* slot: text-more */")
         guard after.count == 2 else {

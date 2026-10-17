@@ -202,7 +202,7 @@ final class PreviewTextTests: XCTestCase {
     /// nothing here: the typing fails by itself when the field has no focus.
     private func addATextAndType(_ app: XCUIApplication, _ string: String) {
         element(app, "editor.addText").tap()
-        let field = app.textViews["text.field"]
+        let field = app.descendants(matching: .any)["text.field"]
         waitUntil("the field after the tap on the text button") { field.exists }
         field.tap()
         waitUntil("the keyboard after the tap on the field", expected: 2, required: false) {

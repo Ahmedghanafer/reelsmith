@@ -109,13 +109,13 @@ final class ClipPanelTests: XCTestCase {
         var app = startApp(seed: "two-clips-wide", playhead: 2400, drafts: "fresh")
         waitForTheEditor(app)
         select(app, "editor.clip.2")
-        let slider = app.sliders["clip.volume"]
+        let slider = element(app, "clip.volume")
         waitUntil("the slider clip.volume") { slider.exists }
         mark("clip-panel-03-volume")
         var moves = 0
         while !value(app, "editor.clip.2").hasSuffix(" 0 v") && moves < mostMoves {
             let before = value(app, "editor.clip.2")
-            slider.adjust(toNormalizedSliderPosition: 0)
+            slide(slider, to: 0)
             moves += 1
             // A move that lands on the step it left changes nothing, so this wait does not fail: the last
             // assert on " 0 v" decides.
@@ -202,11 +202,18 @@ final class ClipPanelTests: XCTestCase {
         XCTAssertLessThanOrEqual(region.maxY, export.minY + 1, "the panel above the export")
         XCTAssertTrue(element(app, "clip.cutBefore").exists)
         XCTAssertTrue(element(app, "clip.cutAfter").exists)
-        XCTAssertEqual(app.sliders["clip.volume"].exists, withVolume)
+        XCTAssertEqual(element(app, "clip.volume").exists, withVolume)
     }
 
     private func value(_ app: XCUIApplication, _ identifier: String) -> String {
         element(app, identifier).value as? String ?? ""
+    }
+
+    /// A Flutter slider reports as another kind and does not take adjust: a press at its middle dragged to the
+    /// place moves it, as a finger does.
+    private func slide(_ slider: XCUIElement, to place: CGFloat) {
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: place, dy: 0.5)))
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {

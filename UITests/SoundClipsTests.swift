@@ -34,7 +34,7 @@ final class SoundClipsTests: XCTestCase {
 
     func testThePartClipsShowsTheSliderAndTheToggleOfTheProject() {
         let app = startClips()
-        let slider = app.sliders["sound.clipVolume"]
+        let slider = element(app, "sound.clipVolume")
         let toggle = element(app, "sound.clipsMuted")
 
         XCTAssertTrue(slider.exists)
@@ -43,8 +43,8 @@ final class SoundClipsTests: XCTestCase {
         XCTAssertTrue(element(app, "sound.tab.clips").isSelected)
         XCTAssertEqual(soundInfo(app), withMusic)
         // The volume is 1, the upper end of the slider.
-        print("sound-clips: the slider at \(slider.normalizedSliderPosition) with the volume of the clips at 1")
-        XCTAssertGreaterThan(slider.normalizedSliderPosition, 0.9)
+        print("sound-clips: the slider at \(position(slider)) with the volume of the clips at 1")
+        XCTAssertGreaterThan(position(slider), 0.9)
         // The toggle stands under the slider, at the leading end of its row, the left in English.
         XCTAssertGreaterThanOrEqual(toggle.frame.minY, slider.frame.maxY - 1)
         XCTAssertLessThan(toggle.frame.midX, slider.frame.midX)
@@ -55,12 +55,12 @@ final class SoundClipsTests: XCTestCase {
     /// and the moves are repeated until field 1 reads 0. Only then a move to the lower end changes nothing.
     func testAMoveTowardTheLowerEndLowersTheVolumeAndAMoveAtTheLowerEndBuildsNoItem() {
         let app = startClips()
-        let slider = app.sliders["sound.clipVolume"]
+        let slider = element(app, "sound.clipVolume")
         let picture = element(app, "editor.picture")
         let first = builds(picture)
         XCTAssertNotNil(first, "editor.picture has no count of builds")
 
-        slider.adjust(toNormalizedSliderPosition: 0.5)
+        slide(slider, to: 0.5)
         waitUntil("field 1 below 100 and the count of builds unchanged after the move toward the lower end") {
             (volume(app) ?? 100) < 100 && builds(picture) == first
         }
@@ -74,7 +74,7 @@ final class SoundClipsTests: XCTestCase {
         var moves = 0
         while volume(app) != 0 && moves < mostMoves {
             let before = volume(app) ?? 100
-            slider.adjust(toNormalizedSliderPosition: 0)
+            slide(slider, to: 0)
             moves += 1
             waitUntil(
                 "field 1 below \(before) and the count of builds unchanged after move \(moves) to the lower end",
@@ -88,7 +88,7 @@ final class SoundClipsTests: XCTestCase {
         XCTAssertEqual(builds(picture), first, "an item was built for a level")
 
         let atZero = builds(picture)
-        slider.adjust(toNormalizedSliderPosition: 0)
+        slide(slider, to: 0)
         // Nothing comes to wait for, so the count is read 2 seconds after the move, as the criterion says.
         Thread.sleep(forTimeInterval: 2)
         let after = builds(picture)
@@ -156,7 +156,7 @@ final class SoundClipsTests: XCTestCase {
 
     func testInArabicThePartMirrorsAndThePictureAndTheStripDoNot() {
         let app = startClips(language: "ar")
-        let slider = app.sliders["sound.clipVolume"]
+        let slider = element(app, "sound.clipVolume")
         let toggle = element(app, "sound.clipsMuted")
 
         // Leading is the right now: the toggle stands at the right end of its row, right of the slider's middle.
@@ -173,7 +173,7 @@ final class SoundClipsTests: XCTestCase {
     func testInSwedish() {
         let app = startClips(language: "sv")
 
-        XCTAssertTrue(app.sliders["sound.clipVolume"].exists)
+        XCTAssertTrue(element(app, "sound.clipVolume").exists)
         XCTAssertTrue(element(app, "sound.clipsMuted").exists)
         XCTAssertEqual(soundInfo(app), withMusic)
         screenshot("sound-clips-01-clips-sv")
@@ -187,9 +187,21 @@ final class SoundClipsTests: XCTestCase {
         waitUntil("the part button sound.tab.clips after the start") { element(app, "sound.tab.clips").exists }
         element(app, "sound.tab.clips").tap()
         waitUntil("the slider and the toggle of the part clips after the tap on its part button") {
-            app.sliders["sound.clipVolume"].exists && element(app, "sound.clipsMuted").exists
+            element(app, "sound.clipVolume").exists && element(app, "sound.clipsMuted").exists
         }
         return app
+    }
+
+    /// A Flutter slider reports as another kind and does not take adjust: a press at its middle dragged to the
+    /// place moves it, as a finger does.
+    private func slide(_ slider: XCUIElement, to place: CGFloat) {
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: place, dy: 0.5)))
+    }
+
+    /// The place of the thumb from 0 to 1, read from the value of the slider, its percent.
+    private func position(_ slider: XCUIElement) -> Double {
+        (Double((slider.value as? String ?? "").replacingOccurrences(of: "%", with: "")) ?? -1) / 100
     }
 
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {

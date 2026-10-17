@@ -99,7 +99,7 @@ final class WholeSoundPathTests: XCTestCase {
         // The levels: the volume of the music toward its lower end, the fade out toward its upper end.
         element(app, "sound.tab.levels").tap()
         waitUntil("the sliders of the music volume and the fade out after the tap on sound.tab.levels") {
-            app.sliders["sound.musicVolume"].exists && app.sliders["sound.fadeOut"].exists
+            element(app, "sound.musicVolume").exists && element(app, "sound.fadeOut").exists
         }
         let volume = move(app, "sound.musicVolume", to: 0.5, field: 4)
         XCTAssertLessThan(Int(volume) ?? 100, 100, "field 4 after the move of the volume toward its lower end")
@@ -281,7 +281,9 @@ final class WholeSoundPathTests: XCTestCase {
         let was = field(app, owned)
         let count = builds(picture)
         XCTAssertNotNil(count, "editor.picture has no count of builds")
-        app.sliders[identifier].adjust(toNormalizedSliderPosition: place)
+        let slider = element(app, identifier)
+        slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.1, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: place, dy: 0.5)))
         waitUntil("field \(owned) changed and the count of builds unchanged after the move of \(identifier)") {
             field(app, owned) != was && builds(picture) == count
         }
