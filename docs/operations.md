@@ -4,7 +4,7 @@ Nothing is built on this PC. Tests and builds run on GitHub runners and are read
 
 ## Run the tests
 
-The `Tests` workflow runs `swift test` on a Linux runner for every pull request into `dev` and every push to `dev`. A branch gets a test run only once a pull request into `dev` is open. To read the result for a branch:
+The `Tests` workflow runs `swift test`, `flutter test` and `dart test` on Linux runners (under "The Flutter build" below) for every pull request into `dev` and every push to `dev`. A branch gets a test run only once a pull request into `dev` is open. To read the result for a branch:
 
 ```
 gh run list --workflow Tests --branch <branch>
@@ -80,12 +80,12 @@ gh run view <run id> --log
 
 The run creates one simulator, an iPhone 17 on the iOS 26.5 runtime, and works through seven layers in order. The setup step prints the simulators the runner image holds. With `-f image_simulator=true` the run uses the image's own iPhone 17 on that runtime in place of a new one, if there is one. Layer 3 prints `the boot, inside layer 3,` with the seconds of the boot and which simulator it was, and the line is in the Summary too:
 
-1. `swift test` builds the package and runs its tests on macOS, the Engine tests among them. `REELSMITH_CLIP_DIR` is set, so the clip maker test leaves `blue.mov` and `red.mov` there.
+1. `swift test` builds the package and runs its tests on macOS, the Engine tests among them. `REELSMITH_CLIP_DIR` is set, so the clip maker test leaves `blue.mov`, `red.mov` and the test photo `magenta.png` there.
 2. The Flutter app is built for a simulator with `flutter build ios --simulator --debug`, then the app and the UI tests are built for testing from `app/ios/Runner.xcworkspace`.
-3. The simulator boots, the built app is installed, the right to add to Photos is granted to the app, the two clips are put into the photo library, and the count of videos in the library is printed.
+3. The simulator boots, the built app is installed, the right to add to Photos is granted to the app, the two clips and the test photo are put into the photo library, and the counts of videos and of photos in the library are printed.
 4. The app is started once on the seed `three-clips` and ended again (the warm start, below). Then one recording of the simulator starts. When the recorder prints `Recording started`, that moment is written to `recording-start.txt` in seconds since 1970 to the thousandth (if the line does not come within 30 seconds, the file keeps the clock second taken just before the recorder started). The UI tests run without a rebuild into a result bundle.
 5. The screenshots and the mark files are exported from the result bundle under their attachment names, and each mark becomes one line of `recording-index.txt` (how it is made is under "Fetch the artifacts"). A name is made safe for the upload: each character the upload refuses (the double quote, colon, less than, greater than, vertical bar, asterisk, question mark, carriage return and line feed) becomes an underscore, and a name that is already taken gets a number before its ending, as in `<name>_2.txt`. The ending of a mark file is `.mark.txt` and that of any other name is what follows its last dot, so a taken name whose last dot is not an ending gets its number before that dot, as in `App UI hierarchy for com.ghanafer_2.reelsmith`.
-6. The count of videos in the library is printed again.
+6. The counts of videos and of photos in the library are printed again.
 7. Only with `ipa=true`: the device build from `app/ios/Runner.xcworkspace` in the release configuration without code signing, packed as `Reelsmith.ipa`.
 
 Between layers 3 and 4 one step writes `tone.wav`, a tone of 3 seconds made with the runner's Python, into the storage of the simulator's Files app, which it finds by a search under the data folder of the device, and prints that folder, or that it found none, without making the run red.
@@ -231,5 +231,5 @@ gh workflow run "macOS build" --ref <branch> -f build_only=true
 <!-- slot: flutter-suite -->
 ## The whole suite and the device file
 
-Once the port is done the whole suite runs on the Flutter build as a split run on `dev`, every class of `UITests/` dealt over the three machines. The file for the phone comes from a run with `-f ipa=true`, as the artifact `ipa` that holds `Reelsmith.ipa`.
+The whole suite runs on the Flutter build as a split run on `dev`, every class of `UITests/` dealt over the three machines. The file for the phone comes from a run with `-f ipa=true`, as the artifact `ipa` that holds `Reelsmith.ipa`.
 <!-- end slot: flutter-suite -->
